@@ -1,0 +1,50 @@
+rules_version = '2';
+// MERGE into your existing rules. `request.auth.token.admin == true` assumes admins carry an `admin`
+// custom claim; use whatever your Admin Portal already uses.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() { return request.auth != null && request.auth.token.admin == true; }
+    function signedIn() { return request.auth != null; }
+
+    // Published content is readable by any signed-in user (or make it public if the website is public).
+    match /testimonies/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
+      allow write: if isAdmin();
+    }
+    match /resources/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
+      allow write: if isAdmin();
+    }
+    match /notifications/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.published == true);
+      allow write: if isAdmin();
+    }
+    match /settings/live {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // Submissions: users may create their own, never read/modify others'.
+    match /testimonySubmissions/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['fullName','churchZone','testimony','userId','userEmail','source','status','createdAt'])
+        && request.resource.data.fullName is string && request.resource.data.fullName.size() < 200
+        && request.resource.data.testimony is string && request.resource.data.testimony.size() < 5001
+        && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Push tokens: a user can only manage tokens they own.
+    match /pushTokens/{token} {
+      allow create, update: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+      allow read: if isAdmin();
+    }
+
+    // Analytics: write-only from clients.
+    match /analyticsEvents/{id} {
+      allow create: if signedIn();
+      allow read: if isAdmin();
+    }
+  }
+}

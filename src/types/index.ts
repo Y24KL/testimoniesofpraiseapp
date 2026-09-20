@@ -1,0 +1,87 @@
+export interface Testimony {
+  id: string;
+  title: string;
+  description: string;
+  authorName?: string;
+  thumbnail?: string;
+  videoUrl: string;
+  /** seconds */
+  duration?: number;
+  category?: string;
+  keywords: string[];
+  createdAt: string | null;
+  publishedAt: string | null;
+  isPublished: boolean;
+  isFeatured: boolean;
+  isDownloadable: boolean;
+}
+
+export interface Resource {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail?: string;
+  fileUrl: string;
+  fileType: string;
+  category?: string;
+  keywords: string[];
+  createdAt: string | null;
+  isPublished: boolean;
+  isDownloadable: boolean;
+}
+
+export interface LiveConfig {
+  isLive: boolean;
+  streamUrl?: string;
+  title?: string;
+  thumbnail?: string;
+  description?: string;
+}
+
+export type NotificationType = 'testimony' | 'resource' | 'live' | 'announcement' | 'featured';
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  contentId?: string;
+  createdAt: string | null;
+  published: boolean;
+}
+
+export interface NotificationPrefs {
+  testimonies: boolean;
+  resources: boolean;
+  live: boolean;
+  announcements: boolean;
+}
+
+export interface Page<T> {
+  items: T[];
+  cursor?: unknown;
+  hasMore: boolean;
+}
+
+export type DownloadKind = 'testimony' | 'resource';
+export type DownloadStatus = 'downloading' | 'done' | 'failed';
+export type DownloadFailure = 'network' | 'storage' | 'http' | 'unsupported' | 'unknown';
+
+export interface DownloadItem {
+  key: string; // `${kind}:${id}`
+  id: string;
+  kind: DownloadKind;
+  title: string;
+  thumbnail?: string;
+  remoteUrl: string;
+  fileName: string; // relative to the downloads directory (absolute paths change between app updates on iOS)
+  fileType: string;
+  status: DownloadStatus;
+  progress: number; // 0..1
+  sizeBytes?: number;
+  failure?: DownloadFailure;
+  createdAt: number;
+  data: Testimony | Resource; // snapshot so details work offline
+}
+
+export type ResourceGroup = 'ALL' | 'VIDEOS' | 'GRAPHICS' | 'ECARDS' | 'PHOTOS' | 'DOCUMENTS' | 'ADOTOPOC';

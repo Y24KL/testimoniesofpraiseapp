@@ -9,7 +9,7 @@ import type { RootStackParamList } from './types';
  * A link that arrives while signed out is dropped (the auth screens are shown instead).
  */
 export const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: ['testimoniesofpraise://', Linking.createURL('/')],
+   prefixes: ['testimoniesofpraise://', Linking.createURL('/', { scheme: 'testimoniesofpraise' })],
   config: {
     screens: {
       Tabs: { screens: { Live: 'live' } },

@@ -18,7 +18,6 @@ export const CONFIG = {
   },
   collections: {
     testimonies: process.env.EXPO_PUBLIC_COL_TESTIMONIES ?? 'testimonies',
-    resources: process.env.EXPO_PUBLIC_COL_RESOURCES ?? 'resources',
     notifications: process.env.EXPO_PUBLIC_COL_NOTIFICATIONS ?? 'notifications',
     submissions: process.env.EXPO_PUBLIC_COL_SUBMISSIONS ?? 'testimonySubmissions',
     pushTokens: process.env.EXPO_PUBLIC_COL_PUSH_TOKENS ?? 'pushTokens',
@@ -28,7 +27,6 @@ export const CONFIG = {
   /** REST-mode endpoints, relative to apiBaseUrl. Adjust to the existing API. */
   rest: {
     testimonies: '/api/testimonies',
-    resources: '/api/resources',
     notifications: '/api/notifications',
     live: '/api/live',
     submit: '/api/testimonies/submit',

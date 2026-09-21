@@ -1,4 +1,4 @@
-import type { AppNotification, LiveConfig, Page, Resource, Testimony } from '@/types';
+import type { AppNotification, LiveConfig, Page, Testimony } from '@/types';
 
 export interface PageOptions {
   limit: number;
@@ -18,8 +18,6 @@ export interface SubmissionInput {
 export interface ContentRepository {
   getTestimonies(opts: PageOptions): Promise<Page<Testimony>>;
   getTestimony(id: string): Promise<Testimony | null>;
-  getResources(opts: PageOptions): Promise<Page<Resource>>;
-  getResource(id: string): Promise<Resource | null>;
   getNotifications(max: number): Promise<AppNotification[]>;
   /** Calls `cb` immediately and whenever the Admin Portal changes the live config. Returns unsubscribe. */
   subscribeLive(cb: (live: LiveConfig) => void, onError?: (e: unknown) => void): () => void;

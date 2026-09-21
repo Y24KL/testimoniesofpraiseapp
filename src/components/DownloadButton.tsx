@@ -3,19 +3,22 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, type as t } from '@/constants/theme';
 import { downloadKey, useDownloads } from '@/downloads/DownloadsContext';
-import type { Resource, Testimony } from '@/types';
+import type { Testimony } from '@/types';
 import { MESSAGES } from '@/utils/errors';
 import { formatBytes } from '@/utils/format';
 import { PrimaryButton } from './PrimaryButton';
 
-type Props = { kind: 'testimony'; data: Testimony } | { kind: 'resource'; data: Resource };
+interface Props {
+  kind: 'testimony';
+  data: Testimony;
+}
 
 /** Renders nothing unless the Admin Portal allowed downloads (isDownloadable). */
 export function DownloadButton({ kind, data }: Props) {
   const dl = useDownloads();
   const key = downloadKey(kind, data.id);
   const item = dl.get(key);
-  const go = () => void dl.start({ kind, data } as Parameters<typeof dl.start>[0]);
+  const go = () => void dl.start({ kind, data });
 
   if (!data.isDownloadable && !item) return null;
 

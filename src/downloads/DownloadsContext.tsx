@@ -4,14 +4,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FS from 'expo-file-system/legacy';
 import { STORAGE_KEYS } from '@/constants/config';
 import { track } from '@/analytics';
-import type { DownloadFailure, DownloadItem, Resource, Testimony } from '@/types';
+import type { DownloadFailure, DownloadItem, Testimony } from '@/types';
 import { extensionOf, isHls, safeId } from '@/utils/format';
 
 const DIR = `${FS.documentDirectory}downloads/`;
 
 export interface DownloadRequest {
-  kind: 'testimony' | 'resource';
-  data: Testimony | Resource;
+  kind: 'testimony';
+  data: Testimony;
 }
 
 interface DownloadsValue {
@@ -25,7 +25,7 @@ interface DownloadsValue {
 }
 
 const Ctx = createContext<DownloadsValue | null>(null);
-export const downloadKey = (kind: 'testimony' | 'resource', id: string) => `${kind}:${id}`;
+export const downloadKey = (kind: 'testimony', id: string) => `${kind}:${id}`;
 
 export function DownloadsProvider({ children }: { children: React.ReactNode }) {
   const [map, setMap] = useState<Record<string, DownloadItem>>({});
@@ -81,14 +81,14 @@ export function DownloadsProvider({ children }: { children: React.ReactNode }) {
     async ({ kind, data }: DownloadRequest) => {
       const id = data.id;
       const key = downloadKey(kind, id);
-      const url = kind === 'testimony' ? (data as Testimony).videoUrl : (data as Resource).fileUrl;
+      const url = data.videoUrl;
       const existing = mapRef.current[key];
 
       // Duplicate prevention
       if (existing && (existing.status === 'downloading' || existing.status === 'done')) return;
       if (jobs.current[key]) return;
 
-      const fileType = kind === 'testimony' ? 'mp4' : (data as Resource).fileType;
+      const fileType = 'mp4';
       const fileName = `${kind}-${safeId(id)}.${extensionOf(url, fileType || 'bin')}`;
       const base: DownloadItem = {
         key,

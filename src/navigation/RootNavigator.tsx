@@ -9,7 +9,6 @@ import { NotificationPrimerScreen } from '@/screens/NotificationPrimerScreen';
 import { NotificationSettingsScreen } from '@/screens/NotificationSettingsScreen';
 import { NotificationsScreen } from '@/screens/NotificationsScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
-import { ResourceDetailsScreen } from '@/screens/ResourceDetailsScreen';
 import { SearchScreen } from '@/screens/SearchScreen';
 import { ShareTestimonyScreen } from '@/screens/ShareTestimonyScreen';
 import { TestimonyDetailsScreen } from '@/screens/TestimonyDetailsScreen';
@@ -37,7 +36,6 @@ export function RootNavigator() {
         <Stack.Group>
           <Stack.Screen name="Tabs" component={TabNavigator} options={{ animation: 'fade' }} />
           <Stack.Screen name="TestimonyDetails" component={TestimonyDetailsScreen} />
-          <Stack.Screen name="ResourceDetails" component={ResourceDetailsScreen} />
           <Stack.Screen name="ShareTestimony" component={ShareTestimonyScreen} options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />

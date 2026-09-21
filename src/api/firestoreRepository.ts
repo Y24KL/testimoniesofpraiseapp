@@ -21,7 +21,7 @@ import { Platform } from 'react-native';
 import { CONFIG } from '@/constants/config';
 import type { Page } from '@/types';
 import { db } from './firebase';
-import { normalizeLive, normalizeNotification, normalizeResource, normalizeTestimony } from './normalize';
+import { normalizeLive, normalizeNotification, normalizeTestimony } from './normalize';
 import type { ContentRepository, PageOptions } from './repository';
 
 async function getPage<T>(
@@ -56,8 +56,6 @@ const tokenDocId = (t: string) => t.replace(/\//g, '_');
 export const firestoreRepository: ContentRepository = {
   getTestimonies: (o) => getPage(CONFIG.collections.testimonies, normalizeTestimony, o),
   getTestimony: (id) => getOne(CONFIG.collections.testimonies, id, normalizeTestimony),
-  getResources: (o) => getPage(CONFIG.collections.resources, normalizeResource, o),
-  getResource: (id) => getOne(CONFIG.collections.resources, id, normalizeResource),
 
   async getNotifications(max) {
     const snap = await getDocs(

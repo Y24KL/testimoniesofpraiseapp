@@ -38,7 +38,7 @@ export function NotificationPrimerScreen() {
         <View style={styles.center}>
           <View style={styles.icon}><Ionicons name="notifications" size={46} color={colors.accent} /></View>
           <Text style={styles.h}>Stay connected with Testimonies of Praise.</Text>
-          <Text style={styles.p}>Receive notifications when new testimonies, videos, live events and important resources are available.</Text>
+          <Text style={styles.p}>Receive notifications when new testimonies, videos, live events and important announcements are available.</Text>
         </View>
         <View style={{ gap: 12 }}>
           <PrimaryButton title="TURN ON NOTIFICATIONS" icon="notifications-outline" onPress={enable} loading={busy} />

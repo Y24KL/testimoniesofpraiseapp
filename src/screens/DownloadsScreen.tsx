@@ -16,8 +16,7 @@ export function DownloadsScreen() {
   const nav = useNavigation();
   const dl = useDownloads();
 
-  const open = (i: DownloadItem) =>
-    i.kind === 'testimony' ? nav.navigate('TestimonyDetails', { id: i.id }) : nav.navigate('ResourceDetails', { id: i.id });
+  const open = (i: DownloadItem) => nav.navigate('TestimonyDetails', { id: i.id });
 
   return (
     <Screen>

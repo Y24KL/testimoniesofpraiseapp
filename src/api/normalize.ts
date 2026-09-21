@@ -1,4 +1,4 @@
-import type { AppNotification, LiveConfig, NotificationType, Resource, Testimony } from '@/types';
+import type { AppNotification, LiveConfig, NotificationType, Testimony } from '@/types';
 
 /**
  * The website's exact schema could not be inspected while this project was generated, so these
@@ -61,24 +61,6 @@ export function normalizeTestimony(id: string, r: Raw): Testimony {
     isPublished: isPublished(r),
     isFeatured: pick(r, ['isFeatured', 'featured']) === true,
     // Safe default: downloads are only offered when the admin explicitly allows them.
-    isDownloadable: pick(r, ['isDownloadable', 'downloadable', 'allowDownload']) === true,
-  };
-}
-
-export function normalizeResource(id: string, r: Raw): Resource {
-  const fileUrl = String(pick(r, ['fileUrl', 'file_url', 'url', 'downloadUrl', 'file']) ?? '');
-  const category = pick(r, ['category', 'type']);
-  return {
-    id,
-    title: String(pick(r, ['title', 'name']) ?? 'Untitled resource'),
-    description: String(pick(r, ['description', 'summary']) ?? ''),
-    thumbnail: pick(r, ['thumbnail', 'thumbnailUrl', 'thumb', 'image', 'imageUrl', 'preview']),
-    fileUrl,
-    fileType: String(pick(r, ['fileType', 'file_type', 'mimeType', 'format']) ?? '').toLowerCase(),
-    category,
-    keywords: toKeywords(r.keywords ?? r.tags, [category, r.title]),
-    createdAt: toIso(pick(r, ['createdAt', 'created_at', 'date'])),
-    isPublished: isPublished(r),
     isDownloadable: pick(r, ['isDownloadable', 'downloadable', 'allowDownload']) === true,
   };
 }

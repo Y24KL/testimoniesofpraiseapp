@@ -5,19 +5,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { repo } from '@/api';
 import { EmptyState } from '@/components/EmptyState';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { ResourceCard } from '@/components/ResourceCard';
 import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
 import { TestimonyCard } from '@/components/TestimonyCard';
 import { TopBar } from '@/components/TopBar';
 import { colors, radius, type as t } from '@/constants/theme';
 import { cacheGet, cacheSet } from '@/storage/cache';
-import type { Resource, Testimony } from '@/types';
+import type { Testimony } from '@/types';
 
 const LIMIT = 100;
 
 /**
- * Client-side search over the newest 100 testimonies and resources (title, name, category, keywords).
+ * Client-side search over the newest 100 testimonies (title, name, category, keywords).
  * For a large catalogue, move this to server-side search (Firestore prefix queries, Algolia, Typesense).
  */
 export function SearchScreen() {
@@ -25,19 +24,15 @@ export function SearchScreen() {
   const [q, setQ] = useState('');
   const [debounced, setDebounced] = useState('');
   const [testimonies, setT] = useState<Testimony[] | null>(null);
-  const [resources, setR] = useState<Resource[] | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [t, r] = await Promise.all([repo.getTestimonies({ limit: LIMIT }), repo.getResources({ limit: LIMIT })]);
+        const t = await repo.getTestimonies({ limit: LIMIT });
         setT(t.items);
-        setR(r.items);
         void cacheSet('search:t', t.items);
-        void cacheSet('search:r', r.items);
       } catch {
         setT((await cacheGet<Testimony[]>('search:t')) ?? (await cacheGet<Testimony[]>(`testimonies:all:12`)) ?? []);
-        setR((await cacheGet<Resource[]>('search:r')) ?? (await cacheGet<Resource[]>('resources:24')) ?? []);
       }
     })();
   }, []);
@@ -53,14 +48,8 @@ export function SearchScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [debounced, testimonies],
   );
-  const rRes = useMemo(
-    () => (debounced && resources ? resources.filter((x) => match([x.title, x.category ?? '', ...x.keywords])) : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [debounced, resources],
-  );
-
   const loading = testimonies === null;
-  const none = debounced && !loading && !tRes.length && !rRes.length;
+  const none = debounced && !loading && !tRes.length;
 
   return (
     <Screen>
@@ -70,7 +59,7 @@ export function SearchScreen() {
         <TextInput
           value={q}
           onChangeText={setQ}
-          placeholder="Search testimonies, videos, resources"
+          placeholder="Search testimonies"
           placeholderTextColor={colors.textMuted + '99'}
           style={styles.input}
           autoFocus
@@ -86,10 +75,8 @@ export function SearchScreen() {
           <EmptyState icon="search-outline" title="No results found." />
         ) : (
           <>
-            {tRes.length ? <SectionHeader title="TESTIMONIES & VIDEOS" /> : null}
+            {tRes.length ? <SectionHeader title="TESTIMONIES" /> : null}
             {tRes.map((i) => <TestimonyCard key={i.id} item={i} onPress={() => nav.navigate('TestimonyDetails', { id: i.id })} />)}
-            {rRes.length ? <SectionHeader title="RESOURCES" /> : null}
-            {rRes.map((i) => <ResourceCard key={i.id} item={i} onPress={() => nav.navigate('ResourceDetails', { id: i.id })} />)}
             {!debounced ? <Text style={styles.hint}>Search by title, name, category or keyword.</Text> : null}
           </>
         )}

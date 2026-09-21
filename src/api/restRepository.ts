@@ -3,7 +3,7 @@ import { CONFIG } from '@/constants/config';
 import type { LiveConfig, Page } from '@/types';
 import { AppError } from '@/utils/errors';
 import { auth } from './firebase';
-import { normalizeLive, normalizeNotification, normalizeResource, normalizeTestimony } from './normalize';
+import { normalizeLive, normalizeNotification, normalizeTestimony } from './normalize';
 import type { ContentRepository, PageOptions } from './repository';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -35,7 +35,7 @@ async function http<T = any>(path: string, init: RequestInit & { timeoutMs?: num
   }
 }
 
-const listOf = (j: any): any[] => (Array.isArray(j) ? j : j?.data ?? j?.items ?? j?.testimonies ?? j?.resources ?? j?.notifications ?? []);
+const listOf = (j: any): any[] => (Array.isArray(j) ? j : j?.data ?? j?.items ?? j?.testimonies ?? j?.notifications ?? []);
 const idOf = (r: any) => String(r.id ?? r._id ?? r.uid ?? '');
 
 async function getPage<T>(path: string, map: (id: string, r: any) => T, o: PageOptions): Promise<Page<T>> {
@@ -59,8 +59,6 @@ async function getOne<T>(path: string, id: string, map: (id: string, r: any) => 
 export const restRepository: ContentRepository = {
   getTestimonies: (o) => getPage(CONFIG.rest.testimonies, normalizeTestimony, o),
   getTestimony: (id) => getOne(CONFIG.rest.testimonies, id, normalizeTestimony),
-  getResources: (o) => getPage(CONFIG.rest.resources, normalizeResource, o),
-  getResource: (id) => getOne(CONFIG.rest.resources, id, normalizeResource),
 
   async getNotifications(max) {
     const list = listOf(await http(`${CONFIG.rest.notifications}?limit=${max}`));

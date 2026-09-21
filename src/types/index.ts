@@ -16,20 +16,6 @@ export interface Testimony {
   isDownloadable: boolean;
 }
 
-export interface Resource {
-  id: string;
-  title: string;
-  description: string;
-  thumbnail?: string;
-  fileUrl: string;
-  fileType: string;
-  category?: string;
-  keywords: string[];
-  createdAt: string | null;
-  isPublished: boolean;
-  isDownloadable: boolean;
-}
-
 export interface LiveConfig {
   isLive: boolean;
   streamUrl?: string;
@@ -52,7 +38,6 @@ export interface AppNotification {
 
 export interface NotificationPrefs {
   testimonies: boolean;
-  resources: boolean;
   live: boolean;
   announcements: boolean;
 }
@@ -63,7 +48,7 @@ export interface Page<T> {
   hasMore: boolean;
 }
 
-export type DownloadKind = 'testimony' | 'resource';
+export type DownloadKind = 'testimony';
 export type DownloadStatus = 'downloading' | 'done' | 'failed';
 export type DownloadFailure = 'network' | 'storage' | 'http' | 'unsupported' | 'unknown';
 
@@ -81,7 +66,5 @@ export interface DownloadItem {
   sizeBytes?: number;
   failure?: DownloadFailure;
   createdAt: number;
-  data: Testimony | Resource; // snapshot so details work offline
+  data: Testimony; // snapshot so details work offline
 }
-
-export type ResourceGroup = 'ALL' | 'VIDEOS' | 'GRAPHICS' | 'ECARDS' | 'PHOTOS' | 'DOCUMENTS' | 'ADOTOPOC';

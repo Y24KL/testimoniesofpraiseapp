@@ -2,7 +2,6 @@ import { CONFIG } from '@/constants/config';
 
 export const deepLink = {
   testimony: (id: string) => `testimoniesofpraise://testimony/${encodeURIComponent(id)}`,
-  resource: (id: string) => `testimoniesofpraise://resource/${encodeURIComponent(id)}`,
   live: () => 'testimoniesofpraise://live',
 };
 

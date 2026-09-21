@@ -9,7 +9,6 @@ const ICONS: Record<string, [React.ComponentProps<typeof Ionicons>['name'], Reac
   Home: ['home-outline', 'home'],
   Testimonies: ['play-circle-outline', 'play-circle'],
   Live: ['radio-outline', 'radio'],
-  Resources: ['albums-outline', 'albums'],
   Downloads: ['download-outline', 'download'],
 };
 

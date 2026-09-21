@@ -12,7 +12,6 @@ import type { NotificationPrefs } from '@/types';
 
 const ROWS: { key: keyof NotificationPrefs; label: string; hint: string }[] = [
   { key: 'testimonies', label: 'New Testimonies', hint: 'When a new testimony is published' },
-  { key: 'resources', label: 'New Resources', hint: 'When new downloads or graphics are added' },
   { key: 'live', label: 'Live Notifications', hint: 'When a live stream is starting' },
   { key: 'announcements', label: 'Important Announcements', hint: 'Featured content and church updates' },
 ];

@@ -4,7 +4,6 @@ export type TabParamList = {
   Home: undefined;
   Testimonies: undefined;
   Live: undefined;
-  Resources: undefined;
   Downloads: undefined;
 };
 
@@ -18,7 +17,6 @@ export type RootStackParamList = {
   // Main
   Tabs: NavigatorScreenParams<TabParamList> | undefined;
   TestimonyDetails: { id: string };
-  ResourceDetails: { id: string };
   ShareTestimony: undefined;
   Notifications: undefined;
   Profile: undefined;

@@ -4,7 +4,6 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import { DownloadsScreen } from '@/screens/DownloadsScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { LiveScreen } from '@/screens/LiveScreen';
-import { ResourcesScreen } from '@/screens/ResourcesScreen';
 import { TestimoniesScreen } from '@/screens/TestimoniesScreen';
 import { colors } from '@/constants/theme';
 import type { TabParamList } from './types';
@@ -25,7 +24,6 @@ export function TabNavigator() {
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
       <Tab.Screen name="Testimonies" component={TestimoniesScreen} options={{ title: 'Testimonies' }} />
       <Tab.Screen name="Live" component={LiveScreen} options={{ title: 'Live' }} />
-      <Tab.Screen name="Resources" component={ResourcesScreen} options={{ title: 'Resources' }} />
       <Tab.Screen name="Downloads" component={DownloadsScreen} options={{ title: 'Downloads' }} />
     </Tab.Navigator>
   );

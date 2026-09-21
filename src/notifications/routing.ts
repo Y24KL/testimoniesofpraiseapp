@@ -15,10 +15,6 @@ export function openTarget({ type, contentId }: NotificationTarget): void {
       if (contentId) navigationRef.navigate('TestimonyDetails', { id: contentId });
       else navigationRef.navigate('Tabs', { screen: 'Testimonies' });
       break;
-    case 'resource':
-      if (contentId) navigationRef.navigate('ResourceDetails', { id: contentId });
-      else navigationRef.navigate('Tabs', { screen: 'Resources' });
-      break;
     case 'live':
       navigationRef.navigate('Tabs', { screen: 'Live' });
       break;

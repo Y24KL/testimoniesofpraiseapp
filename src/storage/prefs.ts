@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '@/constants/config';
 import type { NotificationPrefs } from '@/types';
 
-export const DEFAULT_PREFS: NotificationPrefs = { testimonies: true, resources: true, live: true, announcements: true };
+export const DEFAULT_PREFS: NotificationPrefs = { testimonies: true, live: true, announcements: true };
 
 export async function loadPrefs(): Promise<NotificationPrefs> {
   try {

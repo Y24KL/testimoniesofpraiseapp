@@ -1,4 +1,6 @@
-import type { AppNotification, LiveConfig, NotificationType, Testimony } from '@/types';
+import type { AppNotification, LiveConfig, LiveSourceType, NotificationType, Testimony } from '@/types';
+import { isYouTubeUrl } from '@/utils/youtube';
+import { isHls } from '@/utils/format';
 
 /**
  * The website's exact schema could not be inspected while this project was generated, so these
@@ -83,9 +85,21 @@ export function normalizeNotification(id: string, r: Raw): AppNotification {
 export function normalizeLive(r: Raw | undefined | null): LiveConfig {
   if (!r) return { isLive: false };
   const streamUrl = pick(r, ['streamUrl', 'stream_url', 'hlsUrl', 'url', 'm3u8']);
+  const declared = pick(r, ['sourceType', 'source_type']) as LiveSourceType | undefined;
+  const sourceType: LiveSourceType =
+    declared === 'hls' || declared === 'youtube'
+      ? declared
+      : !streamUrl
+        ? 'unknown'
+        : isYouTubeUrl(streamUrl)
+          ? 'youtube'
+          : isHls(streamUrl)
+            ? 'hls'
+            : 'unknown';
   return {
     isLive: pick(r, ['isLive', 'live', 'is_live', 'active']) === true && !!streamUrl,
     streamUrl,
+    sourceType,
     title: pick(r, ['title']),
     thumbnail: pick(r, ['thumbnail', 'poster']),
     description: pick(r, ['description']),

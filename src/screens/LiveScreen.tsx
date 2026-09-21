@@ -8,6 +8,8 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Screen } from '@/components/Screen';
 import { TopBar } from '@/components/TopBar';
 import { VideoPlayer } from '@/components/VideoPlayer';
+import { YouTubePlayer } from '@/video/YouTubePlayer';
+import { parseYouTubeId } from '@/utils/youtube';
 import { colors, radius, type as t } from '@/constants/theme';
 import { useLive } from '@/hooks/useContent';
 import { MESSAGES } from '@/utils/errors';
@@ -24,7 +26,11 @@ export function LiveScreen() {
       ) : live.isLive && live.streamUrl ? (
         <ScrollView contentContainerStyle={styles.content}>
           {/* key forces a fresh player if the admin swaps the stream URL while we're watching */}
-          <VideoPlayer key={live.streamUrl} uri={live.streamUrl} live autoPlay label={live.title ?? 'Live stream'} />
+          {live.sourceType === 'youtube' && parseYouTubeId(live.streamUrl) ? (
+            <YouTubePlayer key={live.streamUrl} videoId={parseYouTubeId(live.streamUrl)!} label={live.title ?? 'Live stream'} />
+          ) : (
+            <VideoPlayer key={live.streamUrl} uri={live.streamUrl} live autoPlay label={live.title ?? 'Live stream'} />
+          )}
           <LiveBadge />
           <Text style={styles.title}>{live.title ?? 'Live now'}</Text>
           {live.description ? <Text style={styles.desc}>{live.description}</Text> : null}

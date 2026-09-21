@@ -16,9 +16,12 @@ export interface Testimony {
   isDownloadable: boolean;
 }
 
+export type LiveSourceType = 'hls' | 'youtube' | 'unknown';
+
 export interface LiveConfig {
   isLive: boolean;
   streamUrl?: string;
+  sourceType?: LiveSourceType;
   title?: string;
   thumbnail?: string;
   description?: string;

@@ -1,0 +1,9 @@
+name = "top-push-relay"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+# 1) Your Firebase project ID
+FIREBASE_PROJECT_ID = "YOUR-FIREBASE-PROJECT-ID"
+# 2) Where the admin portal runs (comma-separated, no trailing slash)
+ALLOWED_ORIGINS = "http://localhost:5173,https://YOUR-FIREBASE-PROJECT-ID.web.app"

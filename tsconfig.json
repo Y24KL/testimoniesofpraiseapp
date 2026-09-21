@@ -13,7 +13,5 @@
     "**/*.ts",
     "**/*.tsx"
   ],
-  "exclude": [
-    "backend-reference"
-  ]
+ "exclude": ["backend-reference", "top-admin"]
 }

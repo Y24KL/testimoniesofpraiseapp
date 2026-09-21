@@ -1,0 +1,62 @@
+rules_version = '2';
+
+// Data model shared by the mobile app and the admin portal.
+// Admins are users that have a document at admins/{their uid} (create it by hand in the Firebase console).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // A user may check whether THEY are an admin. Nobody can write here from a client.
+    match /admins/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+
+    // Testimonies: the app only sees published ones; admins see and manage everything.
+    match /testimonies/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
+      allow write: if isAdmin();
+    }
+
+    // Live stream settings (a single document).
+    match /settings/live {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // In-app notification feed + announcement triggers.
+    match /notifications/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.published == true);
+      allow write: if isAdmin();
+    }
+
+    // Testimonies shared from the app. Users can create their own; only admins can read/manage them.
+    match /testimonySubmissions/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['fullName','churchZone','testimony','userId','userEmail','source','status','createdAt'])
+        && request.resource.data.fullName is string && request.resource.data.fullName.size() > 0 && request.resource.data.fullName.size() < 200
+        && request.resource.data.churchZone is string && request.resource.data.churchZone.size() < 200
+        && request.resource.data.testimony is string && request.resource.data.testimony.size() > 0 && request.resource.data.testimony.size() < 5001
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Push tokens: a user manages only their own tokens.
+    match /pushTokens/{token} {
+      allow create, update: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow read: if isAdmin();
+    }
+
+    // Analytics: apps write, only admins read.
+    match /analyticsEvents/{id} {
+      allow create: if signedIn();
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+  }
+}

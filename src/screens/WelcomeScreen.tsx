@@ -19,7 +19,7 @@ export function WelcomeScreen() {
             <Logo size={110} />
             <Text style={styles.welcome}>WELCOME TO</Text>
             <Text style={styles.brand}>TESTIMONIES OF PRAISE</Text>
-            <Text style={styles.tag}>Every testimony has a story. Share yours.</Text>
+            <Text style={styles.tag}>No one ever praises God and goes away empty; he always blesses you for praising him</Text>
           </View>
           <View style={{ gap: 12 }}>
             <GoogleButton onError={setError} />

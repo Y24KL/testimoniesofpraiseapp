@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react';
 import { doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { describe, notifyLiveStarted } from '../notify';
-import { isHttpUrl } from '../lib';
+import { isHls, isHttpUrl, isYouTubeUrl, parseYouTubeId } from '../lib';
 import { Check, Field, Message } from '../components/Field';
 import { StreamPreview } from '../components/StreamPreview';
+
+type SourceType = 'hls' | 'youtube' | 'unknown';
+const sourceTypeOf = (url: string): SourceType => (isYouTubeUrl(url) ? 'youtube' : isHls(url) ? 'hls' : 'unknown');
 
 export function Live() {
   const liveRef = doc(db, 'settings', 'live');
@@ -37,13 +40,15 @@ export function Live() {
 
   const write = async (live: boolean, message: string) => {
     setErr(''); setOk('');
+    const type = sourceTypeOf(streamUrl);
     if (streamUrl && !isHttpUrl(streamUrl)) return setErr('The stream link must start with https://');
     if (thumbnail && !isHttpUrl(thumbnail)) return setErr('The thumbnail link must start with https://');
-    if (live && !streamUrl) return setErr('Add the stream link (HLS .m3u8) before going live.');
+    if (live && !streamUrl) return setErr('Add a stream link (YouTube, or an HLS .m3u8 link) before going live.');
+    if (live && type === 'unknown') return setErr('That link isn’t a YouTube link or an HLS (.m3u8) link.');
     if (live && !isLive && notifyOnStart && !confirm('Going live sends a push notification to app users. Continue?')) return;
     setBusy(true);
     try {
-      await setDoc(liveRef, { isLive: live, streamUrl: streamUrl.trim(), title: title.trim(), description: description.trim(), thumbnail: thumbnail.trim(), notifyOnStart, updatedAt: serverTimestamp() }, { merge: true });
+      await setDoc(liveRef, { isLive: live, streamUrl: streamUrl.trim(), sourceType: type, title: title.trim(), description: description.trim(), thumbnail: thumbnail.trim(), notifyOnStart, updatedAt: serverTimestamp() }, { merge: true });
       if (live && !isLive && notifyOnStart) {
         const r = await notifyLiveStarted(title.trim());
         setOk(`${message} ${describe(r)}`);
@@ -75,14 +80,32 @@ export function Live() {
 
       <div className="card">
         <h2>Stream details</h2>
-        <Field label="Stream link (HLS .m3u8) *" hint="The playback URL from your streaming provider or server, the one OBS publishes to.">
-          <input type="url" placeholder="https://…/stream.m3u8" value={streamUrl} onChange={(e) => setStreamUrl(e.target.value)} />
+        <Field label="Stream link *" hint="A YouTube video/live link, or an HLS (.m3u8) playback URL from your streaming provider or server (the one OBS publishes to).">
+          <input type="url" placeholder="https://youtube.com/watch?v=… or https://…/stream.m3u8" value={streamUrl} onChange={(e) => setStreamUrl(e.target.value)} />
         </Field>
+        {streamUrl && sourceTypeOf(streamUrl) === 'unknown' ? (
+          <Message kind="err">That doesn’t look like a YouTube link or an HLS (.m3u8) link.</Message>
+        ) : null}
         <div className="row" style={{ marginBottom: 14 }}>
-          <button className="btn ghost small" disabled={!streamUrl} onClick={() => setPreview(streamUrl)}>Test this stream</button>
+          <button className="btn ghost small" disabled={!streamUrl || sourceTypeOf(streamUrl) === 'unknown'} onClick={() => setPreview(streamUrl)}>Test this stream</button>
           {streamUrl ? <a className="small" href={streamUrl} target="_blank" rel="noreferrer">Open link</a> : null}
+          {streamUrl && sourceTypeOf(streamUrl) !== 'unknown' ? <span className="pill">{sourceTypeOf(streamUrl).toUpperCase()}</span> : null}
         </div>
-        {preview ? <StreamPreview url={preview} /> : null}
+        {preview ? (
+          parseYouTubeId(preview) ? (
+            <div className="preview" style={{ position: 'relative', paddingTop: '56.25%' }}>
+              <iframe
+                title="Stream preview"
+                src={`https://www.youtube.com/embed/${parseYouTubeId(preview)}`}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0, borderRadius: 12 }}
+                allow="autoplay; encrypted-media"
+                allowFullScreen
+              />
+            </div>
+          ) : (
+            <StreamPreview url={preview} />
+          )
+        ) : null}
         <div className="two" style={{ marginTop: 14 }}>
           <Field label="Title"><input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Sunday Testimony Service" /></Field>
           <Field label="Thumbnail link (optional)"><input type="url" value={thumbnail} onChange={(e) => setThumbnail(e.target.value)} placeholder="https://" /></Field>

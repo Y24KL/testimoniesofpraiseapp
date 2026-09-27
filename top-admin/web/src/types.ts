@@ -30,6 +30,19 @@ export interface Submission {
   createdAt?: Timestamp;
 }
 
+export type SponsorshipStatus = 'pending' | 'approved' | 'rejected';
+
+export interface Sponsorship {
+  id: string;
+  uid: string;
+  userEmail: string | null;
+  amount?: string;
+  note?: string;
+  receiptUrl: string;
+  status: SponsorshipStatus;
+  createdAt?: Timestamp;
+}
+
 export interface Announcement {
   id: string;
   title: string;
@@ -47,4 +60,5 @@ export type Route =
   | { name: 'editor'; id?: string; prefill?: Partial<Testimony> }
   | { name: 'live' }
   | { name: 'submissions' }
-  | { name: 'announcements' };
+  | { name: 'announcements' }
+  | { name: 'sponsorships' };

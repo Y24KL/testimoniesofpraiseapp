@@ -10,6 +10,15 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // If the app fails to start, show the reason instead of a blank page.
+      window.addEventListener('error', function (e) {
+        var r = document.getElementById('root');
+        if (r && !r.hasChildNodes()) {
+          r.innerHTML = '<pre style="margin:0;padding:24px;min-height:100vh;background:#12001c;color:#ff6b7f;white-space:pre-wrap;font:14px monospace">The admin portal could not start:\n\n' + (e.message || 'Unknown error') + '</pre>';
+        }
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

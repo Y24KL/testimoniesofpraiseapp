@@ -58,5 +58,35 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow update, delete: if false;
     }
+
+    // Live chat: scoped per stream session. Anyone signed in can read/post as themselves;
+    // messages can't be edited once sent; only admins can delete (moderation).
+    match /liveChat/{sessionId}/messages/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.name is string && request.resource.data.name.size() < 60
+        && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 300;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // Reports on chat messages: anyone can file one, only admins can read/manage them.
+    match /liveChatReports/{id} {
+      allow create: if signedIn() && request.resource.data.reporterUid == request.auth.uid;
+      allow read, delete: if isAdmin();
+      allow update: if false;
+    }
+
+    // Bank-transfer sponsorships: a user can create and read their own; only admins can change status.
+    match /sponsorships/{id} {
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.receiptUrl is string && request.resource.data.receiptUrl.size() > 0;
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
   }
 }

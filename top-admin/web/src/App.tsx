@@ -11,6 +11,7 @@ import { TestimonyEditor } from './pages/TestimonyEditor';
 import { Live } from './pages/Live';
 import { Submissions } from './pages/Submissions';
 import { Announcements } from './pages/Announcements';
+import { Sponsorships } from './pages/Sponsorships';
 
 type Gate = { state: 'loading' } | { state: 'out' } | { state: 'denied'; user: User } | { state: 'admin'; user: User };
 
@@ -62,6 +63,7 @@ export default function App() {
       {route.name === 'live' && <Live />}
       {route.name === 'submissions' && <Submissions go={setRoute} />}
       {route.name === 'announcements' && <Announcements />}
+      {route.name === 'sponsorships' && <Sponsorships />}
     </Layout>
   );
 }

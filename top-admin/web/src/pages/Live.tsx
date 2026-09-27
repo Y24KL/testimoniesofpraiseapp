@@ -5,6 +5,7 @@ import { describe, notifyLiveStarted } from '../notify';
 import { isHls, isHttpUrl, isYouTubeUrl, parseYouTubeId } from '../lib';
 import { Check, Field, Message } from '../components/Field';
 import { StreamPreview } from '../components/StreamPreview';
+import { ChatModeration } from '../components/ChatModeration';
 
 type SourceType = 'hls' | 'youtube' | 'unknown';
 const sourceTypeOf = (url: string): SourceType => (isYouTubeUrl(url) ? 'youtube' : isHls(url) ? 'hls' : 'unknown');
@@ -22,6 +23,7 @@ export function Live() {
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
   const [preview, setPreview] = useState('');
+  const [sessionId, setSessionId] = useState('');
 
   // Load once; the form is then edited locally so live typing isn't overwritten.
   useEffect(
@@ -29,6 +31,7 @@ export function Live() {
       onSnapshot(liveRef, (s) => {
         const x = s.data() ?? {};
         setIsLive(x.isLive === true);
+        setSessionId(x.sessionId ?? '');
         if (!loaded) {
           setStreamUrl(x.streamUrl ?? ''); setTitle(x.title ?? ''); setDescription(x.description ?? ''); setThumbnail(x.thumbnail ?? '');
           setLoaded(true);
@@ -48,7 +51,25 @@ export function Live() {
     if (live && !isLive && notifyOnStart && !confirm('Going live sends a push notification to app users. Continue?')) return;
     setBusy(true);
     try {
-      await setDoc(liveRef, { isLive: live, streamUrl: streamUrl.trim(), sourceType: type, title: title.trim(), description: description.trim(), thumbnail: thumbnail.trim(), notifyOnStart, updatedAt: serverTimestamp() }, { merge: true });
+      // A fresh session id each time we go live (offline -> live) resets the chat for the new stream.
+      const goingLive = live && !isLive;
+      const newSessionId = goingLive ? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}` : sessionId;
+      await setDoc(
+        liveRef,
+        {
+          isLive: live,
+          streamUrl: streamUrl.trim(),
+          sourceType: type,
+          sessionId: newSessionId,
+          title: title.trim(),
+          description: description.trim(),
+          thumbnail: thumbnail.trim(),
+          notifyOnStart,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+      if (goingLive) setSessionId(newSessionId);
       if (live && !isLive && notifyOnStart) {
         const r = await notifyLiveStarted(title.trim());
         setOk(`${message} ${describe(r)}`);
@@ -77,6 +98,14 @@ export function Live() {
             : <button className="btn live" disabled={busy} onClick={() => void write(true, 'You’re live. The app is showing the stream.')}>GO LIVE</button>}
         </div>
       </div>
+
+      {isLive && sessionId ? (
+        <div className="card">
+          <h2>Live chat</h2>
+          <p className="muted small">Long-press (or right-click) isn't needed here — every message has its own delete button. Reported messages are flagged below.</p>
+          <ChatModeration sessionId={sessionId} />
+        </div>
+      ) : null}
 
       <div className="card">
         <h2>Stream details</h2>

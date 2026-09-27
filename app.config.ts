@@ -17,8 +17,9 @@ const schemes = ['testimoniesofpraise', ANDROID_PACKAGE, reversedIosClientId].fi
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'Testimonies of Praise',
-  slug: 'testimonies-of-praise',
+    name: 'Testimonies of Praise',
+  slug: 'top10',
+  owner: 'y24kl',
   version: '1.0.0',
   orientation: 'portrait',
   platforms: ['ios', 'android'],
@@ -66,7 +67,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       { icon: './assets/notification-icon.png', color: '#4B006E' },
     ],
   ],
-  extra: {
-    eas: { projectId: process.env.EAS_PROJECT_ID },
+    extra: {
+    eas: { projectId: 'b28597d8-9088-4a06-999e-c5db935d8f13' },
   },
 });

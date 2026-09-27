@@ -3,7 +3,7 @@
  *
  * Sends through Expo's push service, which delivers to FCM (Android) and APNs (iOS) using the
  * credentials you upload to EAS. Tokens are stored by the app in `pushTokens/{token}`:
- *   { token, uid, platform, prefs: { testimonies, resources, live, announcements } }
+ *   { token, uid, platform, prefs: { testimonies, live, announcements } }
  *
  * Duplicate protection: each source document gets a `pushSentAt` timestamp inside a transaction, so a
  * re-save, retry, or double trigger never sends twice.
@@ -16,7 +16,7 @@ admin.initializeApp();
 const db = admin.firestore();
 const expo = new Expo();
 
-type PrefKey = 'testimonies' | 'resources' | 'live' | 'announcements';
+type PrefKey = 'testimonies' | 'live' | 'announcements';
 
 async function claim(ref: FirebaseFirestore.DocumentReference): Promise<boolean> {
   return db.runTransaction(async (tx) => {
@@ -66,17 +66,6 @@ export const onTestimonyPublished = onDocumentWritten('testimonies/{id}', async 
   });
 });
 
-export const onResourcePublished = onDocumentWritten('resources/{id}', async (event) => {
-  const after = event.data?.after;
-  if (!after?.exists || after.get('isPublished') !== true) return;
-  if (!(await claim(after.ref))) return;
-  await broadcast('resources', {
-    title: 'NEW RESOURCE AVAILABLE',
-    body: `${after.get('title') ?? 'A new resource'} is now in the Resource Center.`,
-    data: { type: 'resource', contentId: event.params.id },
-  });
-});
-
 /** Fires when the Admin Portal flips settings/live from offline to live. */
 export const onLiveStarted = onDocumentWritten('settings/live', async (event) => {
   const before = event.data?.before?.get('isLive') === true;
@@ -94,7 +83,7 @@ export const onAnnouncement = onDocumentWritten('notifications/{id}', async (eve
   const after = event.data?.after;
   if (!after?.exists || after.get('published') !== true) return;
   const type = after.get('type');
-  if (type !== 'announcement' && type !== 'featured') return; // testimony/resource are sent above
+  if (type !== 'announcement' && type !== 'featured') return; // testimony notifications are sent above
   if (!(await claim(after.ref))) return;
   await broadcast('announcements', {
     title: after.get('title'),

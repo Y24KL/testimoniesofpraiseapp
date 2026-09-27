@@ -28,23 +28,20 @@ export function GoogleButton({ onError }: { onError: (message: string) => void }
 
   useEffect(() => {
     if (!response) return;
-
     if (response.type === 'success') {
       const idToken = response.params?.id_token ?? response.authentication?.idToken;
-
       if (!idToken) {
         setBusy(false);
         return onError('Unable to sign you in.\nPlease check your details.');
       }
-
       signInWithGoogleIdToken(idToken, response.authentication?.accessToken)
-        .catch((e) => {
-          console.log('GOOGLE SIGNIN ERROR', e?.code, e?.message);
-          onError(authMessage(e));
-        })
+        .catch((e) => onError(authMessage(e)))
         .finally(() => setBusy(false));
+    } else {
+      setBusy(false);
+      if (response.type === 'error') onError('Unable to sign you in.\nPlease check your details.');
     }
-  }, [onError, response, signInWithGoogleIdToken]);
+  }, [response, signInWithGoogleIdToken, onError]);
 
   const press = async () => {
     if (!isGoogleConfigured) return onError('Google sign-in is not available right now.');

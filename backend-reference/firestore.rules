@@ -11,10 +11,6 @@ service cloud.firestore {
       allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
       allow write: if isAdmin();
     }
-    match /resources/{id} {
-      allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
-      allow write: if isAdmin();
-    }
     match /notifications/{id} {
       allow read: if isAdmin() || (signedIn() && resource.data.published == true);
       allow write: if isAdmin();

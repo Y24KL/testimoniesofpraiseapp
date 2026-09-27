@@ -8,6 +8,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Screen } from '@/components/Screen';
 import { TopBar } from '@/components/TopBar';
 import { VideoPlayer } from '@/components/VideoPlayer';
+import { LiveChat } from '@/components/LiveChat';
 import { YouTubePlayer } from '@/video/YouTubePlayer';
 import { parseYouTubeId } from '@/utils/youtube';
 import { colors, radius, type as t } from '@/constants/theme';
@@ -34,6 +35,7 @@ export function LiveScreen() {
           <LiveBadge />
           <Text style={styles.title}>{live.title ?? 'Live now'}</Text>
           {live.description ? <Text style={styles.desc}>{live.description}</Text> : null}
+          {live.sessionId ? <LiveChat sessionId={live.sessionId} /> : null}
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>

@@ -3,7 +3,6 @@
   "compilerOptions": {
     "strict": true,
     "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
     "paths": {
       "@/*": [
         "src/*"
@@ -12,7 +11,12 @@
   },
   "include": [
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
   ],
- "exclude": ["backend-reference", "top-admin"]
+  "exclude": [
+    "backend-reference",
+    "top-admin"
+  ]
 }

@@ -45,7 +45,7 @@ Uses `expo-auth-session` (real Google OAuth, id token -> Firebase credential). I
 ## 3. Push notifications
 - App side: Expo push tokens are saved to `pushTokens/{token}` with the user's notification preferences.
 - Android: upload your FCM V1 service-account key to EAS (`eas credentials`). iOS: EAS can create the APNs key for you.
-- Server: deploy `backend-reference/functions` (merge with your existing functions). It sends on testimony/resource
+- Server: deploy `backend-reference/functions` (merge with your existing functions). It sends on testimony
   publish, live start, and announcements, with duplicate protection (`pushSentAt`).
 - Every push must carry `data: { type, contentId }`; tapping opens the exact screen.
 - Simulators can't receive push; test on real devices.
@@ -71,7 +71,7 @@ Update `eas.json > submit` with your App Store Connect app id. Bump `version` in
 - Replace the Google "G" icon with Google's official asset; replace placeholder logo/icons.
 
 ## 6. Known limits / decisions
-- **HLS videos can't be downloaded** for offline use (they're many segments). MP4/file resources can.
+- **HLS videos can't be downloaded** for offline use (they're many segments). MP4 videos can.
 - Downloads are stored in the app's private storage (no storage permissions needed) and are deleted if the app is uninstalled.
 - Firebase Auth's session is persisted with AsyncStorage (Firebase's supported RN approach).
 - Deep links arriving while signed out are dropped (user lands on Welcome).

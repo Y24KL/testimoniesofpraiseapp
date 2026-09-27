@@ -14,10 +14,12 @@ export type RootStackParamList = {
   ForgotPassword: undefined;
   // Onboarding
   NotificationPrimer: undefined;
+  FirstTimeWelcome: undefined;
   // Main
   Tabs: NavigatorScreenParams<TabParamList> | undefined;
   TestimonyDetails: { id: string };
   ShareTestimony: undefined;
+  Sponsor: undefined;
   Notifications: undefined;
   Profile: undefined;
   NotificationSettings: undefined;

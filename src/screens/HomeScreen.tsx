@@ -1,6 +1,7 @@
 import React from 'react';
 import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { EmailVerifyBanner } from '@/components/EmailVerifyBanner';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { LiveCard } from '@/components/LiveCard';
@@ -11,6 +12,7 @@ import { SkeletonCard } from '@/components/SkeletonCard';
 import { TestimonyCard } from '@/components/TestimonyCard';
 import { TopBar } from '@/components/TopBar';
 import { VideoCard } from '@/components/VideoCard';
+import { useVerificationOnForeground } from '@/hooks/useVerificationOnForeground';
 import { colors, radius, type as t } from '@/constants/theme';
 import { useLive, useTestimonies } from '@/hooks/useContent';
 import { messageFor } from '@/utils/errors';
@@ -20,6 +22,7 @@ export function HomeScreen() {
   const feat = useTestimonies({ featuredOnly: true, limit: 1 });
   const latest = useTestimonies({ limit: 10 });
   const { live } = useLive();
+  useVerificationOnForeground();
 
   const hero = feat.items[0] ?? latest.items[0];
   const rest = latest.items.filter((i) => i.id !== hero?.id);
@@ -33,6 +36,7 @@ export function HomeScreen() {
     <Screen>
       <TopBar brand onSearch={() => nav.navigate('Search')} onNotifications={() => nav.navigate('Notifications')} onProfile={() => nav.navigate('Profile')} />
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />} contentContainerStyle={{ paddingBottom: 32 }}>
+        <EmailVerifyBanner />
         {latest.loading && !hero ? (
           <View style={{ paddingHorizontal: 16, gap: 16 }}><SkeletonCard /><SkeletonCard horizontal /><SkeletonCard horizontal /></View>
         ) : latest.error && !hero ? (

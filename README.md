@@ -21,11 +21,11 @@ npm run start               # then open the dev build on your phone
 src/
   api/            repository interface + Firestore & REST implementations + field normalisers
   auth/           AuthContext (Firebase Auth: email/password, Google credential, reset, delete)
-  components/     TopBar, BottomNavigation, TestimonyCard, ResourceCard, VideoCard, DownloadButton,
+  components/     TopBar, BottomNavigation, TestimonyCard, VideoCard, DownloadButton,
                   LoadingSpinner, LoadingPraise, SkeletonCard, EmptyState, ErrorState, PrimaryButton,
                   GoogleButton, NotificationCard, LiveCard, TestimonySubmissionForm, ...
   screens/        Welcome, EmailAuth, ForgotPassword, NotificationPrimer, Home, Testimonies,
-                  TestimonyDetails, Live, Resources, ResourceDetails, Downloads, ShareTestimony,
+                  TestimonyDetails, Live, Downloads, ShareTestimony,
                   Notifications, NotificationSettings, Profile, Search
   navigation/     root stack (auth / onboarding / main), tabs, deep-link config
   downloads/      offline downloads (progress, cancel, retry, duplicates, storage checks, persistence)
@@ -40,12 +40,12 @@ docs/SETUP.md       configuration + release checklist
 | Area | Status |
 |---|---|
 | Google + Email/Password auth, forgot password, session persistence, logout | Implemented (needs your Firebase + OAuth config) |
-| Home, Testimonies, Details, Live, Resource Center (+ADOTOPOC filter), Downloads, Profile, Search | Implemented |
+| Home, Testimonies, Details, Live, Downloads, Profile, Search | Implemented (Resources live on the website only) |
 | Share Your Testimony | Implemented, **confirm the submission collection/fields match the website** |
 | Live stream from Admin-controlled config (real-time), LIVE NOW / offline states | Implemented, **confirm the live doc path/fields** |
 | Downloads gated by `isDownloadable`, progress/cancel/retry, offline playback | Implemented. HLS (.m3u8) videos can't be saved offline (many segments) |
 | Offline banner, cached metadata, downloads open offline | Implemented |
 | Push notifications (Expo Push -> FCM/APNs), preferences, tap -> exact screen | App side implemented; **server side is in `backend-reference/` and must be deployed** |
-| Deep links `testimoniesofpraise://testimony/{id}`, `resource/{id}`, `live` | Implemented |
-| Analytics (app open, video play/complete, downloads, resource views, notification opens) | Implemented; Admin Portal must read `analyticsEvents` to display it |
+| Deep links `testimoniesofpraise://testimony/{id}`, `live` | Implemented |
+| Analytics (app open, video play/complete, downloads, notification opens) | Implemented; Admin Portal must read `analyticsEvents` to display it |
 | APK / AAB / TestFlight config | `app.config.ts` + `eas.json` ready; **builds must be run by you** (needs your Expo/Apple/Google accounts) |

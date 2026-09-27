@@ -100,6 +100,7 @@ export function normalizeLive(r: Raw | undefined | null): LiveConfig {
     isLive: pick(r, ['isLive', 'live', 'is_live', 'active']) === true && !!streamUrl,
     streamUrl,
     sourceType,
+    sessionId: pick(r, ['sessionId', 'session_id']),
     title: pick(r, ['title']),
     thumbnail: pick(r, ['thumbnail', 'poster']),
     description: pick(r, ['description']),

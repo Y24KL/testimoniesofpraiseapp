@@ -67,6 +67,7 @@ export function ProfileScreen() {
           <Row icon="notifications-outline" label="Notification preferences" onPress={() => nav.navigate('NotificationSettings')} />
           <Row icon="download-outline" label="Downloads" onPress={() => nav.navigate('Tabs', { screen: 'Downloads' })} />
           <Row icon="heart-outline" label="Share your testimony" onPress={() => nav.navigate('ShareTestimony')} />
+          <Row icon="gift-outline" label="Sponsor Testimonies of Praise" onPress={() => nav.navigate('Sponsor')} />
         </View>
         <PrimaryButton title="LOG OUT" icon="log-out-outline" variant="outline" onPress={logout} loading={busy} />
         <PrimaryButton title="DELETE ACCOUNT" variant="danger" onPress={confirmDelete} />

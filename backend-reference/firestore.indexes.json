@@ -4,8 +4,6 @@
       { "fieldPath": "isPublished", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" } ] },
     { "collectionGroup": "testimonies", "queryScope": "COLLECTION", "fields": [
       { "fieldPath": "isPublished", "order": "ASCENDING" }, { "fieldPath": "isFeatured", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" } ] },
-    { "collectionGroup": "resources", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "isPublished", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" } ] },
     { "collectionGroup": "notifications", "queryScope": "COLLECTION", "fields": [
       { "fieldPath": "published", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" } ] }
   ],

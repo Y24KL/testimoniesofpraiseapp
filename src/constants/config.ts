@@ -35,7 +35,19 @@ export const CONFIG = {
   },
   pageSize: 12,
   livePollMs: 15000,
+  cloudinary: {
+    cloudName: process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME ?? '',
+    uploadPreset: process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? '',
+  },
+  // TODO: replace with the real Parallex account details before launch.
+  bank: {
+    bankName: process.env.EXPO_PUBLIC_BANK_NAME ?? 'Parallex Bank',
+    accountName: process.env.EXPO_PUBLIC_BANK_ACCOUNT_NAME ?? 'Testimonies of Praise',
+    accountNumber: process.env.EXPO_PUBLIC_BANK_ACCOUNT_NUMBER ?? '0000000000',
+  },
 };
+
+export const isCloudinaryConfigured = Boolean(CONFIG.cloudinary.cloudName && CONFIG.cloudinary.uploadPreset);
 
 export const isFirebaseConfigured = Boolean(CONFIG.firebase.apiKey && CONFIG.firebase.projectId);
 export const isGoogleConfigured = Boolean(

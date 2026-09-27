@@ -45,10 +45,16 @@ async function getPage<T>(
 }
 
 async function getOne<T>(col: string, id: string, map: (id: string, d: DocumentData) => T & { isPublished: boolean }) {
-  const s = await getDoc(doc(db, col, id));
-  if (!s.exists()) return null;
-  const item = map(s.id, s.data());
-  return item.isPublished ? item : null;
+  try {
+    const s = await getDoc(doc(db, col, id));
+    if (!s.exists()) return null;
+    const item = map(s.id, s.data());
+    return item.isPublished ? item : null;
+  } catch (e) {
+    // Unpublished documents are unreadable for app users (security rules): treat as "not available".
+    if ((e as { code?: string })?.code === 'permission-denied') return null;
+    throw e;
+  }
 }
 
 const tokenDocId = (t: string) => t.replace(/\//g, '_');
@@ -105,7 +111,7 @@ export const firestoreRepository: ContentRepository = {
   async recordEvent(event, params, uid) {
     await addDoc(collection(db, CONFIG.collections.analytics), {
       event,
-      params,
+      params: JSON.parse(JSON.stringify(params)), // Firestore rejects `undefined` values
       uid: uid ?? null,
       platform: Platform.OS,
       ts: serverTimestamp(),

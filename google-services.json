@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "754997860722",
+    "project_id": "testimoniesofpraiseapp",
+    "storage_bucket": "testimoniesofpraiseapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:754997860722:android:8d5d34004a38bd5c7265eb",
+        "android_client_info": {
+          "package_name": "com.testimoniesofpraise.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "754997860722-9r59ln2nl6gp62btdmh0gmib46rb27tj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.testimoniesofpraise.app",
+            "certificate_hash": "016358a655be5b15ea92a4d25738146123136a1a"
+          }
+        },
+        {
+          "client_id": "754997860722-9m136c2lt98vej9d0roi6jel53i3887l.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCVbB8TqE-WbyiVR9bz6J89Wu02jFXJjp4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "754997860722-9m136c2lt98vej9d0roi6jel53i3887l.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

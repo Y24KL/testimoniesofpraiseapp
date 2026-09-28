@@ -88,12 +88,12 @@ export function SponsorScreen() {
         {done ? (
           <View style={styles.success}>
             <Ionicons name="checkmark-circle" size={64} color={colors.success} />
-            <Text style={styles.successText}>Thank you for your seed! We’ve received your receipt and will confirm it shortly.</Text>
+            <Text style={styles.successText}>Thank you for your sponsorship! Kindly reachout to us on Kingschat @testimonies.lmm for confirmation.</Text>
             <PrimaryButton title="DONE" onPress={() => nav.goBack()} />
           </View>
         ) : (
           <>
-            <Text style={styles.intro}>Every seed helps testimonies reach someone who needs to hear them. Thank you for sowing.</Text>
+            <Text style={styles.intro}>Every seed helps testimonies reach someone who needs to hear them. Thank you for your sponsorship.</Text>
 
             <View style={styles.card}>
               <Text style={styles.cardTitle}>BANK TRANSFER</Text>

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '@/auth/AuthContext';
 import { colors, type as t } from '@/constants/theme';
 import { Logo } from './Logo';
 
@@ -22,6 +24,7 @@ function IconBtn({ name, label, onPress }: { name: React.ComponentProps<typeof I
 }
 
 export function TopBar({ title, brand, onBack, onSearch, onNotifications, onProfile }: Props) {
+  const { user } = useAuth();
   return (
     <View style={styles.bar}>
       <View style={styles.left}>
@@ -34,7 +37,15 @@ export function TopBar({ title, brand, onBack, onSearch, onNotifications, onProf
       <View style={styles.right}>
         {onSearch ? <IconBtn name="search-outline" label="Search" onPress={onSearch} /> : null}
         {onNotifications ? <IconBtn name="notifications-outline" label="Notifications" onPress={onNotifications} /> : null}
-        {onProfile ? <IconBtn name="person-circle-outline" label="Profile" onPress={onProfile} /> : null}
+        {onProfile ? (
+          <Pressable onPress={onProfile} style={styles.icon} hitSlop={8} accessibilityRole="button" accessibilityLabel="Profile">
+            {user?.photoURL ? (
+              <Image source={user.photoURL} style={styles.avatar} contentFit="cover" accessibilityLabel="Your profile photo" />
+            ) : (
+              <Ionicons name="person-circle-outline" size={24} color={colors.text} />
+            )}
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );
@@ -46,4 +57,5 @@ const styles = StyleSheet.create({
   right: { flexDirection: 'row', alignItems: 'center' },
   title: { ...t.h3, color: colors.text, flexShrink: 1 },
   icon: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, borderColor: colors.accent, backgroundColor: colors.card },
 });

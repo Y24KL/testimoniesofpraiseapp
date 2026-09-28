@@ -31,7 +31,7 @@ export function FirstTimeWelcomeScreen() {
           </View>
           <View style={styles.row}>
             <Ionicons name="radio-outline" size={20} color={colors.accent} />
-            <Text style={styles.rowText}>Join live services as they happen</Text>
+            <Text style={styles.rowText}>Join us Live to hear amazing testimoniesas they happen</Text>
           </View>
           <View style={styles.row}>
             <Ionicons name="heart-outline" size={20} color={colors.accent} />

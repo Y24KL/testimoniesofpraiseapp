@@ -73,8 +73,10 @@ export function SponsorScreen() {
         createdAt: serverTimestamp(),
       });
       setDone(true);
-    } catch {
-      setError('Something went wrong sending your receipt. Please try again.');
+    } catch (e) {
+      console.log('RECEIPT UPLOAD ERROR', e);
+      const reason = (e as Error)?.message;
+      setError(__DEV__ && reason ? `Couldn’t send your receipt: ${reason}` : 'Something went wrong sending your receipt. Please try again.');
     }
     setSubmitting(false);
   };

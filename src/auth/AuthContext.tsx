@@ -34,6 +34,8 @@ interface AuthValue {
   refreshEmailVerified(): Promise<void>;
   resendVerificationEmail(): Promise<void>;
   needsEmailVerification: boolean;
+  /** Sets (or, with null, removes) the signed-in user's profile picture. */
+  updatePhoto(photoURL: string | null): Promise<void>;
 }
 
 const Ctx = createContext<AuthValue | null>(null);
@@ -83,6 +85,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser({ ...auth.currentUser } as User);
   }, []);
 
+  const updatePhoto = useCallback(async (photoURL: string | null) => {
+    if (!auth.currentUser) return;
+    await updateProfile(auth.currentUser, { photoURL });
+    setUser({ ...auth.currentUser } as User);
+  }, []);
+
   const resendVerificationEmail = useCallback(async () => {
     if (auth.currentUser) await sendEmailVerification(auth.currentUser);
   }, []);
@@ -117,8 +125,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       refreshEmailVerified,
       resendVerificationEmail,
       needsEmailVerification,
+      updatePhoto,
     }),
-    [user, initializing, signInWithEmail, register, signInWithGoogleIdToken, resetPassword, signOut, deleteAccount, isNewAccount, clearNewAccount, refreshEmailVerified, resendVerificationEmail, needsEmailVerification],
+    [user, initializing, signInWithEmail, register, signInWithGoogleIdToken, resetPassword, signOut, deleteAccount, isNewAccount, clearNewAccount, refreshEmailVerified, resendVerificationEmail, needsEmailVerification, updatePhoto],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

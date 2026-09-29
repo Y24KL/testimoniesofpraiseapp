@@ -53,10 +53,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#4B006E',
     },
     // Only what's needed. POST_NOTIFICATIONS is required on Android 13+.
-    permissions: ['POST_NOTIFICATIONS'],
-    blockedPermissions: [
-      'android.permission.READ_EXTERNAL_STORAGE',
-      'android.permission.WRITE_EXTERNAL_STORAGE',
+   permissions: [
+      'POST_NOTIFICATIONS',
+      'READ_EXTERNAL_STORAGE',
+      'WRITE_EXTERNAL_STORAGE',
+      'READ_MEDIA_IMAGES'
     ],
   },
   plugins: [
@@ -67,7 +68,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       { icon: './assets/notification-icon.png', color: '#4B006E' },
     ],
   ],
-    extra: {
+  extra: {
     eas: { projectId: 'b28597d8-9088-4a06-999e-c5db935d8f13' },
   },
 });

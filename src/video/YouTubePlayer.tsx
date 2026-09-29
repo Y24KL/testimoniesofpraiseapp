@@ -12,9 +12,13 @@ interface Props {
   label: string;
 }
 
+// YouTube's player rejects requests with no (or an untrustworthy) Referer/origin — "Error 153".
+// Giving the WebView a real https baseUrl, matched by the iframe's referrerpolicy, fixes it.
+const ORIGIN = 'https://testimoniesofpraise.app';
+
 const html = (id: string) => `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <style>html,body{margin:0;background:#000;height:100%}iframe{position:absolute;inset:0;width:100%;height:100%;border:0}</style></head>
-<body><iframe src="https://www.youtube.com/embed/${id}?autoplay=1&playsinline=1&rel=0&modestbranding=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></body></html>`;
+<body><iframe src="https://www.youtube.com/embed/${id}?autoplay=1&playsinline=1&rel=0&modestbranding=1&origin=${encodeURIComponent(ORIGIN)}" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></body></html>`;
 
 /** Plays a YouTube video or live stream via an embedded player (YouTube's own web player, not native controls). */
 export function YouTubePlayer({ videoId, label }: Props) {
@@ -38,7 +42,8 @@ export function YouTubePlayer({ videoId, label }: Props) {
         <>
           <WebView
             key={key}
-            source={{ html: html(videoId) }}
+            source={{ html: html(videoId), baseUrl: ORIGIN }}
+            originWhitelist={['*']}
             style={StyleSheet.absoluteFill}
             allowsInlineMediaPlayback
             mediaPlaybackRequiresUserAction={false}

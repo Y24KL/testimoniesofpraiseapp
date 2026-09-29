@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { isNewAccountPending } from '@/onboarding/welcome';
+import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '@/auth/AuthContext';
 import { colors } from '@/constants/theme';
@@ -24,29 +23,10 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export function RootNavigator() {
   const { user, isNewAccount } = useAuth();
   const { primerSeen } = useAppFlags();
-  const [checkingWelcome, setCheckingWelcome] = useState(true);
-  const [pendingWelcome, setPendingWelcome] = useState(false);
-
-  useEffect(() => {
-    if (!user) {
-      setCheckingWelcome(false);
-      setPendingWelcome(false);
-      return;
-    }
-    setCheckingWelcome(true);
-    // isNewAccount (set the instant an account is created) short-circuits the AsyncStorage check.
-    if (isNewAccount) {
-      setPendingWelcome(true);
-      setCheckingWelcome(false);
-      return;
-    }
-    isNewAccountPending(user.uid).then((pending) => {
-      setPendingWelcome(pending);
-      setCheckingWelcome(false);
-    });
-  }, [user, isNewAccount]);
-
-  if (user && checkingWelcome) return null; // brief check against AsyncStorage; avoids a Home flash before the welcome screen
+  // isNewAccount is resolved inside AuthContext as part of auth restore, so by the time this
+  // component mounts it's already correct — reading it directly here avoids the double-check
+  // (context flag vs. a separate AsyncStorage read) that used to race on "GET STARTED".
+  const pendingWelcome = !!user && isNewAccount;
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right', contentStyle: { backgroundColor: colors.bg } }}>

@@ -15,7 +15,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { auth } from '@/api/firebase';
-import { markNewAccount } from '@/onboarding/welcome';
+import { isNewAccountPending, markNewAccount } from '@/onboarding/welcome';
 
 interface AuthValue {
   user: User | null;
@@ -47,8 +47,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(
     () =>
-      onAuthStateChanged(auth, (u) => {
+      onAuthStateChanged(auth, async (u) => {
         setUser(u);
+        // Resolved here, as part of the same restore, so by the time `initializing` clears
+        // (and RootNavigator mounts) this is already correct — no separate check, no race.
+        setIsNewAccount(u ? await isNewAccountPending(u.uid) : false);
         setInitializing(false);
       }),
     [],

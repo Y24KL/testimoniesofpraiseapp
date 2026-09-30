@@ -55,7 +55,10 @@ export function LiveChat({ sessionId }: { sessionId: string }) {
         setMessages(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ChatMessage, 'id'>) })));
         requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
       },
-      () => setError('Chat couldn’t load.'),
+      (e) => {
+        console.log('CHAT LOAD ERROR', e);
+        setError(__DEV__ ? `Chat couldn’t load: ${e.code}` : 'Chat couldn’t load.');
+      },
     );
   }, [sessionId]);
 
@@ -71,8 +74,14 @@ export function LiveChat({ sessionId }: { sessionId: string }) {
         text: value.slice(0, MAX_LEN),
         createdAt: serverTimestamp(),
       });
-    } catch {
-      setError('Your message didn’t send. Please try again.');
+    } catch (e) {
+      console.log('CHAT SEND ERROR', e);
+      const code = (e as { code?: string })?.code;
+      setError(
+        __DEV__
+          ? `Your message didn’t send: ${code ?? (e as Error)?.message ?? 'unknown error'}`
+          : 'Your message didn’t send. Please try again.',
+      );
     }
     setTimeout(() => setSending(false), SEND_COOLDOWN_MS);
   };

@@ -59,6 +59,11 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Per-user profile extras (currently: the KingsChat link). A user can only touch their own doc.
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
     // Live chat: scoped per stream session. Anyone signed in can read/post as themselves;
     // messages can't be edited once sent; only admins can delete (moderation).
     match /liveChat/{sessionId}/messages/{id} {

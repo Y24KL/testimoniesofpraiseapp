@@ -16,6 +16,9 @@ export const CONFIG = {
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '',
     androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '',
   },
+  kingsChat: {
+    clientId: process.env.EXPO_PUBLIC_KINGSCHAT_CLIENT_ID ?? '5a194a59-c962-471a-8529-43b55fc5cead',
+  },
   collections: {
     testimonies: process.env.EXPO_PUBLIC_COL_TESTIMONIES ?? 'testimonies',
     notifications: process.env.EXPO_PUBLIC_COL_NOTIFICATIONS ?? 'notifications',

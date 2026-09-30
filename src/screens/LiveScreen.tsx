@@ -14,11 +14,15 @@ import { parseYouTubeId } from '@/utils/youtube';
 import { colors, radius, type as t } from '@/constants/theme';
 import { useLive } from '@/hooks/useContent';
 import { MESSAGES } from '@/utils/errors';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 
 export function LiveScreen() {
   const nav = useNavigation();
   const { live, error } = useLive();
+  // Bottom-tab screens stay mounted when you switch tabs (that's normally what you want — instant
+  // switching), but that also means a playing video keeps its audio running in the background
+  // unless we explicitly stop it. Unmounting the player while this tab isn't focused fixes that.
+  const isFocused = useIsFocused();
   return (
     <Screen>
       <TopBar title="Watch Live" onNotifications={() => nav.navigate('Notifications')} onProfile={() => nav.navigate('Profile')} />
@@ -27,7 +31,12 @@ export function LiveScreen() {
       ) : live.isLive && live.streamUrl ? (
         <ScrollView contentContainerStyle={styles.content}>
           {/* key forces a fresh player if the admin swaps the stream URL while we're watching */}
-          {live.sourceType === 'youtube' && parseYouTubeId(live.streamUrl) ? (
+          {!isFocused ? (
+            <View style={styles.paused}>
+              <Ionicons name="pause-circle-outline" size={40} color={colors.textMuted} />
+              <Text style={styles.pausedText}>Paused — come back to this tab to keep watching</Text>
+            </View>
+          ) : live.sourceType === 'youtube' && parseYouTubeId(live.streamUrl) ? (
             <YouTubePlayer key={live.streamUrl} videoId={parseYouTubeId(live.streamUrl)!} label={live.title ?? 'Live stream'} />
           ) : (
             <VideoPlayer key={live.streamUrl} uri={live.streamUrl} live autoPlay label={live.title ?? 'Live stream'} />
@@ -61,4 +70,6 @@ const styles = StyleSheet.create({
   offlineOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: colors.overlay, padding: 16 },
   offlineText: { ...t.caps, fontSize: 13, color: colors.text, textAlign: 'center' },
   note: { ...t.body, color: colors.textMuted, textAlign: 'center' },
+  paused: { aspectRatio: 16 / 9, borderRadius: radius.md, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  pausedText: { ...t.small, color: colors.textMuted, textAlign: 'center', paddingHorizontal: 24 },
 });

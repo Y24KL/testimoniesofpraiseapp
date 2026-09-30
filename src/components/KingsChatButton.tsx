@@ -7,7 +7,7 @@ import { radius, type as t } from '@/constants/theme';
 import { authMessage } from '@/utils/errors';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const logo = require('../../assets/kingschat-logo.png');
+const logo = require('../../assets/kc34.png');
 
 // KingsChat's own blue gradient.
 const KC_BLUE_LIGHT = '#38BDF8';

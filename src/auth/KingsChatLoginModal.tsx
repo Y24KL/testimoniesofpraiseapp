@@ -39,7 +39,7 @@ const html = (clientId: string) => `<!doctype html><html><head><meta name="viewp
   import('https://esm.sh/kingschat-web-sdk')
     .then(function (mod) {
       var sdk = mod.default || mod;
-      return sdk.login({ clientId: '${clientId}', scopes: [] });
+      return sdk.login({ clientId: '${clientId}' });
     })
     .catch(function (err) { /* ignore, URL is already captured */ });
 </script>

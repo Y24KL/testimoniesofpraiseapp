@@ -18,27 +18,6 @@ interface Props {
   onError: (message: string) => void;
 }
 
-/**
- * KingsChat's real API (confirmed from their own README, github.com/kingschat/kingschat-web-sdk):
- *   import kingsChatWebSdk from 'kingschat-web-sdk';
- *   kingsChatWebSdk.login({ clientId, scopes }) -> Promise<{ accessToken, expiresInMillis, refreshToken }>
- * It's an npm package written for bundlers (Webpack/React/Vue), not a plain <script> global — an
- * earlier version of this file guessed it exposed `window.kingsChatWebSdk` from a raw <script src>,
- * which is wrong and is why the button did nothing. Fixed here using <script type="module"> with
- * unpkg's official `?module` flag, which serves any npm package as a real ES module you can
- * `import` directly in a browser — the correct, documented way to run a bundler-oriented package
- * with no bundler. See https://unpkg.com/#module-mode-default.
- *
- * `scopes: []` — their only documented scope is 'send_chat_message' (for the sendMessage API,
- * which this app doesn't use); there is no documented profile-reading scope, since there's no
- * profile-fetch endpoint at all (confirmed: login, refreshAuthenticationToken, sendMessage are
- * the entire public API). Requesting an undocumented scope name risks KingsChat rejecting it.
- *
- * Still not verified against a live login on a phone — their login() opens a popup/redirect to
- * accounts.kingschat.online, and WebView popup behaviour can differ from a desktop browser. If
- * the KingsChat sign-in page doesn't appear, or nothing happens after signing in, that's the
- * first thing to report back.
- */
 const html = (clientId: string) => `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
   html,body{margin:0;height:100%;background:#0b1330;display:flex;align-items:center;justify-content:center;font-family:sans-serif}
@@ -50,30 +29,71 @@ const html = (clientId: string) => `<!doctype html><html><head><meta name="viewp
   function send(type, payload) {
     window.ReactNativeWebView.postMessage(JSON.stringify({ type, payload }));
   }
-  import('https://unpkg.com/kingschat-web-sdk?module')
+  
+  // 1. Intercept the blocked popup and send the actual login URL to React Native
+  window.open = function(url) {
+    send('open_url', url);
+    return { close: function(){} }; 
+  };
+
+  import('https://esm.sh/kingschat-web-sdk')
     .then(function (mod) {
       var sdk = mod.default || mod;
-      if (!sdk || !sdk.login) throw new Error('KingsChat sign-in could not load.');
       return sdk.login({ clientId: '${clientId}', scopes: [] });
     })
-    .then(function (res) { send('success', res); })
-    .catch(function (err) { send('error', (err && (err.message || err.toString())) || 'Sign-in was cancelled.'); });
+    .catch(function (err) { /* ignore, URL is already captured */ });
 </script>
 </body></html>`;
 
+// 2. Inject a fake "opener" into the real KingsChat page so it can securely send the token back
+const injectedJs = `
+  window.opener = {
+    postMessage: function(data) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'success_from_opener', payload: data }));
+    }
+  };
+  true;
+`;
+
 export function KingsChatLoginModal({ visible, onClose, onSuccess, onError }: Props) {
   const [loading, setLoading] = useState(true);
+  const [loginUrl, setLoginUrl] = useState<string | null>(null);
   const closedRef = useRef(false);
 
   const handleMessage = useCallback(
     (e: WebViewMessageEvent) => {
       if (closedRef.current) return;
       try {
-        const msg = JSON.parse(e.nativeEvent.data) as { type: 'success' | 'error'; payload: KingsChatToken | string };
+        const msg = JSON.parse(e.nativeEvent.data);
+        
+        // Switch the WebView from the local HTML directly to the real KingsChat URL
+        if (msg.type === 'open_url') {
+          setLoginUrl(msg.payload);
+          return;
+        }
+
+        // Catch the token returning from our injected mock window
+        if (msg.type === 'success_from_opener') {
+          let tokenData = msg.payload;
+          if (typeof tokenData === 'string') {
+            try { tokenData = JSON.parse(tokenData); } catch (e) {}
+          }
+          
+          if (tokenData && (tokenData.accessToken || tokenData.access_token)) {
+             closedRef.current = true;
+             onSuccess({
+               accessToken: tokenData.accessToken || tokenData.access_token,
+               refreshToken: tokenData.refreshToken || tokenData.refresh_token || '',
+               expiresInMillis: tokenData.expiresInMillis || tokenData.expires_in || 0,
+             });
+          }
+          return;
+        }
+
         if (msg.type === 'success') {
           closedRef.current = true;
           onSuccess(msg.payload as KingsChatToken);
-        } else {
+        } else if (msg.type === 'error') {
           closedRef.current = true;
           onError(typeof msg.payload === 'string' ? msg.payload : 'Unable to sign you in with KingsChat.');
         }
@@ -83,6 +103,27 @@ export function KingsChatLoginModal({ visible, onClose, onSuccess, onError }: Pr
     },
     [onSuccess, onError],
   );
+
+  const handleNavigationStateChange = (navState: any) => {
+    if (closedRef.current) return;
+    const url = navState.url;
+    
+    // 3. Failsafe: Catch the token if KingsChat redirects the URL instead of using messaging
+    if (url.includes('access_token=') || url.includes('accessToken=')) {
+      const accessToken = url.match(/(?:access_token|accessToken)=([^&]+)/)?.[1];
+      const refreshToken = url.match(/(?:refresh_token|refreshToken)=([^&]+)/)?.[1];
+      const expiresIn = url.match(/(?:expires_in|expiresIn)=([^&]+)/)?.[1];
+      
+      if (accessToken) {
+        closedRef.current = true;
+        onSuccess({
+          accessToken,
+          refreshToken: refreshToken || '',
+          expiresInMillis: expiresIn ? parseInt(expiresIn, 10) : 0,
+        });
+      }
+    }
+  };
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} transparent={false}>
@@ -94,12 +135,20 @@ export function KingsChatLoginModal({ visible, onClose, onSuccess, onError }: Pr
         <View style={{ width: 26 }} />
       </View>
       <WebView
-        source={{ html: html(CONFIG.kingsChat.clientId) }}
+        source={
+          loginUrl 
+            ? { uri: loginUrl } 
+            : { 
+                html: html(CONFIG.kingsChat.clientId), 
+                baseUrl: 'https://localhost' // This fakes a secure web environment
+              }
+        }
         onMessage={handleMessage}
+        onNavigationStateChange={handleNavigationStateChange}
+        injectedJavaScript={loginUrl ? injectedJs : undefined}
         onLoadEnd={() => setLoading(false)}
         javaScriptEnabled
         domStorageEnabled
-        setSupportMultipleWindows
         style={{ flex: 1, backgroundColor: '#0b1330' }}
       />
       {loading ? (

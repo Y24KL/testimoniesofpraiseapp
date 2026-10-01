@@ -24,9 +24,14 @@ interface Props {
  *   import kingsChatWebSdk from 'kingschat-web-sdk';
  *   kingsChatWebSdk.login({ clientId, scopes }) -> Promise<{ accessToken, expiresInMillis, refreshToken }>
  *
- * Their SDK is an npm package meant for a bundler, loaded here via unpkg's `?module` flag so it
- * can be `import`-ed directly in a plain page — the documented way to run a bundler-oriented
- * package with no bundler (see https://unpkg.com/#module-mode-default).
+ * Their SDK is published only as a CommonJS build for bundlers (Babel-compiled, no real ES
+ * module output) — there is no plain-browser-script version of it at all. A first attempt
+ * loaded it via unpkg's `?module` flag, which only rewrites import paths for packages that are
+ * ALREADY real ES modules; against a CommonJS-only package like this one it serves the raw
+ * CommonJS file, which references Node's `exports` global that doesn't exist in a browser —
+ * hence "exports is not defined". esm.sh actually converts CommonJS packages into working
+ * browser ES modules on the fly (it bundles the package with esbuild, rather than just
+ * rewriting import statements), which is what this needs.
  *
  * `scopes: []` — their only documented scope is 'send_chat_message' (the sendMessage API, which
  * this app doesn't use). There's no documented profile-reading scope, because there's no
@@ -57,7 +62,7 @@ const html = (clientId: string) => `<!doctype html><html><head><meta name="viewp
   function send(type, payload) {
     window.ReactNativeWebView.postMessage(JSON.stringify({ type, payload }));
   }
-  import('https://unpkg.com/kingschat-web-sdk?module')
+  import('https://esm.sh/kingschat-web-sdk')
     .then(function (mod) {
       var sdk = mod.default || mod;
       if (!sdk || !sdk.login) throw new Error('KingsChat sign-in could not load.');

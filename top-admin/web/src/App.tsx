@@ -12,6 +12,7 @@ import { Live } from './pages/Live';
 import { Submissions } from './pages/Submissions';
 import { Announcements } from './pages/Announcements';
 import { Sponsorships } from './pages/Sponsorships';
+import { DataSettings } from './pages/DataSettings';
 
 type Gate = { state: 'loading' } | { state: 'out' } | { state: 'denied'; user: User } | { state: 'admin'; user: User };
 
@@ -64,6 +65,7 @@ export default function App() {
       {route.name === 'submissions' && <Submissions go={setRoute} />}
       {route.name === 'announcements' && <Announcements />}
       {route.name === 'sponsorships' && <Sponsorships />}
+      {route.name === 'data' && <DataSettings />}
     </Layout>
   );
 }

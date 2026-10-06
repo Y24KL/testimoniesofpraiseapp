@@ -61,4 +61,5 @@ export type Route =
   | { name: 'live' }
   | { name: 'submissions' }
   | { name: 'announcements' }
-  | { name: 'sponsorships' };
+  | { name: 'sponsorships' }
+  | { name: 'data' };

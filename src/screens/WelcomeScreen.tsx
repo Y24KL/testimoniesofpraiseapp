@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
+import { Platform } from 'react-native';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GoogleButton } from '@/components/GoogleButton';
-import { KingsChatButton } from '@/components/KingsChatButton';
 import { Logo } from '@/components/Logo';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { colors, gradients, type as t } from '@/constants/theme';
@@ -20,11 +20,10 @@ export function WelcomeScreen() {
             <Logo size={110} />
             <Text style={styles.welcome}>WELCOME TO</Text>
             <Text style={styles.brand}>TESTIMONIES OF PRAISE</Text>
-            <Text style={styles.tag}>No one praises God and goes away empty, he always blesses you for Praising him.</Text>
+            <Text style={styles.tag}>Every testimony has a story. Share yours.</Text>
           </View>
           <View style={{ gap: 12 }}>
-            <GoogleButton onError={setError} />
-            <KingsChatButton onError={setError} />
+            {Platform.OS === 'android' ? <GoogleButton onError={setError} /> : null}
             <PrimaryButton title="CONTINUE WITH EMAIL" icon="mail-outline" variant="outline" onPress={() => nav.navigate('EmailAuth', { mode: 'signin' })} />
             {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}
             <Text style={styles.legal}>By continuing you agree to the Terms of Service and Privacy Policy.</Text>

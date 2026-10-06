@@ -10,6 +10,7 @@ const NAV: { name: Route['name']; label: string }[] = [
   { name: 'submissions', label: 'Submissions' },
   { name: 'announcements', label: 'Announcements' },
   { name: 'sponsorships', label: 'Sponsorships' },
+  { name: 'data', label: 'Data' },
 ];
 
 export function Layout({ route, go, children }: { route: Route; go: (r: Route) => void; children: ReactNode }) {

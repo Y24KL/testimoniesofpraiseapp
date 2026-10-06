@@ -13,6 +13,7 @@ import { YouTubePlayer } from '@/video/YouTubePlayer';
 import { parseYouTubeId } from '@/utils/youtube';
 import { colors, radius, type as t } from '@/constants/theme';
 import { useLive } from '@/hooks/useContent';
+import { useLiveViewer } from '@/hooks/useLiveViewer';
 import { MESSAGES } from '@/utils/errors';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 
@@ -23,6 +24,9 @@ export function LiveScreen() {
   // switching), but that also means a playing video keeps its audio running in the background
   // unless we explicitly stop it. Unmounting the player while this tab isn't focused fixes that.
   const isFocused = useIsFocused();
+  // Counts as watching the moment this tab is open while the stream is live — matches how the
+  // admin portal's viewer count is meant to work, not tied to whether the video is actually playing.
+  useLiveViewer(live?.sessionId, isFocused && !!live?.isLive);
   return (
     <Screen>
       <TopBar title="Watch Live" onNotifications={() => nav.navigate('Notifications')} onProfile={() => nav.navigate('Profile')} />

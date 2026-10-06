@@ -52,20 +52,30 @@ service cloud.firestore {
       allow read: if isAdmin();
     }
 
-    // Analytics: apps write, only admins read.
+    // Analytics: apps write; admins read AND delete (the "reset everything" tool needs this).
     match /analyticsEvents/{id} {
       allow create: if signedIn();
-      allow read: if isAdmin();
-      allow update, delete: if false;
+      allow read, delete: if isAdmin();
+      allow update: if false;
     }
 
-    // Per-user profile extras (currently: the KingsChat link). A user can only touch their own doc.
-    match /users/{uid} {
-      allow read, write: if signedIn() && request.auth.uid == uid;
+    // Live viewer presence: a heartbeat doc per person currently on the Live screen while a
+    // stream is live (see src/hooks/useLiveViewer.ts in the mobile app). A user can only write
+    // their own doc; admins read the whole set to show a live viewer count, and can clean it up
+    // on reset.
+    match /liveViewers/{sessionId} {
+      allow read, delete: if isAdmin();
+    }
+    match /liveViewers/{sessionId}/viewers/{uid} {
+      allow read: if isAdmin();
+      allow write, delete: if signedIn() && request.auth.uid == uid;
     }
 
     // Live chat: scoped per stream session. Anyone signed in can read/post as themselves;
     // messages can't be edited once sent; only admins can delete (moderation).
+    match /liveChat/{sessionId} {
+      allow read, delete: if isAdmin(); // the rare "parent" doc itself, if one ever exists
+    }
     match /liveChat/{sessionId}/messages/{id} {
       allow read: if signedIn();
       allow create: if signedIn()

@@ -17,7 +17,7 @@ const schemes = ['testimoniesofpraise', ANDROID_PACKAGE, reversedIosClientId].fi
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-    name: 'Testimonies of Praise',
+  name: 'Testimonies of Praise',
   slug: 'top10',
   owner: 'y24kl',
   version: '1.0.0',
@@ -47,17 +47,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: ANDROID_PACKAGE,
     versionCode: 1,
-    googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? './google-services.json',
+    googleServicesFile: process.env.GOOGLE_SERVICES_JSON,
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#4B006E',
     },
     // Only what's needed. POST_NOTIFICATIONS is required on Android 13+.
-   permissions: [
-      'POST_NOTIFICATIONS',
-      'READ_EXTERNAL_STORAGE',
-      'WRITE_EXTERNAL_STORAGE',
-      'READ_MEDIA_IMAGES'
+    permissions: ['POST_NOTIFICATIONS'],
+    blockedPermissions: [
+      'android.permission.READ_EXTERNAL_STORAGE',
+      'android.permission.WRITE_EXTERNAL_STORAGE',
     ],
   },
   plugins: [

@@ -8,16 +8,13 @@ import {
   reload,
   sendEmailVerification,
   sendPasswordResetEmail,
-  signInAnonymously,
   signInWithCredential,
   signInWithEmailAndPassword,
   signOut as fbSignOut,
   updateProfile,
   type User,
 } from 'firebase/auth';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { auth, db } from '@/api/firebase';
-import type { KingsChatToken } from './KingsChatLoginModal';
+import { auth } from '@/api/firebase';
 import { isNewAccountPending, markNewAccount } from '@/onboarding/welcome';
 
 interface AuthValue {
@@ -27,14 +24,6 @@ interface AuthValue {
   signInWithEmail(email: string, password: string): Promise<void>;
   register(fullName: string, email: string, password: string): Promise<void>;
   signInWithGoogleIdToken(idToken: string, accessToken?: string): Promise<void>;
-  /**
-   * KingsChat has no Firebase provider and no public endpoint to verify a token or fetch a
-   * profile, so this can't do a real "sign in as this verified KingsChat person" — that would
-   * need KingsChat's side to confirm who the token belongs to, which isn't publicly available.
-   * What this DOES do honestly: opens a real, ordinary Firebase session (anonymous auth) and
-   * records that it came from KingsChat, with the token, on that user's profile document.
-   */
-  signInWithKingsChat(token: KingsChatToken): Promise<void>;
   resetPassword(email: string): Promise<void>;
   signOut(): Promise<void>;
   deleteAccount(): Promise<void>;
@@ -91,21 +80,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const signInWithKingsChat = useCallback(async (token: KingsChatToken) => {
-    const cred = auth.currentUser ?? (await signInAnonymously(auth)).user;
-    await setDoc(
-      doc(db, 'users', cred.uid),
-      {
-        loginMethod: 'kingschat',
-        kingsChat: { accessToken: token.accessToken, refreshToken: token.refreshToken, linkedAt: serverTimestamp() },
-      },
-      { merge: true },
-    );
-    void markNewAccount(cred.uid);
-    setIsNewAccount(true);
-    setUser({ ...cred } as User);
-  }, []);
-
   const clearNewAccount = useCallback(() => setIsNewAccount(false), []);
 
   const refreshEmailVerified = useCallback(async () => {
@@ -146,7 +120,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithEmail,
       register,
       signInWithGoogleIdToken,
-      signInWithKingsChat,
       resetPassword,
       signOut,
       deleteAccount,
@@ -157,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       needsEmailVerification,
       updatePhoto,
     }),
-    [user, initializing, signInWithEmail, register, signInWithGoogleIdToken, signInWithKingsChat, resetPassword, signOut, deleteAccount, isNewAccount, clearNewAccount, refreshEmailVerified, resendVerificationEmail, needsEmailVerification, updatePhoto],
+    [user, initializing, signInWithEmail, register, signInWithGoogleIdToken, resetPassword, signOut, deleteAccount, isNewAccount, clearNewAccount, refreshEmailVerified, resendVerificationEmail, needsEmailVerification, updatePhoto],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -6,6 +6,7 @@ import { isHls, isHttpUrl, isYouTubeUrl, parseYouTubeId } from '../lib';
 import { Check, Field, Message } from '../components/Field';
 import { StreamPreview } from '../components/StreamPreview';
 import { ChatModeration } from '../components/ChatModeration';
+import { ViewerCount } from '../components/ViewerCount';
 
 type SourceType = 'hls' | 'youtube' | 'unknown';
 const sourceTypeOf = (url: string): SourceType => (isYouTubeUrl(url) ? 'youtube' : isHls(url) ? 'hls' : 'unknown');
@@ -92,7 +93,10 @@ export function Live() {
 
       <div className="card">
         <div className="row between">
-          <div><span className={`dot ${isLive ? 'on' : ''}`} /><b>{isLive ? 'LIVE NOW' : 'Offline'}</b></div>
+          <div>
+            <span className={`dot ${isLive ? 'on' : ''}`} /><b>{isLive ? 'LIVE NOW' : 'Offline'}</b>
+            {isLive && sessionId ? <ViewerCount sessionId={sessionId} /> : null}
+          </div>
           {isLive
             ? <button className="btn danger" disabled={busy} onClick={() => void write(false, 'Stream ended. The app now shows it as offline.')}>END STREAM</button>
             : <button className="btn live" disabled={busy} onClick={() => void write(true, 'You’re live. The app is showing the stream.')}>GO LIVE</button>}

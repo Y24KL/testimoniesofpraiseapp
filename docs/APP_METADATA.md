@@ -20,12 +20,12 @@ I either don't have access to it or it needs a decision only you can make.
 | Support URL / phone | **[FILL IN]** |
 
 ## Short description (≈80 characters)
-> Watch, share, and be encouraged by real testimonies of people who listened to the Lovewold Singers.
+> Watch, share, and be encouraged by real testimonies of God's faithfulness.
 
 ## Full description
 
 > Testimonies of Praise brings the global testimony community into your pocket. Watch inspiring
-> testimonies from believers around the world, join us live as we share testimonies and praise God aas they happen, and share what
+> testimonies from believers around the world, join live services as they happen, and share what
 > God has done in your own life — all in one place.
 >
 > WHAT YOU CAN DO
@@ -36,7 +36,7 @@ I either don't have access to it or it needs a decision only you can make.
 > • Get notified the moment a new testimony or live service goes up
 > • Sow into the ministry through the Sponsor feature
 >
-> Nobody ever praises God and goes away empty, he always blesses those who praise him.
+> Every testimony has a story. Share yours.
 
 ## What's new (this release)
 > First release: watch and share testimonies, live streaming with chat, offline downloads, and

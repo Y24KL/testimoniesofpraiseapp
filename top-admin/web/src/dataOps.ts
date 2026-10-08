@@ -2,6 +2,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   query,
   setDoc,
@@ -104,8 +105,10 @@ export async function exportEverything(onProgress?: (label: string) => void): Pr
   }
 
   onProgress?.('live stream settings');
-  const liveSnap = await getDocs(query(collection(db, 'settings')));
-  out['settings'] = liveSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // getDoc on the known document, not a collection list — the rules only ever granted read
+  // access to settings/live specifically, never to listing the settings collection itself.
+  const liveDoc = await getDoc(doc(db, 'settings', 'live'));
+  out['settings'] = liveDoc.exists() ? [{ id: liveDoc.id, ...liveDoc.data() }] : [];
 
   return out;
 }

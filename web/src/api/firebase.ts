@@ -30,3 +30,13 @@ if (typeof window !== 'undefined') {
 }
 
 export const db = getFirestore(app);
+
+export const analyticsPromise: Promise<Analytics | null> =
+  typeof window === 'undefined' ||
+  !firebaseConfig.measurementId
+    ? Promise.resolve(null)
+    : isSupported()
+        .then((supported) =>
+          supported ? getAnalytics(app) : null
+        )
+        .catch(() => null);

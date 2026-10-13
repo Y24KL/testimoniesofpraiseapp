@@ -10,12 +10,13 @@ import {
 const env = import.meta.env;
 
 const firebaseConfig = {
-  apiKey: env.VITE_FIREBASE_API_KEY || '',
-  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || '',
-  projectId: env.VITE_FIREBASE_PROJECT_ID || '',
-  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: env.VITE_FIREBASE_APP_ID || '',
+  apiKey: "AIzaSyAg_3WiDv4LL2BWceIxcyx-GqXuef8VlD4",
+  authDomain: "testimoniesofpraiseapp.firebaseapp.com",
+  projectId: "testimoniesofpraiseapp",
+  storageBucket: "testimoniesofpraiseapp.firebasestorage.app",
+  messagingSenderId: "754997860722",
+  appId: "1:754997860722:web:acff003464bb7aec7265eb",
+  measurementId: "G-DG98C00425"
 };
 
 export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);

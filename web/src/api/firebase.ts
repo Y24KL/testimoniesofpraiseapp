@@ -1,6 +1,11 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, browserLocalPersistence, setPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import {
+  getAnalytics,
+  isSupported,
+  type Analytics,
+} from 'firebase/analytics';
 
 const env = import.meta.env;
 

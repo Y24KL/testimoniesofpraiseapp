@@ -198,11 +198,8 @@ function AppContent() {
         flexDirection: 'column',
         minHeight: '100dvh',
         width: '100%',
-        maxWidth: '480px',
-        margin: '0 auto',
         backgroundColor: colors.bg,
         position: 'relative',
-        boxShadow: '0 0 40px rgba(0,0,0,0.5)',
       }}
     >
       <OfflineBanner />

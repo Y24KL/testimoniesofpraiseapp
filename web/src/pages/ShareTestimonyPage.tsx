@@ -64,7 +64,16 @@ export function ShareTestimonyPage({ onBack }: Props) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', backgroundColor: colors.bg }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100dvh',
+        backgroundColor: colors.bg,
+        paddingBottom: 'calc(var(--sab, 0px) + 36px)',
+        boxSizing: 'border-box',
+      }}
+    >
       <TopBar title="Share your testimony" onBack={onBack} />
       <div
         style={{
@@ -72,8 +81,6 @@ export function ShareTestimonyPage({ onBack }: Props) {
           padding: '20px 16px',
           display: 'flex',
           flexDirection: 'column',
-          maxWidth: '480px',
-          margin: '0 auto',
           width: '100%',
           boxSizing: 'border-box',
         }}

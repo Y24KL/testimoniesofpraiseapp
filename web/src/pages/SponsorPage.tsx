@@ -118,7 +118,16 @@ export function SponsorPage({ onBack }: Props) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', backgroundColor: colors.bg }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100dvh',
+        backgroundColor: colors.bg,
+        paddingBottom: 'calc(var(--sab, 0px) + 36px)',
+        boxSizing: 'border-box',
+      }}
+    >
       <TopBar title="Sponsor Testimonies of Praise" onBack={onBack} />
       <div
         style={{
@@ -127,8 +136,6 @@ export function SponsorPage({ onBack }: Props) {
           display: 'flex',
           flexDirection: 'column',
           gap: '20px',
-          maxWidth: '480px',
-          margin: '0 auto',
           width: '100%',
           boxSizing: 'border-box',
         }}

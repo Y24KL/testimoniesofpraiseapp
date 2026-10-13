@@ -111,6 +111,7 @@ export function HomePage({
                 padding: '0 16px',
                 WebkitOverflowScrolling: 'touch',
                 scrollbarWidth: 'none',
+                touchAction: 'pan-x pan-y',
               }}
             >
               {rest.map((item) => (

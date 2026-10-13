@@ -64,3 +64,10 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Enable momentum scrolling on iOS */
+html, body {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: normal;
+}
+

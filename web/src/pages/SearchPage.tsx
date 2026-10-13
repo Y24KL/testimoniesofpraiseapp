@@ -50,7 +50,16 @@ export function SearchPage({ onBack, onSelectTestimony }: Props) {
   const noResults = debounced && !loading && results.length === 0;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', backgroundColor: colors.bg }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100dvh',
+        backgroundColor: colors.bg,
+        paddingBottom: 'calc(var(--sab, 0px) + 36px)',
+        boxSizing: 'border-box',
+      }}
+    >
       <TopBar title="Search" onBack={onBack} />
 
       {/* Search Input Bar */}

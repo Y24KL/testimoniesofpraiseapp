@@ -58,6 +58,7 @@ export function TestimoniesPage({
             padding: '12px 16px',
             WebkitOverflowScrolling: 'touch',
             scrollbarWidth: 'none',
+            touchAction: 'pan-x pan-y',
           }}
         >
           {categories.map((cat) => {

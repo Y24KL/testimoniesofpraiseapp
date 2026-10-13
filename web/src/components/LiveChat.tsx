@@ -302,7 +302,7 @@ export function LiveChat({ sessionId }: { sessionId: string }) {
               border: `1px solid ${colors.border}`,
               borderRadius: radius.pill,
               padding: '8px 14px',
-              fontSize: '14px',
+              fontSize: '16px',
               color: colors.text,
               outline: 'none',
             }}

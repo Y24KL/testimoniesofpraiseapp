@@ -65,9 +65,18 @@ export function NotificationsPage({ onBack, onSelectTestimony, onGoToLive }: Pro
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', backgroundColor: colors.bg }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100dvh',
+        backgroundColor: colors.bg,
+        paddingBottom: 'calc(var(--sab, 0px) + 36px)',
+        boxSizing: 'border-box',
+      }}
+    >
       <TopBar title="Notifications" onBack={onBack} />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%' }}>
         {loading ? (
           <div style={{ padding: '32px', textAlign: 'center', color: colors.textMuted }}>
             Loading notifications…

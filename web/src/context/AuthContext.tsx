@@ -1,0 +1,162 @@
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import {
+  GoogleAuthProvider,
+  createUserWithEmailAndPassword,
+  deleteUser,
+  getAdditionalUserInfo,
+  onAuthStateChanged,
+  reload,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signInWithRedirect,
+  signOut as fbSignOut,
+  updateProfile,
+  type User,
+} from 'firebase/auth';
+import { auth } from '../api/firebase';
+
+interface AuthValue {
+  user: User | null;
+  initializing: boolean;
+  signInWithEmail(email: string, password: string): Promise<void>;
+  register(fullName: string, email: string, password: string): Promise<void>;
+  signInWithGoogle(): Promise<void>;
+  resetPassword(email: string): Promise<void>;
+  signOut(): Promise<void>;
+  deleteAccount(): Promise<void>;
+  isNewAccount: boolean;
+  clearNewAccount(): void;
+  refreshEmailVerified(): Promise<void>;
+  resendVerificationEmail(): Promise<void>;
+  needsEmailVerification: boolean;
+  updatePhoto(photoURL: string | null): Promise<void>;
+}
+
+const AuthContext = createContext<AuthValue | null>(null);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [initializing, setInitializing] = useState(true);
+  const [isNewAccount, setIsNewAccount] = useState(false);
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, async (u) => {
+      setUser(u);
+      if (u) {
+        const isNew = localStorage.getItem(`top:new-account:${u.uid}`) === 'true';
+        setIsNewAccount(isNew);
+      } else {
+        setIsNewAccount(false);
+      }
+      setInitializing(false);
+    });
+  }, []);
+
+  const signInWithEmail = useCallback(async (email: string, password: string) => {
+    await signInWithEmailAndPassword(auth, email.trim(), password);
+  }, []);
+
+  const register = useCallback(async (fullName: string, email: string, password: string) => {
+    const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+    await updateProfile(cred.user, { displayName: fullName.trim() });
+    await sendEmailVerification(cred.user).catch(() => {});
+    localStorage.setItem(`top:new-account:${cred.user.uid}`, 'true');
+    setIsNewAccount(true);
+    setUser({ ...cred.user } as User);
+  }, []);
+
+  const signInWithGoogle = useCallback(async () => {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    try {
+      const cred = await signInWithPopup(auth, provider);
+      if (getAdditionalUserInfo(cred)?.isNewUser) {
+        localStorage.setItem(`top:new-account:${cred.user.uid}`, 'true');
+        setIsNewAccount(true);
+      }
+    } catch (err: any) {
+      // In standalone iOS PWA or restrictive popup blockers, fall back to redirect
+      if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
+        await signInWithRedirect(auth, provider);
+      } else {
+        throw err;
+      }
+    }
+  }, []);
+
+  const resetPassword = useCallback(async (email: string) => {
+    await sendPasswordResetEmail(auth, email.trim());
+  }, []);
+
+  const signOut = useCallback(async () => {
+    await fbSignOut(auth);
+  }, []);
+
+  const deleteAccount = useCallback(async () => {
+    if (auth.currentUser) {
+      await deleteUser(auth.currentUser);
+    }
+  }, []);
+
+  const clearNewAccount = useCallback(() => {
+    if (auth.currentUser) {
+      localStorage.removeItem(`top:new-account:${auth.currentUser.uid}`);
+    }
+    setIsNewAccount(false);
+  }, []);
+
+  const refreshEmailVerified = useCallback(async () => {
+    if (!auth.currentUser) return;
+    await reload(auth.currentUser);
+    setUser({ ...auth.currentUser } as User);
+  }, []);
+
+  const resendVerificationEmail = useCallback(async () => {
+    if (auth.currentUser) {
+      await sendEmailVerification(auth.currentUser);
+    }
+  }, []);
+
+  const updatePhoto = useCallback(async (photoURL: string | null) => {
+    if (!auth.currentUser) return;
+    await updateProfile(auth.currentUser, { photoURL });
+    setUser({ ...auth.currentUser } as User);
+  }, []);
+
+  const needsEmailVerification = Boolean(
+    user &&
+    !user.emailVerified &&
+    user.providerData.some((p) => p.providerId === 'password')
+  );
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        initializing,
+        signInWithEmail,
+        register,
+        signInWithGoogle,
+        resetPassword,
+        signOut,
+        deleteAccount,
+        isNewAccount,
+        clearNewAccount,
+        refreshEmailVerified,
+        resendVerificationEmail,
+        needsEmailVerification,
+        updatePhoto,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
+  return ctx;
+}

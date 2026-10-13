@@ -1,0 +1,24 @@
+{
+  "name": "Testimonies of Praise",
+  "short_name": "TOP",
+  "description": "Watch, share, and be encouraged by real testimonies of God's faithfulness.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#12001C",
+  "theme_color": "#4B006E",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/adaptive-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

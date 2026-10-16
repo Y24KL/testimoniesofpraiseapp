@@ -1,4 +1,14 @@
-import type { AppNotification, LiveConfig, Page, Testimony } from '@/types';
+import type {
+  AdotopocConfig,
+  AppNotification,
+  Article,
+  AudioTestimony,
+  LiveConfig,
+  Page,
+  Promotion,
+  RadioConfig,
+  Testimony,
+} from '@/types';
 
 export interface PageOptions {
   limit: number;
@@ -25,4 +35,13 @@ export interface ContentRepository {
   registerPushToken(input: { token: string; uid: string; platform: string; prefs: Record<string, boolean> }): Promise<void>;
   unregisterPushToken(token: string): Promise<void>;
   recordEvent(event: string, params: Record<string, string | number | boolean | undefined>, uid?: string): Promise<void>;
+
+  // Upgraded Feature Methods
+  getPromotions(): Promise<Promotion[]>;
+  getArticles(limit?: number): Promise<Article[]>;
+  getArticle(id: string): Promise<Article | null>;
+  getAudioTestimonies(limit?: number): Promise<AudioTestimony[]>;
+  getRadioConfig(): Promise<RadioConfig>;
+  subscribeRadio(cb: (cfg: RadioConfig) => void, onError?: (e: unknown) => void): () => void;
+  getAdotopocConfig(): Promise<AdotopocConfig>;
 }

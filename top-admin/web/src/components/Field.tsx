@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
-export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+export function Field({ label, hint, children, style }: { label: string; hint?: string; children: ReactNode; style?: CSSProperties }) {
   return (
-    <label className="f">
+    <label className="f" style={style}>
       <span>{label}</span>
       {children}
       {hint ? <span className="small muted" style={{ marginTop: 4, fontWeight: 400 }}>{hint}</span> : null}

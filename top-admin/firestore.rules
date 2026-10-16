@@ -103,5 +103,50 @@ service cloud.firestore {
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
+
+    // Promotions: public read for published promotions; admin full access.
+    match /promotions/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
+      allow write: if isAdmin();
+    }
+
+    // Updates & Articles: public read for published articles; admin full access.
+    match /articles/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
+      allow write: if isAdmin();
+    }
+
+    // Audio Testimonies: public read for published items; admin full access.
+    match /audioTestimonies/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
+      allow write: if isAdmin();
+    }
+
+    // TOP Radio Settings (single document settings/radio).
+    match /settings/radio {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // ADOTOPOC Settings (single document settings/adotopoc).
+    match /settings/adotopoc {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // TOP Radio listener heartbeat presence.
+    match /radioListeners/{sessionId} {
+      allow read, delete: if isAdmin();
+    }
+    match /radioListeners/{sessionId}/listeners/{listenerId} {
+      allow read: if isAdmin();
+      allow write, delete: if signedIn() && request.auth.uid == listenerId;
+    }
+
+    // TOP Radio historical analytics.
+    match /radioAnalytics/{id} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
   }
 }

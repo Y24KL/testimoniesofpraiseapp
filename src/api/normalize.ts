@@ -1,4 +1,15 @@
-import type { AppNotification, LiveConfig, LiveSourceType, NotificationType, Testimony } from '@/types';
+import type {
+  AdotopocConfig,
+  AppNotification,
+  Article,
+  AudioTestimony,
+  LiveConfig,
+  LiveSourceType,
+  NotificationType,
+  Promotion,
+  RadioConfig,
+  Testimony,
+} from '@/types';
 import { isYouTubeUrl } from '@/utils/youtube';
 import { isHls } from '@/utils/format';
 
@@ -104,5 +115,78 @@ export function normalizeLive(r: Raw | undefined | null): LiveConfig {
     title: pick(r, ['title']),
     thumbnail: pick(r, ['thumbnail', 'poster']),
     description: pick(r, ['description']),
+  };
+}
+
+export function normalizePromotion(id: string, r: Raw): Promotion {
+  return {
+    id,
+    title: String(pick(r, ['title']) ?? 'Promotion'),
+    description: String(pick(r, ['description']) ?? ''),
+    imageUrl: String(pick(r, ['imageUrl', 'image', 'bannerUrl']) ?? ''),
+    category: pick(r, ['category']),
+    destinationUrl: String(pick(r, ['destinationUrl', 'url', 'link']) ?? ''),
+    target: pick(r, ['target']) === 'external' ? 'external' : 'internal',
+    order: Number(pick(r, ['order']) ?? 0),
+    isPublished: pick(r, ['isPublished', 'published']) !== false,
+    createdAt: toIso(pick(r, ['createdAt', 'created_at'])),
+  };
+}
+
+export function normalizeArticle(id: string, r: Raw): Article {
+  return {
+    id,
+    title: String(pick(r, ['title']) ?? 'Untitled Article'),
+    body: String(pick(r, ['body', 'content']) ?? ''),
+    coverImageUrl: pick(r, ['coverImageUrl', 'coverImage', 'image', 'imageUrl']),
+    category: pick(r, ['category']),
+    author: pick(r, ['author', 'authorName']),
+    isPublished: pick(r, ['isPublished', 'published']) !== false,
+    publishedAt: toIso(pick(r, ['publishedAt', 'published_at', 'createdAt'])),
+    createdAt: toIso(pick(r, ['createdAt', 'created_at'])),
+  };
+}
+
+export function normalizeAudioTestimony(id: string, r: Raw): AudioTestimony {
+  return {
+    id,
+    title: String(pick(r, ['title']) ?? 'Untitled Audio Testimony'),
+    description: String(pick(r, ['description', 'summary']) ?? ''),
+    audioUrl: String(pick(r, ['audioUrl', 'url', 'audio']) ?? ''),
+    duration: toSeconds(pick(r, ['duration', 'durationSeconds'])),
+    speaker: pick(r, ['speaker', 'testifier', 'author']),
+    category: pick(r, ['category']),
+    thumbnailUrl: pick(r, ['thumbnailUrl', 'thumbnail', 'image']),
+    isPublished: pick(r, ['isPublished', 'published']) !== false,
+    publishedAt: toIso(pick(r, ['publishedAt', 'published_at'])),
+    createdAt: toIso(pick(r, ['createdAt', 'created_at'])),
+  };
+}
+
+export function normalizeRadio(r: Raw | undefined | null): RadioConfig {
+  if (!r) {
+    return {
+      isLive: false,
+      streamUrl: '',
+      currentProgramme: 'TOP Radio - Off Air',
+    };
+  }
+  return {
+    isLive: pick(r, ['isLive', 'live']) === true,
+    streamUrl: String(pick(r, ['streamUrl', 'url', 'stream']) ?? ''),
+    currentProgramme: String(pick(r, ['currentProgramme', 'title', 'programme']) ?? 'Live Radio Broadcast'),
+    description: pick(r, ['description']),
+    sessionId: pick(r, ['sessionId', 'session_id']),
+  };
+}
+
+export function normalizeAdotopoc(r: Raw | undefined | null): AdotopocConfig {
+  return {
+    resourcePageUrl: String(pick(r ?? {}, ['resourcePageUrl']) ?? 'https://testimoniesofpraiseweb.onrender.com/adotopoc'),
+    introVideoUrl: String(
+      pick(r ?? {}, ['introVideoUrl']) ??
+        'https://res.cloudinary.com/duw6xrnpn/video/upload/v1792135475/ADOTOP_LOGO_OUTRO_m1awjk.mp4',
+    ),
+    introEnabled: pick(r ?? {}, ['introEnabled']) !== false,
   };
 }

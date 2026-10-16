@@ -24,6 +24,12 @@ export type RootStackParamList = {
   Profile: undefined;
   NotificationSettings: undefined;
   Search: undefined;
+  // Upgrade Features
+  Adotopoc: undefined;
+  Radio: undefined;
+  Promotions: undefined;
+  Articles: undefined;
+  ArticleDetails: { id: string };
 };
 
 declare global {

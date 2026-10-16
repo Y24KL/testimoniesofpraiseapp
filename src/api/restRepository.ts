@@ -95,6 +95,33 @@ export const restRepository: ContentRepository = {
   async recordEvent(event, params) {
     await http(CONFIG.rest.analytics, { method: 'POST', body: JSON.stringify({ event, params, platform: Platform.OS }) });
   },
+
+  async getPromotions() {
+    return [];
+  },
+  async getArticles() {
+    return [];
+  },
+  async getArticle() {
+    return null;
+  },
+  async getAudioTestimonies() {
+    return [];
+  },
+  async getRadioConfig() {
+    return { isLive: false, streamUrl: '', currentProgramme: 'TOP Radio' };
+  },
+  subscribeRadio(cb) {
+    cb({ isLive: false, streamUrl: '', currentProgramme: 'TOP Radio' });
+    return () => {};
+  },
+  async getAdotopocConfig() {
+    return {
+      resourcePageUrl: 'https://testimoniesofpraiseweb.onrender.com/adotopoc',
+      introVideoUrl: 'https://res.cloudinary.com/duw6xrnpn/video/upload/v1792135475/ADOTOP_LOGO_OUTRO_m1awjk.mp4',
+      introEnabled: true,
+    };
+  },
 };
 
 export type { LiveConfig };

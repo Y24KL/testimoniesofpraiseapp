@@ -11,6 +11,9 @@ const ICON: Record<AppNotification['type'], React.ComponentProps<typeof Ionicons
   live: 'radio',
   announcement: 'megaphone',
   featured: 'star',
+  article: 'document-text',
+  promotion: 'megaphone-outline',
+  radio: 'musical-notes',
 };
 
 export function NotificationCard({ item, onPress }: { item: AppNotification; onPress: () => void }) {

@@ -55,6 +55,29 @@ export async function notifyLiveStarted(liveTitle: string): Promise<NotifyResult
   return { status: pushEnabled ? 'sent' : 'in-app-only' };
 }
 
+export async function notifyArticlePublished(id: string, articleTitle: string): Promise<NotifyResult> {
+  const ref = doc(db, 'articles', id);
+  const claimed = await runTransaction(db, async (tx) => {
+    const s = await tx.get(ref);
+    if (!s.exists() || s.get('pushSentAt')) return false;
+    tx.update(ref, { pushSentAt: serverTimestamp() });
+    return true;
+  });
+  if (!claimed) return { status: 'skipped' };
+
+  const title = 'NEW UPDATE PUBLISHED';
+  const message = articleTitle || 'A new article has been published on Testimonies of Praise.';
+  if (pushEnabled) {
+    const r = await sendPush({ pref: 'announcements', title, body: message, data: { type: 'announcement', contentId: id } });
+    if (!r.ok) {
+      await updateDoc(ref, { pushSentAt: deleteField() }).catch(() => undefined);
+      return { status: 'failed', message: r.error };
+    }
+  }
+  await addFeed({ title, message, type: 'announcement', contentId: id });
+  return { status: pushEnabled ? 'sent' : 'in-app-only' };
+}
+
 export function describe(r: NotifyResult): string {
   switch (r.status) {
     case 'sent': return 'Push notification sent.';

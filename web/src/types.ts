@@ -27,7 +27,7 @@ export interface LiveConfig {
   description?: string;
 }
 
-export type NotificationType = 'testimony' | 'resource' | 'live' | 'announcement' | 'featured';
+export type NotificationType = 'testimony' | 'resource' | 'live' | 'announcement' | 'featured' | 'article' | 'promotion' | 'radio';
 
 export interface AppNotification {
   id: string;
@@ -75,4 +75,57 @@ export interface ChatMessage {
   name: string;
   text: string;
   createdAt: any;
+}
+
+export interface Promotion {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  category?: string;
+  destinationUrl: string;
+  target?: 'internal' | 'external';
+  order: number;
+  isPublished: boolean;
+  createdAt: string | null;
+}
+
+export interface Article {
+  id: string;
+  title: string;
+  body: string;
+  coverImageUrl?: string;
+  category?: string;
+  author?: string;
+  isPublished: boolean;
+  publishedAt: string | null;
+  createdAt: string | null;
+}
+
+export interface AudioTestimony {
+  id: string;
+  title: string;
+  description: string;
+  audioUrl: string;
+  duration?: number;
+  speaker?: string;
+  category?: string;
+  thumbnailUrl?: string;
+  isPublished: boolean;
+  publishedAt: string | null;
+  createdAt: string | null;
+}
+
+export interface RadioConfig {
+  isLive: boolean;
+  streamUrl: string;
+  currentProgramme: string;
+  description?: string;
+  sessionId?: string;
+}
+
+export interface AdotopocConfig {
+  resourcePageUrl: string;
+  introVideoUrl: string;
+  introEnabled: boolean;
 }

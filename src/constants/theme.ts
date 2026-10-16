@@ -21,6 +21,8 @@ export const colors = {
   success: '#3DDC97',
   live: '#FF3B4E',
   overlay: 'rgba(18,0,28,0.72)',
+  cardBorder: '#3D2456',
+  surfaceLight: '#2E0044',
 };
 
 export const gradients = {
@@ -30,7 +32,7 @@ export const gradients = {
 };
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
-export const radius = { sm: 8, md: 14, lg: 20, pill: 999 };
+export const radius = { sm: 8, md: 14, lg: 20, xl: 24, pill: 999 };
 
 export const type = {
   h1: { fontSize: 28, fontWeight: '800' as const, letterSpacing: 0.3 },
@@ -39,4 +41,6 @@ export const type = {
   body: { fontSize: 15, fontWeight: '400' as const, lineHeight: 22 },
   small: { fontSize: 13, fontWeight: '400' as const },
   caps: { fontSize: 12, fontWeight: '800' as const, letterSpacing: 1.4 },
+  label: { fontSize: 11, fontWeight: '700' as const, letterSpacing: 0.8 },
+  caption: { fontSize: 12, fontWeight: '400' as const },
 };

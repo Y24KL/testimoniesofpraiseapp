@@ -11,6 +11,7 @@ interface Props {
   onSearch?: () => void;
   onNotifications?: () => void;
   onProfile?: () => void;
+  actions?: Array<{ icon: React.ComponentType<{ size?: number; color?: string }>; label: string; onClick: () => void }>;
 }
 
 export function TopBar({
@@ -20,6 +21,7 @@ export function TopBar({
   onSearch,
   onNotifications,
   onProfile,
+  actions,
 }: Props) {
   const { user } = useAuth();
 
@@ -80,6 +82,28 @@ export function TopBar({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+        {actions?.map((action, idx) => (
+          <button
+            key={idx}
+            type="button"
+            onClick={action.onClick}
+            aria-label={action.label}
+            style={{
+              width: '40px',
+              height: '40px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'none',
+              border: 'none',
+              color: colors.text,
+              cursor: 'pointer',
+              padding: 0,
+            }}
+          >
+            <action.icon size={22} color={colors.text} />
+          </button>
+        ))}
         {onSearch && (
           <button
             type="button"

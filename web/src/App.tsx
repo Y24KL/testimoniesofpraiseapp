@@ -24,6 +24,12 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { NotificationSettingsPage } from './pages/NotificationSettingsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SearchPage } from './pages/SearchPage';
+import { PromotionsPage } from './pages/PromotionsPage';
+import { ArticlesPage } from './pages/ArticlesPage';
+import { ArticleDetailPage } from './pages/ArticleDetailPage';
+import { RadioPage } from './pages/RadioPage';
+import { AdotopocPage } from './pages/AdotopocPage';
+
 
 type ViewState =
   | { type: 'tabs' }
@@ -33,7 +39,12 @@ type ViewState =
   | { type: 'notifications' }
   | { type: 'notificationSettings' }
   | { type: 'profile' }
-  | { type: 'search' };
+  | { type: 'search' }
+  | { type: 'promotions' }
+  | { type: 'articles' }
+  | { type: 'articleDetail'; id: string }
+  | { type: 'radio' }
+  | { type: 'adotopoc' };
 
 type AuthScreen = 'welcome' | 'emailAuth' | 'forgotPassword';
 
@@ -54,9 +65,20 @@ function AppContent() {
       if (hash.startsWith('#testimony/')) {
         const id = hash.replace('#testimony/', '');
         if (id) setViewState({ type: 'testimonyDetail', id });
+      } else if (hash.startsWith('#article/')) {
+        const id = hash.replace('#article/', '');
+        if (id) setViewState({ type: 'articleDetail', id });
       } else if (hash === '#live') {
         setCurrentTab('live');
         setViewState({ type: 'tabs' });
+      } else if (hash === '#radio') {
+        setViewState({ type: 'radio' });
+      } else if (hash === '#adotopoc') {
+        setViewState({ type: 'adotopoc' });
+      } else if (hash === '#articles') {
+        setViewState({ type: 'articles' });
+      } else if (hash === '#promotions') {
+        setViewState({ type: 'promotions' });
       }
     };
     handleHash();
@@ -190,6 +212,49 @@ function AppContent() {
     );
   }
 
+  if (viewState.type === 'promotions') {
+    return (
+      <PromotionsPage
+        onBack={() => setViewState({ type: 'tabs' })}
+        onNavigateInternal={(route) => {
+          if (route === 'Radio') setViewState({ type: 'radio' });
+          else if (route === 'Adotopoc') setViewState({ type: 'adotopoc' });
+          else if (route === 'Articles') setViewState({ type: 'articles' });
+          else if (route.startsWith('ArticleDetails:')) {
+            const id = route.split(':')[1];
+            setViewState({ type: 'articleDetail', id });
+          }
+        }}
+      />
+    );
+  }
+
+  if (viewState.type === 'articles') {
+    return (
+      <ArticlesPage
+        onBack={() => setViewState({ type: 'tabs' })}
+        onSelectArticle={(id) => setViewState({ type: 'articleDetail', id })}
+      />
+    );
+  }
+
+  if (viewState.type === 'articleDetail') {
+    return (
+      <ArticleDetailPage
+        articleId={viewState.id}
+        onBack={() => setViewState({ type: 'articles' })}
+      />
+    );
+  }
+
+  if (viewState.type === 'radio') {
+    return <RadioPage onBack={() => setViewState({ type: 'tabs' })} />;
+  }
+
+  if (viewState.type === 'adotopoc') {
+    return <AdotopocPage onBack={() => setViewState({ type: 'tabs' })} />;
+  }
+
   // 6. Main Tab Navigation
   return (
     <div
@@ -214,6 +279,10 @@ function AppContent() {
             onGoToLive={() => setCurrentTab('live')}
             onGoToTestimonies={() => setCurrentTab('testimonies')}
             onShareTestimony={() => setViewState({ type: 'shareTestimony' })}
+            onGoToRadio={() => setViewState({ type: 'radio' })}
+            onGoToAdotopoc={() => setViewState({ type: 'adotopoc' })}
+            onGoToArticles={() => setViewState({ type: 'articles' })}
+            onGoToPromotions={() => setViewState({ type: 'promotions' })}
           />
         )}
 

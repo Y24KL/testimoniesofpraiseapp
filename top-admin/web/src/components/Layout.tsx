@@ -7,6 +7,11 @@ const NAV: { name: Route['name']; label: string }[] = [
   { name: 'dashboard', label: 'Dashboard' },
   { name: 'testimonies', label: 'Testimonies' },
   { name: 'live', label: 'Live stream' },
+  { name: 'radio', label: 'TOP Radio' },
+  { name: 'articles', label: 'Articles & Updates' },
+  { name: 'promotions', label: 'Promotions' },
+  { name: 'adotopoc', label: 'ADOTOPOC Config' },
+  { name: 'media', label: 'Media & Storage' },
   { name: 'submissions', label: 'Submissions' },
   { name: 'announcements', label: 'Announcements' },
   { name: 'sponsorships', label: 'Sponsorships' },
@@ -14,7 +19,7 @@ const NAV: { name: Route['name']; label: string }[] = [
 ];
 
 export function Layout({ route, go, children }: { route: Route; go: (r: Route) => void; children: ReactNode }) {
-  const active = route.name === 'editor' ? 'testimonies' : route.name;
+  const active = route.name === 'editor' ? 'testimonies' : route.name === 'articleEditor' ? 'articles' : route.name;
   return (
     <div className="shell">
       <aside className="side">

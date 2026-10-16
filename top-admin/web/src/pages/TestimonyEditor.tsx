@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { collection, doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { MAX_VIDEO_MB, uploadToCloudinary, uploadsEnabled } from '../uploads';
+import {
+  MAX_VIDEO_MB,
+  uploadToCloudinary,
+  uploadsEnabled,
+  uploadVideo,
+  identifyProvider,
+  getProviderDisplayName,
+} from '../uploads';
 import { describe, notifyTestimonyPublished } from '../notify';
 import { CATEGORIES, fmtDuration, isHls, isHttpUrl, parseDuration, readVideoDuration, testimonyFromDoc } from '../lib';
 import type { Route, Testimony } from '../types';
@@ -73,12 +80,14 @@ export function TestimonyEditor({ id, prefill, go }: Props) {
   const pickVideo = async (file?: File) => {
     if (!file) return;
     setErr('');
-    if (!file.type.startsWith('video/')) return setErr('Please choose a video file (MP4 works best).');
+    if (!file.type.startsWith('video/') && !file.type.startsWith('audio/')) return setErr('Please choose a video file (MP4 works best).');
     try {
       setVideoPct(0);
       const secs = await readVideoDuration(file);
       if (secs && !durationText) setDurationText(fmtDuration(secs));
-      mark(setVideoUrl)(await uploadToCloudinary(file, 'video', setVideoPct));
+      const res = await uploadVideo(file, setVideoPct);
+      mark(setVideoUrl)(res.url);
+      setOk(`Media uploaded to ${getProviderDisplayName(res.provider)}!`);
     } catch (e) { setErr(`Video upload failed. ${(e as Error).message}`); }
     setVideoPct(null);
   };
@@ -166,6 +175,11 @@ export function TestimonyEditor({ id, prefill, go }: Props) {
           </>
         ) : null}
         <Field label={uploadsEnabled ? '…or paste a video link' : 'Video link *'} hint="An MP4 link or an HLS (.m3u8) stream from your video host."><input type="url" placeholder="https://" value={videoUrl} onChange={(e) => mark(setVideoUrl)(e.target.value)} /></Field>
+        {videoUrl ? (
+          <div style={{ fontSize: 12, color: '#aaa', margin: '-4px 0 8px 0' }}>
+            Storage Provider: <span style={{ color: '#F5C542', fontWeight: 600 }}>{getProviderDisplayName(identifyProvider(videoUrl))}</span>
+          </div>
+        ) : null}
         {videoUrl && !hls ? <video className="preview" src={videoUrl} controls preload="metadata" /> : null}
         {hls ? <Message kind="ok">HLS stream detected. Viewers can watch it, but it can’t be downloaded for offline use.</Message> : null}
         <div className="two" style={{ marginTop: 12 }}>
@@ -182,6 +196,11 @@ export function TestimonyEditor({ id, prefill, go }: Props) {
           </>
         ) : null}
         <Field label={uploadsEnabled ? '…or paste an image link' : 'Image link'}><input type="url" placeholder="https://" value={thumbnail} onChange={(e) => mark(setThumbnail)(e.target.value)} /></Field>
+        {thumbnail ? (
+          <div style={{ fontSize: 12, color: '#aaa', margin: '-4px 0 8px 0' }}>
+            Storage Provider: <span style={{ color: '#F5C542', fontWeight: 600 }}>{getProviderDisplayName(identifyProvider(thumbnail))}</span>
+          </div>
+        ) : null}
         {thumbnail ? <img src={thumbnail} alt="Thumbnail preview" style={{ maxWidth: 280, borderRadius: 12 }} /> : null}
       </div>
 

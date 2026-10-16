@@ -23,6 +23,11 @@ export const CONFIG = {
     pushTokens: process.env.EXPO_PUBLIC_COL_PUSH_TOKENS ?? 'pushTokens',
     analytics: process.env.EXPO_PUBLIC_COL_ANALYTICS ?? 'analyticsEvents',
     liveDoc: process.env.EXPO_PUBLIC_DOC_LIVE ?? 'settings/live',
+    promotions: process.env.EXPO_PUBLIC_COL_PROMOTIONS ?? 'promotions',
+    articles: process.env.EXPO_PUBLIC_COL_ARTICLES ?? 'articles',
+    audioTestimonies: process.env.EXPO_PUBLIC_COL_AUDIO_TESTIMONIES ?? 'audioTestimonies',
+    radioDoc: process.env.EXPO_PUBLIC_DOC_RADIO ?? 'settings/radio',
+    adotopocDoc: process.env.EXPO_PUBLIC_DOC_ADOTOPOC ?? 'settings/adotopoc',
   },
   /** REST-mode endpoints, relative to apiBaseUrl. Adjust to the existing API. */
   rest: {
@@ -60,4 +65,5 @@ export const STORAGE_KEYS = {
   primerSeen: 'top:notification-primer-seen:v1',
   cachePrefix: 'top:cache:v1:',
   playbackPrefix: 'top:playback:v1:',
+  articlesRead: 'top:articles:read:v1',
 };

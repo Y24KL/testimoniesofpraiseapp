@@ -13,6 +13,11 @@ export const linking: LinkingOptions<RootStackParamList> = {
     screens: {
       Tabs: { screens: { Live: 'live' } },
       TestimonyDetails: 'testimony/:id',
+      Adotopoc: 'adotopoc',
+      Radio: 'radio',
+      Promotions: 'promotions',
+      Articles: 'articles',
+      ArticleDetails: 'article/:id',
     },
   },
 };

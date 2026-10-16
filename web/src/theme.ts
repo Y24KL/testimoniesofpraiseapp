@@ -7,6 +7,8 @@ export const colors = {
   surface: '#1E0A2B',
   card: '#2A1240',
   border: '#3D2456',
+  cardBorder: '#3D2456',
+  surfaceLight: '#2E0044',
   text: '#FFFFFF',
   textMuted: '#C9B5D9',
   danger: '#FF6B7F',

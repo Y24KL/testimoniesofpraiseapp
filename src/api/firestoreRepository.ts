@@ -21,7 +21,16 @@ import { Platform } from 'react-native';
 import { CONFIG } from '@/constants/config';
 import type { Page } from '@/types';
 import { db } from './firebase';
-import { normalizeLive, normalizeNotification, normalizeTestimony } from './normalize';
+import {
+  normalizeAdotopoc,
+  normalizeArticle,
+  normalizeAudioTestimony,
+  normalizeLive,
+  normalizeNotification,
+  normalizePromotion,
+  normalizeRadio,
+  normalizeTestimony,
+} from './normalize';
 import type { ContentRepository, PageOptions } from './repository';
 
 async function getPage<T>(
@@ -116,5 +125,62 @@ export const firestoreRepository: ContentRepository = {
       platform: Platform.OS,
       ts: serverTimestamp(),
     });
+  },
+
+  async getPromotions() {
+    const snap = await getDocs(
+      query(
+        collection(db, CONFIG.collections.promotions),
+        where('isPublished', '==', true),
+        orderBy('order', 'asc'),
+      ),
+    );
+    return snap.docs.map((d) => normalizePromotion(d.id, d.data()));
+  },
+
+  async getArticles(max = 20) {
+    const snap = await getDocs(
+      query(
+        collection(db, CONFIG.collections.articles),
+        where('isPublished', '==', true),
+        orderBy('createdAt', 'desc'),
+        qLimit(max),
+      ),
+    );
+    return snap.docs.map((d) => normalizeArticle(d.id, d.data()));
+  },
+
+  getArticle(id) {
+    return getOne(CONFIG.collections.articles, id, normalizeArticle);
+  },
+
+  async getAudioTestimonies(max = 30) {
+    const snap = await getDocs(
+      query(
+        collection(db, CONFIG.collections.audioTestimonies),
+        where('isPublished', '==', true),
+        orderBy('createdAt', 'desc'),
+        qLimit(max),
+      ),
+    );
+    return snap.docs.map((d) => normalizeAudioTestimony(d.id, d.data()));
+  },
+
+  async getRadioConfig() {
+    const snap = await getDoc(doc(db, CONFIG.collections.radioDoc));
+    return normalizeRadio(snap.exists() ? snap.data() : null);
+  },
+
+  subscribeRadio(cb, onError) {
+    return onSnapshot(
+      doc(db, CONFIG.collections.radioDoc),
+      (s) => cb(normalizeRadio(s.exists() ? s.data() : null)),
+      (e) => onError?.(e),
+    );
+  },
+
+  async getAdotopocConfig() {
+    const snap = await getDoc(doc(db, CONFIG.collections.adotopocDoc));
+    return normalizeAdotopoc(snap.exists() ? snap.data() : null);
   },
 };

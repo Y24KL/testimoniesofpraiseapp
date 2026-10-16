@@ -13,6 +13,7 @@ interface Props {
   onSearch?: () => void;
   onNotifications?: () => void;
   onProfile?: () => void;
+  right?: React.ReactNode;
 }
 
 function IconBtn({ name, label, onPress }: { name: React.ComponentProps<typeof Ionicons>['name']; label: string; onPress: () => void }) {
@@ -23,7 +24,7 @@ function IconBtn({ name, label, onPress }: { name: React.ComponentProps<typeof I
   );
 }
 
-export function TopBar({ title, brand, onBack, onSearch, onNotifications, onProfile }: Props) {
+export function TopBar({ title, brand, onBack, onSearch, onNotifications, onProfile, right }: Props) {
   const { user } = useAuth();
   return (
     <View style={styles.bar}>
@@ -35,6 +36,7 @@ export function TopBar({ title, brand, onBack, onSearch, onNotifications, onProf
         </Text>
       </View>
       <View style={styles.right}>
+        {right ?? null}
         {onSearch ? <IconBtn name="search-outline" label="Search" onPress={onSearch} /> : null}
         {onNotifications ? <IconBtn name="notifications-outline" label="Notifications" onPress={onNotifications} /> : null}
         {onProfile ? (

@@ -13,6 +13,12 @@ import { Submissions } from './pages/Submissions';
 import { Announcements } from './pages/Announcements';
 import { Sponsorships } from './pages/Sponsorships';
 import { DataSettings } from './pages/DataSettings';
+import { Promotions } from './pages/Promotions';
+import { Articles } from './pages/Articles';
+import { ArticleEditor } from './pages/ArticleEditor';
+import { Radio } from './pages/Radio';
+import { AdotopocConfig } from './pages/AdotopocConfig';
+import { MediaManager } from './pages/MediaManager';
 
 type Gate = { state: 'loading' } | { state: 'out' } | { state: 'denied'; user: User } | { state: 'admin'; user: User };
 
@@ -62,6 +68,12 @@ export default function App() {
       {route.name === 'testimonies' && <Testimonies go={setRoute} />}
       {route.name === 'editor' && <TestimonyEditor key={route.id ?? 'new'} id={route.id} prefill={route.prefill} go={setRoute} />}
       {route.name === 'live' && <Live />}
+      {route.name === 'radio' && <Radio />}
+      {route.name === 'articles' && <Articles go={setRoute} />}
+      {route.name === 'articleEditor' && <ArticleEditor id={route.id} go={setRoute} />}
+      {route.name === 'promotions' && <Promotions />}
+      {route.name === 'adotopoc' && <AdotopocConfig />}
+      {route.name === 'media' && <MediaManager />}
       {route.name === 'submissions' && <Submissions go={setRoute} />}
       {route.name === 'announcements' && <Announcements />}
       {route.name === 'sponsorships' && <Sponsorships />}

@@ -1,24 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { repo } from '../api/repository';
-import { TopBar } from '../components/TopBar';
-import { colors } from '../theme';
 import type { AdotopocConfig } from '../types';
 
 const DEFAULT_VIDEO_URL =
   'https://res.cloudinary.com/duw6xrnpn/video/upload/v1792135475/ADOTOP_LOGO_OUTRO_m1awjk.mp4';
 const DEFAULT_PAGE_URL = 'https://testimoniesofpraiseweb.onrender.com/adotopoc';
 const LOGO_URL = 'https://res.cloudinary.com/duw6xrnpn/image/upload/v1789425387/LOG_xcvt3v.png';
-
-// Scoped ADOTOPOC Palette
-const A = {
-  bg: '#11070B',
-  surface: '#220912',
-  border: '#3D1020',
-  crimson: '#7F0404',
-  crimsonLight: '#A80505',
-  cream: '#FBFAF5',
-  creamMuted: 'rgba(251,250,245,0.7)',
-};
 
 interface Props {
   onBack: () => void;
@@ -30,217 +17,175 @@ export function AdotopocPage({ onBack }: Props) {
     introVideoUrl: DEFAULT_VIDEO_URL,
     introEnabled: true,
   });
-  const [showVideo, setShowVideo] = useState(true);
-  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const [isMuted, setIsMuted] = useState(true);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
-    repo.getAdotopocConfig().then((cfg) => {
-      setConfig(cfg);
-      if (!cfg.introEnabled) setShowVideo(false);
-    }).catch(() => undefined);
+    repo.getAdotopocConfig()
+      .then((cfg) => setConfig(cfg))
+      .catch(() => undefined);
   }, []);
 
-  const handleVideoEnd = () => {
-    setShowVideo(false);
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
   };
 
-  const handleSkip = () => {
-    if (videoRef.current) videoRef.current.pause();
-    setShowVideo(false);
-  };
-
-  const handleReplay = () => {
-    setShowVideo(true);
-    setTimeout(() => {
-      if (videoRef.current) {
-        videoRef.current.currentTime = 0;
-        videoRef.current.play();
-      }
-    }, 50);
+  const handleGoToResources = () => {
+    const targetUrl = config.resourcePageUrl || DEFAULT_PAGE_URL;
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
     <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      minHeight: '100dvh', // 100dvh prevents mobile browser navigation bars from hiding content
-      backgroundColor: A.bg,
-      boxSizing: 'border-box',
+      position: 'relative',
+      width: '100%',
+      height: '100dvh',
+      backgroundColor: '#000000',
+      overflow: 'hidden',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
-      {/* ADOTOPOC Header */}
+      {/* Background Full-Screen Video */}
+      <video
+        ref={videoRef}
+        src={config.introVideoUrl || DEFAULT_VIDEO_URL}
+        autoPlay
+        loop
+        playsInline
+        muted={isMuted}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          zIndex: 1,
+        }}
+      />
+
+      {/* Top Bar Controls */}
       <div style={{
-        minHeight: '64px', // Increased height for better mobile touch area
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
         display: 'flex',
-        alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '8px 16px',
-        borderBottom: `1px solid ${A.border}`,
-        backgroundColor: A.bg,
-        flexShrink: 0,
+        alignItems: 'center',
+        padding: '16px 20px',
+        zIndex: 10,
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)',
       }}>
+        {/* Sound Toggle (Matching the screenshot icon style) */}
         <button
-          onClick={onBack}
+          onClick={toggleMute}
           style={{
-            width: '48px', // Expanded minimum touch target to 48px
-            height: '48px',
-            background: 'none',
+            background: 'rgba(0, 0, 0, 0.4)',
             border: 'none',
-            cursor: 'pointer',
-            color: A.cream,
-            fontSize: '24px', // Scaled up for visibility
+            borderRadius: '50%',
+            width: '40px',
+            height: '40px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginLeft: '-8px', 
+            color: '#FFFFFF',
+            fontSize: '18px',
+            cursor: 'pointer',
+            backdropFilter: 'blur(8px)',
           }}
-          aria-label="Back"
+          aria-label={isMuted ? 'Unmute video' : 'Mute video'}
         >
-          ←
+          {isMuted ? '🔇' : '🔊'}
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, paddingLeft: '4px' }}>
-          <img src={LOGO_URL} alt="ADOTOPOC Logo" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ fontSize: '16px', fontWeight: 800, color: A.cream, lineHeight: '1.2' }}>ADOTOPOC</div>
-            <div style={{ fontSize: '10px', fontWeight: 600, color: A.creamMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Resource Center
-            </div>
-          </div>
-        </div>
-
-        {!showVideo && (
-          <button
-            onClick={handleReplay}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '10px 14px', // Increased padding for mobile tapping
-              borderRadius: '20px',
-              backgroundColor: A.crimson,
-              border: `1px solid ${A.crimsonLight}`,
-              color: A.cream,
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            🎬 Intro
-          </button>
-        )}
+        {/* Back Button / Brand Badge */}
+        <button
+          onClick={onBack}
+          style={{
+            background: 'rgba(0, 0, 0, 0.4)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '20px',
+            padding: '6px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            color: '#FFFFFF',
+            fontSize: '13px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          <img src={LOGO_URL} alt="Logo" style={{ width: '18px', height: '18px', objectFit: 'contain' }} />
+          <span>Close</span>
+        </button>
       </div>
 
-      {/* Content */}
-      <div style={{ flex: 1, position: 'relative', backgroundColor: A.bg, display: 'flex', flexDirection: 'column' }}>
-        {showVideo ? (
-          <div style={{ flex: 1, width: '100%', position: 'relative', backgroundColor: '#000' }}>
-            <video
-              ref={videoRef}
-              src={config.introVideoUrl || DEFAULT_VIDEO_URL}
-              autoPlay
-              playsInline
-              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-              onEnded={handleVideoEnd}
-            />
+      {/* Bottom Gradient & Text/CTA Container */}
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 10,
+        padding: '40px 24px 36px 24px',
+        background: 'linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.6) 60%, transparent 100%)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+      }}>
+        {/* Requested Text Overlay */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <h2 style={{
+            color: '#FFFFFF',
+            fontSize: '22px',
+            fontWeight: 800,
+            margin: 0,
+            lineHeight: 1.3,
+            textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)',
+          }}>
+            Want to host a day of Testimonies of Praise outreaches and crusade?
+          </h2>
+          <p style={{
+            color: 'rgba(255, 255, 255, 0.85)',
+            fontSize: '14px',
+            fontWeight: 500,
+            margin: 0,
+            lineHeight: 1.4,
+          }}>
+            Click below to go to our resource center.
+          </p>
+        </div>
 
-            <button
-              onClick={handleSkip}
-              style={{
-                position: 'absolute',
-                top: '16px',
-                right: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '12px 18px', // Scaled for mobile
-                borderRadius: '24px',
-                backgroundColor: 'rgba(17,7,11,0.85)',
-                border: `1px solid ${A.crimsonLight}`,
-                color: A.cream,
-                fontSize: '14px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                zIndex: 10,
-              }}
-            >
-              Skip Intro ⏭
-            </button>
-
-            <div style={{
-              position: 'absolute',
-              bottom: '32px',
-              left: '16px',
-              right: '16px',
-              padding: '16px',
-              borderRadius: '16px',
-              backgroundColor: 'rgba(17,7,11,0.9)',
-              border: `1px solid ${A.border}`,
-              textAlign: 'center',
-            }}>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: A.cream }}>Welcome to ADOTOPOC</div>
-              <div style={{ fontSize: '13px', color: A.creamMuted, marginTop: '6px', lineHeight: '1.4' }}>
-                Apostolic Deliverance Outreach & Testimonies of Praise Online Community
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
-            {/* The Iframe Container */}
-            <div style={{ flex: 1, WebkitOverflowScrolling: 'touch' }}>
-              <iframe
-                src={config.resourcePageUrl || DEFAULT_PAGE_URL}
-                title="ADOTOPOC Resource Center"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  border: 'none',
-                  backgroundColor: A.bg,
-                  display: 'block'
-                }}
-                allow="fullscreen"
-              />
-            </div>
-            
-            {/* Mobile-Optimized Action Bar */}
-            <div style={{
-              padding: '16px',
-              backgroundColor: A.surface,
-              borderTop: `1px solid ${A.border}`,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '10px',
-              alignItems: 'center',
-              flexShrink: 0
-            }}>
-              <span style={{ fontSize: '13px', color: A.creamMuted, textAlign: 'center' }}>
-                Need to download files or want a better view?
-              </span>
-              <a
-                href={config.resourcePageUrl || DEFAULT_PAGE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '100%',
-                  padding: '16px', // Massive touch target area
-                  backgroundColor: A.crimson,
-                  color: A.cream,
-                  textDecoration: 'none',
-                  borderRadius: '12px',
-                  fontSize: '16px',
-                  fontWeight: 700,
-                  boxSizing: 'border-box',
-                  border: `1px solid ${A.crimsonLight}`,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-                }}
-              >
-                Open Resources in New Tab ↗
-              </a>
-            </div>
-          </div>
-        )}
+        {/* Full-Width Golden/Amber Action Button (Styled after screenshot) */}
+        <button
+          onClick={handleGoToResources}
+          style={{
+            width: '100%',
+            padding: '16px 20px',
+            backgroundColor: '#DDA853',
+            color: '#1A1001',
+            border: 'none',
+            borderRadius: '12px',
+            fontSize: '16px',
+            fontWeight: 800,
+            cursor: 'pointer',
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.4)',
+            transition: 'transform 0.15s ease, background-color 0.15s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+          }}
+          onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.98)')}
+          onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+        >
+          <span>Go to Our Resource Center</span>
+          <span style={{ fontSize: '18px' }}>➔</span>
+        </button>
       </div>
     </div>
   );

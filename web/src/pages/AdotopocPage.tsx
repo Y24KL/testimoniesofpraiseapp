@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator } from 'react-native';
 import { repo } from '../api/repository';
 import { TopBar } from '../components/TopBar';
 import { colors } from '../theme';

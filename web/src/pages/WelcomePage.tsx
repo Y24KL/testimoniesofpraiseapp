@@ -86,7 +86,7 @@ export function WelcomePage({ onGoToEmail }: Props) {
             margin: '6px 0 0 0',
           }}
         >
-         Nobody praises God and goes away empty, he always blesses you for praising him.
+         "Nobody ever praised God and went away empty, he always blesses you for praising him."- Rev. Chris Oyakhilome Dsc.Dsc.DD
         </p>
       </div>
 

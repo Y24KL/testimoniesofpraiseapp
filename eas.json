@@ -1,18 +1,38 @@
 {
   "cli": {
-    "version": ">= 3.8.2"
+    "version": ">= 3.8.2",
+    "appVersionSource": "local"
   },
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      },
+      "ios": {
+        "simulator": false
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_BACKEND_MODE": "firestore"
+      }
     },
     "production": {
       "android": {
-        "buildType": "apk" 
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "autoIncrement": true
+      },
+      "env": {
+        "EXPO_PUBLIC_BACKEND_MODE": "firestore"
       }
     }
   },

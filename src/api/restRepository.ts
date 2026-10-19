@@ -105,6 +105,10 @@ export const restRepository: ContentRepository = {
   async getArticle() {
     return null;
   },
+  async publishArticle() {
+    // REST mode: article publishing is handled by the admin portal only.
+    throw new Error('publishArticle is not supported in REST mode');
+  },
   async getAudioTestimonies() {
     return [];
   },

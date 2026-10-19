@@ -6,14 +6,8 @@ import { repo } from '@/api';
 import { loadPrefs } from '@/storage/prefs';
 import type { NotificationPrefs } from '@/types';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// NOTE: The global notification handler is set once in App.tsx (shouldShowAlert: true).
+// Do NOT set a second handler here — the last registration wins and can suppress banners.
 
 export async function ensureAndroidChannel() {
   if (Platform.OS !== 'android') return;

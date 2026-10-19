@@ -14,3 +14,8 @@ android/
 google-services.json
 GoogleService-Info.plist
 top-admin/
+backend-reference/
+backups/
+docs/
+tests/
+web/

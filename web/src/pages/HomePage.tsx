@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Heart, Radio, BookOpen, Megaphone, Library, Play } from 'lucide-react';
+import { Radio, Play, Heart } from 'lucide-react';
 import { colors, radius } from '../theme';
 import { TopBar } from '../components/TopBar';
 import { EmailVerifyBanner } from '../components/EmailVerifyBanner';
@@ -17,6 +17,7 @@ interface Props {
   onSearch: () => void;
   onNotifications: () => void;
   onProfile: () => void;
+  onMenu?: () => void;
   onSelectTestimony: (id: string) => void;
   onGoToLive: () => void;
   onGoToTestimonies: () => void;
@@ -31,6 +32,7 @@ export function HomePage({
   onSearch,
   onNotifications,
   onProfile,
+  onMenu,
   onSelectTestimony,
   onGoToLive,
   onGoToTestimonies,
@@ -71,7 +73,7 @@ export function HomePage({
         brand
         onSearch={onSearch}
         onNotifications={onNotifications}
-        onProfile={onProfile}
+        onMenu={onMenu || onProfile}
       />
 
       <EmailVerifyBanner />
@@ -144,155 +146,7 @@ export function HomePage({
         </div>
       )}
 
-      {/* Quick Discover Navigation Grid (2x2) */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: '10px',
-          padding: '12px 16px',
-        }}
-      >
-        <button
-          type="button"
-          onClick={onGoToRadio}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '14px',
-            borderRadius: radius.md,
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            cursor: 'pointer',
-            textAlign: 'left',
-          }}
-        >
-          <div
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              backgroundColor: 'rgba(245, 197, 66, 0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Radio size={18} color={colors.accent} />
-          </div>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 800, color: colors.text }}>TOP Radio</div>
-            <div style={{ fontSize: '11px', color: colors.textMuted }}>Audio Stream</div>
-          </div>
-        </button>
 
-        <button
-          type="button"
-          onClick={onGoToAdotopoc}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '14px',
-            borderRadius: radius.md,
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            cursor: 'pointer',
-            textAlign: 'left',
-          }}
-        >
-          <div
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              backgroundColor: 'rgba(127, 4, 4, 0.35)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Library size={18} color="#FBFAF5" />
-          </div>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 800, color: colors.text }}>ADOTOPOC</div>
-            <div style={{ fontSize: '11px', color: colors.textMuted }}>Resource Center</div>
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={onGoToArticles}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '14px',
-            borderRadius: radius.md,
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            cursor: 'pointer',
-            textAlign: 'left',
-          }}
-        >
-          <div
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              backgroundColor: 'rgba(186, 104, 200, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <BookOpen size={18} color={colors.primaryLight} />
-          </div>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 800, color: colors.text }}>Articles</div>
-            <div style={{ fontSize: '11px', color: colors.textMuted }}>Study & Faith</div>
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={onGoToPromotions}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '14px',
-            borderRadius: radius.md,
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.border}`,
-            cursor: 'pointer',
-            textAlign: 'left',
-          }}
-        >
-          <div
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              backgroundColor: 'rgba(245, 197, 66, 0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Megaphone size={18} color={colors.accent} />
-          </div>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 800, color: colors.text }}>Highlights</div>
-            <div style={{ fontSize: '11px', color: colors.textMuted }}>Events & News</div>
-          </div>
-        </button>
-      </div>
 
       {/* Promotions Horizontal Carousel */}
       {promotions.length > 0 && (

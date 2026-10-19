@@ -1,7 +1,6 @@
 import React from 'react';
-import { ChevronLeft, Search, Bell, User as UserIcon } from 'lucide-react';
+import { ChevronLeft, Search, Bell, Menu } from 'lucide-react';
 import { colors } from '../theme';
-import { useAuth } from '../context/AuthContext';
 import { Logo } from './Logo';
 
 interface Props {
@@ -11,6 +10,7 @@ interface Props {
   onSearch?: () => void;
   onNotifications?: () => void;
   onProfile?: () => void;
+  onMenu?: () => void;
   actions?: Array<{ icon: React.ComponentType<{ size?: number; color?: string }>; label: string; onClick: () => void }>;
 }
 
@@ -21,9 +21,10 @@ export function TopBar({
   onSearch,
   onNotifications,
   onProfile,
+  onMenu,
   actions,
 }: Props) {
-  const { user } = useAuth();
+  const handleMenuClick = onMenu || onProfile;
 
   return (
     <header
@@ -68,42 +69,46 @@ export function TopBar({
         {brand && <Logo size={34} />}
         <h1
           style={{
-            fontSize: '17px',
-            fontWeight: '700',
-            color: colors.text,
             margin: 0,
+            fontSize: '17px',
+            fontWeight: 700,
+            color: colors.text,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}
         >
-          {title ?? 'Testimonies of Praise'}
+          {title || 'Testimonies of Praise'}
         </h1>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-        {actions?.map((action, idx) => (
-          <button
-            key={idx}
-            type="button"
-            onClick={action.onClick}
-            aria-label={action.label}
-            style={{
-              width: '40px',
-              height: '40px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'none',
-              border: 'none',
-              color: colors.text,
-              cursor: 'pointer',
-              padding: 0,
-            }}
-          >
-            <action.icon size={22} color={colors.text} />
-          </button>
-        ))}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        {actions &&
+          actions.map((act, i) => {
+            const Icon = act.icon;
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={act.onClick}
+                aria-label={act.label}
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'none',
+                  border: 'none',
+                  color: colors.text,
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+              >
+                <Icon size={22} color={colors.text} />
+              </button>
+            );
+          })}
         {onSearch && (
           <button
             type="button"
@@ -146,11 +151,11 @@ export function TopBar({
             <Bell size={22} />
           </button>
         )}
-        {onProfile && (
+        {handleMenuClick && (
           <button
             type="button"
-            onClick={onProfile}
-            aria-label="Profile"
+            onClick={handleMenuClick}
+            aria-label="Navigation Menu"
             style={{
               width: '40px',
               height: '40px',
@@ -159,41 +164,12 @@ export function TopBar({
               justifyContent: 'center',
               background: 'none',
               border: 'none',
+              color: colors.text,
               cursor: 'pointer',
               padding: 0,
             }}
           >
-            {user?.photoURL ? (
-              <img
-                src={user.photoURL}
-                alt="Profile"
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  border: `1.5px solid ${colors.accent}`,
-                  objectFit: 'cover',
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  border: `1.5px solid ${colors.accent}`,
-                  backgroundColor: colors.card,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: colors.accent,
-                  fontSize: '13px',
-                  fontWeight: '700',
-                }}
-              >
-                {user?.displayName ? user.displayName[0].toUpperCase() : <UserIcon size={18} />}
-              </div>
-            )}
+            <Menu size={24} />
           </button>
         )}
       </div>

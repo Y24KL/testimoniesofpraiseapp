@@ -4,6 +4,7 @@ import { DownloadsProvider } from './context/DownloadsContext';
 import { BottomNavigation, type TabName } from './components/BottomNavigation';
 import { OfflineBanner } from './components/OfflineBanner';
 import { AddToHomeScreenModal } from './components/AddToHomeScreenModal';
+import { AppDrawer } from './components/AppDrawer';
 import { Logo } from './components/Logo';
 import { colors, gradients } from './theme';
 
@@ -57,6 +58,7 @@ function AppContent() {
 
   const [currentTab, setCurrentTab] = useState<TabName>('home');
   const [viewState, setViewState] = useState<ViewState>({ type: 'tabs' });
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Handle URL deep links like #testimony/:id or #live
   useEffect(() => {
@@ -274,7 +276,8 @@ function AppContent() {
           <HomePage
             onSearch={() => setViewState({ type: 'search' })}
             onNotifications={() => setViewState({ type: 'notifications' })}
-            onProfile={() => setViewState({ type: 'profile' })}
+            onProfile={() => setIsDrawerOpen(true)}
+            onMenu={() => setIsDrawerOpen(true)}
             onSelectTestimony={(id) => setViewState({ type: 'testimonyDetail', id })}
             onGoToLive={() => setCurrentTab('live')}
             onGoToTestimonies={() => setCurrentTab('testimonies')}
@@ -290,7 +293,7 @@ function AppContent() {
           <TestimoniesPage
             onSearch={() => setViewState({ type: 'search' })}
             onNotifications={() => setViewState({ type: 'notifications' })}
-            onProfile={() => setViewState({ type: 'profile' })}
+            onProfile={() => setIsDrawerOpen(true)}
             onSelectTestimony={(id) => setViewState({ type: 'testimonyDetail', id })}
           />
         )}
@@ -298,14 +301,14 @@ function AppContent() {
         {currentTab === 'live' && (
           <LivePage
             onNotifications={() => setViewState({ type: 'notifications' })}
-            onProfile={() => setViewState({ type: 'profile' })}
+            onProfile={() => setIsDrawerOpen(true)}
           />
         )}
 
         {currentTab === 'downloads' && (
           <DownloadsPage
             onNotifications={() => setViewState({ type: 'notifications' })}
-            onProfile={() => setViewState({ type: 'profile' })}
+            onProfile={() => setIsDrawerOpen(true)}
             onSelectTestimony={(id) => setViewState({ type: 'testimonyDetail', id })}
           />
         )}
@@ -317,6 +320,32 @@ function AppContent() {
       />
 
       <AddToHomeScreenModal />
+
+      <AppDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        onProfile={() => setViewState({ type: 'profile' })}
+        onGoToRadio={() => setViewState({ type: 'radio' })}
+        onGoToAdotopoc={() => setViewState({ type: 'adotopoc' })}
+        onGoToArticles={() => setViewState({ type: 'articles' })}
+        onGoToPromotions={() => setViewState({ type: 'promotions' })}
+        onGoToLive={() => {
+          setCurrentTab('live');
+          setViewState({ type: 'tabs' });
+        }}
+        onGoToTestimonies={() => {
+          setCurrentTab('testimonies');
+          setViewState({ type: 'tabs' });
+        }}
+        onShareTestimony={() => setViewState({ type: 'shareTestimony' })}
+        onSponsor={() => setViewState({ type: 'sponsor' })}
+        onGoToDownloads={() => {
+          setCurrentTab('downloads');
+          setViewState({ type: 'tabs' });
+        }}
+        onNotifications={() => setViewState({ type: 'notifications' })}
+        onNotificationSettings={() => setViewState({ type: 'notificationSettings' })}
+      />
     </div>
   );
 }

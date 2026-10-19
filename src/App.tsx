@@ -11,6 +11,8 @@ import { AppFlagsProvider, useAppFlags } from '@/context/AppFlags';
 import { DownloadsProvider } from '@/downloads/DownloadsContext';
 import { linking } from '@/navigation/linking';
 import { navigationRef } from '@/navigation/ref';
+import { AppDrawer } from '@/components/AppDrawer';
+import { DrawerProvider } from '@/context/DrawerContext';
 import { RootNavigator } from '@/navigation/RootNavigator';
 import { usePushLifecycle } from '@/notifications/usePushLifecycle';
 
@@ -39,7 +41,10 @@ function Shell() {
   if (!ready) return <LoadingPraise />;
   return (
     <NavigationContainer ref={navigationRef} theme={theme} linking={linking}>
-      <RootNavigator />
+      <DrawerProvider>
+        <RootNavigator />
+        <AppDrawer />
+      </DrawerProvider>
     </NavigationContainer>
   );
 }

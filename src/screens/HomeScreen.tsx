@@ -24,6 +24,7 @@ import { TestimonyCard } from '@/components/TestimonyCard';
 import { TopBar } from '@/components/TopBar';
 import { VideoCard } from '@/components/VideoCard';
 import { colors, radius, type as t } from '@/constants/theme';
+import { useDrawer } from '@/context/DrawerContext';
 import { useLive, useTestimonies } from '@/hooks/useContent';
 import { useVerificationOnForeground } from '@/hooks/useVerificationOnForeground';
 import type { Promotion, RadioConfig } from '@/types';
@@ -31,6 +32,7 @@ import { messageFor } from '@/utils/errors';
 
 export function HomeScreen() {
   const nav = useNavigation();
+  const { openDrawer } = useDrawer();
   const feat = useTestimonies({ featuredOnly: true, limit: 1 });
   const latest = useTestimonies({ limit: 10 });
   const { live } = useLive();
@@ -60,7 +62,7 @@ export function HomeScreen() {
         brand
         onSearch={() => nav.navigate('Search')}
         onNotifications={() => nav.navigate('Notifications')}
-        onProfile={() => nav.navigate('Profile')}
+        onMenu={openDrawer}
       />
       <ScrollView
         refreshControl={
@@ -95,60 +97,6 @@ export function HomeScreen() {
           </Pressable>
         ) : null}
 
-        {/* Quick Discover Navigation Grid */}
-        <View style={styles.discoverGrid}>
-          <Pressable
-            style={styles.gridTile}
-            onPress={() => nav.navigate('Radio')}
-            accessibilityRole="button"
-            accessibilityLabel="TOP Radio"
-          >
-            <View style={[styles.tileIconCircle, { backgroundColor: 'rgba(245, 197, 66, 0.15)' }]}>
-              <Ionicons name="radio-outline" size={20} color={colors.accent} />
-            </View>
-            <Text style={styles.tileTitle}>TOP Radio</Text>
-            <Text style={styles.tileSubtitle}>24/7 Audio Stream</Text>
-          </Pressable>
-
-          <Pressable
-            style={styles.gridTile}
-            onPress={() => nav.navigate('Adotopoc')}
-            accessibilityRole="button"
-            accessibilityLabel="ADOTOPOC Resource Center"
-          >
-            <View style={[styles.tileIconCircle, { backgroundColor: 'rgba(127, 4, 4, 0.35)' }]}>
-              <Ionicons name="library-outline" size={20} color="#FBFAF5" />
-            </View>
-            <Text style={styles.tileTitle}>ADOTOPOC</Text>
-            <Text style={styles.tileSubtitle}>Resource Center</Text>
-          </Pressable>
-
-          <Pressable
-            style={styles.gridTile}
-            onPress={() => nav.navigate('Articles')}
-            accessibilityRole="button"
-            accessibilityLabel="Articles and Insights"
-          >
-            <View style={[styles.tileIconCircle, { backgroundColor: 'rgba(186, 104, 200, 0.2)' }]}>
-              <Ionicons name="book-outline" size={20} color={colors.primaryLight} />
-            </View>
-            <Text style={styles.tileTitle}>Articles</Text>
-            <Text style={styles.tileSubtitle}>Publications & Study</Text>
-          </Pressable>
-
-          <Pressable
-            style={styles.gridTile}
-            onPress={() => nav.navigate('Promotions')}
-            accessibilityRole="button"
-            accessibilityLabel="Highlights and Promotions"
-          >
-            <View style={[styles.tileIconCircle, { backgroundColor: 'rgba(245, 197, 66, 0.15)' }]}>
-              <Ionicons name="megaphone-outline" size={20} color={colors.accent} />
-            </View>
-            <Text style={styles.tileTitle}>Highlights</Text>
-            <Text style={styles.tileSubtitle}>Events & Programs</Text>
-          </Pressable>
-        </View>
 
         {/* Promotions Carousel */}
         {promotions.length > 0 ? (
@@ -300,40 +248,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.bg,
   },
-  discoverGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 6,
-    gap: 10,
-  },
-  gridTile: {
-    width: '48.5%',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    padding: 12,
-    gap: 6,
-  },
-  tileIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tileTitle: {
-    ...t.h3,
-    fontSize: 14,
-    color: colors.text,
-  },
-  tileSubtitle: {
-    ...t.caption,
-    fontSize: 11,
-    color: colors.textMuted,
-  },
+
   cta: {
     margin: 16,
     marginTop: 24,

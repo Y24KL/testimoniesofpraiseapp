@@ -1,9 +1,8 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '@/auth/AuthContext';
 import { colors, type as t } from '@/constants/theme';
+import { useDrawer } from '@/context/DrawerContext';
 import { Logo } from './Logo';
 
 interface Props {
@@ -13,19 +12,48 @@ interface Props {
   onSearch?: () => void;
   onNotifications?: () => void;
   onProfile?: () => void;
+  onMenu?: () => void;
   right?: React.ReactNode;
 }
 
-function IconBtn({ name, label, onPress }: { name: React.ComponentProps<typeof Ionicons>['name']; label: string; onPress: () => void }) {
+function IconBtn({
+  name,
+  label,
+  onPress,
+}: {
+  name: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  onPress: () => void;
+}) {
   return (
-    <Pressable onPress={onPress} style={styles.icon} hitSlop={8} accessibilityRole="button" accessibilityLabel={label}>
+    <Pressable
+      onPress={onPress}
+      style={styles.icon}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
       <Ionicons name={name} size={24} color={colors.text} />
     </Pressable>
   );
 }
 
-export function TopBar({ title, brand, onBack, onSearch, onNotifications, onProfile, right }: Props) {
-  const { user } = useAuth();
+export function TopBar({
+  title,
+  brand,
+  onBack,
+  onSearch,
+  onNotifications,
+  onProfile,
+  onMenu,
+  right,
+}: Props) {
+  const { openDrawer } = useDrawer();
+
+  // The hamburger icon replaces the profile icon on the top right
+  const showMenu = Boolean(onMenu || onProfile || brand);
+  const handleMenuPress = onMenu || openDrawer;
+
   return (
     <View style={styles.bar}>
       <View style={styles.left}>
@@ -38,14 +66,18 @@ export function TopBar({ title, brand, onBack, onSearch, onNotifications, onProf
       <View style={styles.right}>
         {right ?? null}
         {onSearch ? <IconBtn name="search-outline" label="Search" onPress={onSearch} /> : null}
-        {onNotifications ? <IconBtn name="notifications-outline" label="Notifications" onPress={onNotifications} /> : null}
-        {onProfile ? (
-          <Pressable onPress={onProfile} style={styles.icon} hitSlop={8} accessibilityRole="button" accessibilityLabel="Profile">
-            {user?.photoURL ? (
-              <Image source={user.photoURL} style={styles.avatar} contentFit="cover" accessibilityLabel="Your profile photo" />
-            ) : (
-              <Ionicons name="person-circle-outline" size={24} color={colors.text} />
-            )}
+        {onNotifications ? (
+          <IconBtn name="notifications-outline" label="Notifications" onPress={onNotifications} />
+        ) : null}
+        {showMenu ? (
+          <Pressable
+            onPress={handleMenuPress}
+            style={styles.icon}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Open navigation menu"
+          >
+            <Ionicons name="menu-outline" size={26} color={colors.text} />
           </Pressable>
         ) : null}
       </View>
@@ -54,10 +86,15 @@ export function TopBar({ title, brand, onBack, onSearch, onNotifications, onProf
 }
 
 const styles = StyleSheet.create({
-  bar: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12 },
+  bar: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+  },
   left: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
   right: { flexDirection: 'row', alignItems: 'center' },
   title: { ...t.h3, color: colors.text, flexShrink: 1 },
   icon: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  avatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, borderColor: colors.accent, backgroundColor: colors.card },
 });

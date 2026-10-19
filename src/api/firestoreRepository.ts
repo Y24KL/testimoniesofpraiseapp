@@ -38,19 +38,26 @@ async function getPage<T>(
   map: (id: string, d: DocumentData) => T,
   { limit, cursor, featuredOnly }: PageOptions,
 ): Promise<Page<T>> {
-  // NOTE: where(isPublished) + orderBy(createdAt) needs a composite index; Firestore logs a
-  // console link to create it the first time this query runs.
-  const c: QueryConstraint[] = [where('isPublished', '==', true)];
-  if (featuredOnly) c.push(where('isFeatured', '==', true));
-  c.push(orderBy('createdAt', 'desc'));
-  if (cursor) c.push(startAfter(cursor as QueryDocumentSnapshot));
-  c.push(qLimit(limit));
-  const snap = await getDocs(query(collection(db, col), ...c));
-  return {
-    items: snap.docs.map((d) => map(d.id, d.data())),
-    cursor: snap.docs[snap.docs.length - 1],
-    hasMore: snap.docs.length === limit,
-  };
+  try {
+    // NOTE: where(isPublished) + orderBy(createdAt) needs a composite index in firestore.indexes.json
+    const c: QueryConstraint[] = [where('isPublished', '==', true)];
+    if (featuredOnly) c.push(where('isFeatured', '==', true));
+    c.push(orderBy('createdAt', 'desc'));
+    if (cursor) c.push(startAfter(cursor as QueryDocumentSnapshot));
+    c.push(qLimit(limit));
+
+    const snap = await getDocs(query(collection(db, col), ...c));
+    return {
+      items: snap.docs.map((d) => map(d.id, d.data())),
+      cursor: snap.docs[snap.docs.length - 1],
+      hasMore: snap.docs.length === limit,
+    };
+  } catch (e) {
+    if ((e as { code?: string })?.code === 'permission-denied') {
+      return { items: [], cursor: undefined, hasMore: false };
+    }
+    throw e;
+  }
 }
 
 async function getOne<T>(col: string, id: string, map: (id: string, d: DocumentData) => T & { isPublished: boolean }) {
@@ -60,7 +67,7 @@ async function getOne<T>(col: string, id: string, map: (id: string, d: DocumentD
     const item = map(s.id, s.data());
     return item.isPublished ? item : null;
   } catch (e) {
-    // Unpublished documents are unreadable for app users (security rules): treat as "not available".
+    // Unpublished documents or restricted read access: treat as unavailable
     if ((e as { code?: string })?.code === 'permission-denied') return null;
     throw e;
   }
@@ -73,22 +80,33 @@ export const firestoreRepository: ContentRepository = {
   getTestimony: (id) => getOne(CONFIG.collections.testimonies, id, normalizeTestimony),
 
   async getNotifications(max) {
-    const snap = await getDocs(
-      query(
-        collection(db, CONFIG.collections.notifications),
-        where('published', '==', true),
-        orderBy('createdAt', 'desc'),
-        qLimit(max),
-      ),
-    );
-    return snap.docs.map((d) => normalizeNotification(d.id, d.data()));
+    try {
+      const snap = await getDocs(
+        query(
+          collection(db, CONFIG.collections.notifications),
+          where('published', '==', true),
+          orderBy('createdAt', 'desc'),
+          qLimit(max),
+        ),
+      );
+      return snap.docs.map((d) => normalizeNotification(d.id, d.data()));
+    } catch (e) {
+      if ((e as { code?: string })?.code === 'permission-denied') return [];
+      throw e;
+    }
   },
 
   subscribeLive(cb, onError) {
     return onSnapshot(
       doc(db, CONFIG.collections.liveDoc),
       (s) => cb(normalizeLive(s.exists() ? s.data() : null)),
-      (e) => onError?.(e),
+      (e) => {
+        if ((e as { code?: string })?.code === 'permission-denied') {
+          cb(normalizeLive(null));
+        } else {
+          onError?.(e);
+        }
+      },
     );
   },
 
@@ -128,26 +146,68 @@ export const firestoreRepository: ContentRepository = {
   },
 
   async getPromotions() {
-    const snap = await getDocs(
-      query(
-        collection(db, CONFIG.collections.promotions),
-        where('isPublished', '==', true),
-        orderBy('order', 'asc'),
-      ),
-    );
-    return snap.docs.map((d) => normalizePromotion(d.id, d.data()));
+    try {
+      let snap = await getDocs(
+        query(
+          collection(db, CONFIG.collections.promotions),
+          where('isPublished', '==', true),
+          orderBy('order', 'asc'),
+        ),
+      );
+      if (snap.empty) {
+        try {
+          const altSnap = await getDocs(
+            query(
+              collection(db, CONFIG.collections.promotions),
+              where('published', '==', true),
+              orderBy('order', 'asc'),
+            ),
+          );
+          if (!altSnap.empty) snap = altSnap;
+        } catch {
+          // ignore secondary schema query errors
+        }
+      }
+      return snap.docs.map((d) => normalizePromotion(d.id, d.data()));
+    } catch (e) {
+      if ((e as { code?: string })?.code === 'permission-denied') return [];
+      throw e;
+    }
   },
 
   async getArticles(max = 20) {
-    const snap = await getDocs(
-      query(
-        collection(db, CONFIG.collections.articles),
-        where('isPublished', '==', true),
-        orderBy('createdAt', 'desc'),
-        qLimit(max),
-      ),
-    );
-    return snap.docs.map((d) => normalizeArticle(d.id, d.data()));
+    try {
+      let snap = await getDocs(
+        query(
+          collection(db, CONFIG.collections.articles),
+          where('isPublished', '==', true),
+          orderBy('createdAt', 'desc'),
+          qLimit(max),
+        ),
+      );
+
+      // Schema fallback if documents were saved with published: true
+      if (snap.empty) {
+        try {
+          const altSnap = await getDocs(
+            query(
+              collection(db, CONFIG.collections.articles),
+              where('published', '==', true),
+              orderBy('createdAt', 'desc'),
+              qLimit(max),
+            ),
+          );
+          if (!altSnap.empty) snap = altSnap;
+        } catch {
+          // ignore secondary schema query errors
+        }
+      }
+
+      return snap.docs.map((d) => normalizeArticle(d.id, d.data()));
+    } catch (e) {
+      if ((e as { code?: string })?.code === 'permission-denied') return [];
+      throw e;
+    }
   },
 
   getArticle(id) {
@@ -155,32 +215,70 @@ export const firestoreRepository: ContentRepository = {
   },
 
   async getAudioTestimonies(max = 30) {
-    const snap = await getDocs(
-      query(
-        collection(db, CONFIG.collections.audioTestimonies),
-        where('isPublished', '==', true),
-        orderBy('createdAt', 'desc'),
-        qLimit(max),
-      ),
-    );
-    return snap.docs.map((d) => normalizeAudioTestimony(d.id, d.data()));
+    try {
+      let snap = await getDocs(
+        query(
+          collection(db, CONFIG.collections.audioTestimonies),
+          where('isPublished', '==', true),
+          orderBy('createdAt', 'desc'),
+          qLimit(max),
+        ),
+      );
+
+      if (snap.empty) {
+        try {
+          const altSnap = await getDocs(
+            query(
+              collection(db, CONFIG.collections.audioTestimonies),
+              where('published', '==', true),
+              orderBy('createdAt', 'desc'),
+              qLimit(max),
+            ),
+          );
+          if (!altSnap.empty) snap = altSnap;
+        } catch {
+          // ignore secondary schema query errors
+        }
+      }
+
+      return snap.docs.map((d) => normalizeAudioTestimony(d.id, d.data()));
+    } catch (e) {
+      if ((e as { code?: string })?.code === 'permission-denied') return [];
+      throw e;
+    }
   },
 
   async getRadioConfig() {
-    const snap = await getDoc(doc(db, CONFIG.collections.radioDoc));
-    return normalizeRadio(snap.exists() ? snap.data() : null);
+    try {
+      const snap = await getDoc(doc(db, CONFIG.collections.radioDoc));
+      return normalizeRadio(snap.exists() ? snap.data() : null);
+    } catch (e) {
+      if ((e as { code?: string })?.code === 'permission-denied') return normalizeRadio(null);
+      throw e;
+    }
   },
 
   subscribeRadio(cb, onError) {
     return onSnapshot(
       doc(db, CONFIG.collections.radioDoc),
       (s) => cb(normalizeRadio(s.exists() ? s.data() : null)),
-      (e) => onError?.(e),
+      (e) => {
+        if ((e as { code?: string })?.code === 'permission-denied') {
+          cb(normalizeRadio(null));
+        } else {
+          onError?.(e);
+        }
+      },
     );
   },
 
   async getAdotopocConfig() {
-    const snap = await getDoc(doc(db, CONFIG.collections.adotopocDoc));
-    return normalizeAdotopoc(snap.exists() ? snap.data() : null);
+    try {
+      const snap = await getDoc(doc(db, CONFIG.collections.adotopocDoc));
+      return normalizeAdotopoc(snap.exists() ? snap.data() : null);
+    } catch (e) {
+      if ((e as { code?: string })?.code === 'permission-denied') return normalizeAdotopoc(null);
+      throw e;
+    }
   },
 };

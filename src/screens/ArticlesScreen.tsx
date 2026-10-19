@@ -24,10 +24,10 @@ export function ArticlesScreen() {
 
   const load = useCallback(async () => {
     try {
-      const [articles, read] = await Promise.all([repo.getArticles(50), getReadArticleIds()]);
-      setItems(articles);
-      setReadIds(read);
       setError(null);
+      const [articles, read] = await Promise.all([repo.getArticles(50), getReadArticleIds()]);
+      setItems(articles ?? []);
+      setReadIds(read ?? new Set());
     } catch (e) {
       setError(messageFor(e));
     }
@@ -39,11 +39,23 @@ export function ArticlesScreen() {
     }, [load]),
   );
 
+  const handleRetry = () => {
+    setItems(null);
+    setError(null);
+    void load();
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  };
+
   return (
     <Screen>
       <TopBar title="Articles & Insights" onBack={() => nav.goBack()} />
       {error ? (
-        <ErrorState message={error} onRetry={() => { setError(null); void load(); }} />
+        <ErrorState message={error} onRetry={handleRetry} />
       ) : !items ? (
         <LoadingSpinner label="LOADING ARTICLES" />
       ) : (
@@ -55,11 +67,7 @@ export function ArticlesScreen() {
             <RefreshControl
               refreshing={refreshing}
               tintColor={colors.accent}
-              onRefresh={async () => {
-                setRefreshing(true);
-                await load();
-                setRefreshing(false);
-              }}
+              onRefresh={handleRefresh}
             />
           }
           renderItem={({ item }) => {

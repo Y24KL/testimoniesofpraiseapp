@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
 import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '@/auth/AuthContext';
@@ -17,6 +18,18 @@ import { RootNavigator } from '@/navigation/RootNavigator';
 import { usePushLifecycle } from '@/notifications/usePushLifecycle';
 
 void SplashScreen.preventAutoHideAsync();
+
+// --- FORCES FOREGROUND DROP-DOWN NOTIFICATIONS ---
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true, // <--- THIS is what triggers the drop-down banner
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true, // Plays the default notification sound
+    shouldSetBadge: false,
+  }),
+});
+// -------------------------------------------------
 
 const theme = {
   ...DarkTheme,

@@ -44,7 +44,8 @@ service cloud.firestore {
     // 2. PROMOTIONALS SECTION
     // =====================================================================
     match /promotions/{id} {
-      allow read: if isAdmin() || (signedIn() && (resource.data.published == true || resource.data.status == 'published'));
+      // Allow anyone to read published promos; admins manage everything
+      allow read: if isAdmin() || resource.data.isPublished == true || resource.data.published == true || resource.data.status == 'published';
       allow write: if isAdmin();
     }
 
@@ -52,13 +53,14 @@ service cloud.firestore {
     // 3. WRITE-UPS & ARTICLES
     // =====================================================================
     match /articles/{id} {
-      allow read: if isAdmin() || (signedIn() && (resource.data.published == true || resource.data.status == 'published'));
+      // Allow anyone to read published articles; admins manage everything
+      allow read: if isAdmin() || resource.data.isPublished == true || resource.data.published == true || resource.data.status == 'published';
       allow write: if isAdmin();
     }
 
     // In-app notification feed + announcement triggers.
     match /notifications/{id} {
-      allow read: if isAdmin() || (signedIn() && (resource.data.published == true || resource.data.status == 'published'));
+      allow read: if isAdmin() || (signedIn() && (resource.data.published == true || resource.data.status == 'published' || resource.data.isPublished == true));
       allow write: if isAdmin();
     }
 
@@ -76,13 +78,14 @@ service cloud.firestore {
     // =====================================================================
     // TOP Radio stream configuration (stream URL, programme title, live status).
     match /settings/radio {
-      allow read: if signedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
     // Audio testimonies library.
     match /audioTestimonies/{id} {
-      allow read: if isAdmin() || (signedIn() && (resource.data.published == true || resource.data.status == 'published'));
+      // Allow anyone to listen to published audio
+      allow read: if isAdmin() || resource.data.isPublished == true || resource.data.published == true || resource.data.status == 'published';
       allow write: if isAdmin();
     }
 

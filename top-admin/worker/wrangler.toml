@@ -3,22 +3,10 @@ main = "src/index.js"
 compatibility_date = "2025-01-01"
 
 [vars]
-# 1) Firebase project ID
-FIREBASE_PROJECT_ID = "YOUR-FIREBASE-PROJECT-ID"
-
-# 2) Where the admin portal runs (comma-separated, no trailing slash)
-ALLOWED_ORIGINS = "http://localhost:5173,https://YOUR-FIREBASE-PROJECT-ID.web.app"
-
-# 3) Bunny Storage Configuration (Audio, Podcasts & Large Media)
-# Storage Zone Name configured in Bunny.net console
+FIREBASE_PROJECT_ID = "testimoniesofpraiseapp"  
+ALLOWED_ORIGINS = "http://localhost:5173,https://testimoniesofpraiseweb.onrender.com"
 BUNNY_STORAGE_ZONE_NAME = "top-media-storage"
-
-# Storage API Endpoint: defaults to storage.bunnycdn.com
-# (Use uk.storage.bunnycdn.com, ny.storage.bunnycdn.com, etc. depending on your main storage region)
 BUNNY_STORAGE_ENDPOINT = "storage.bunnycdn.com"
-
-# Public Pull Zone CDN Hostname (linked to your storage zone)
-# Example: top-media.b-cdn.net or custom domain media.testimoniesofpraise.org
 BUNNY_CDN_HOSTNAME = "top-media.b-cdn.net"
 
 # NOTE ON SECRETS:

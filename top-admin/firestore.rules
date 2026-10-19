@@ -17,7 +17,7 @@ service cloud.firestore {
 
     // Testimonies: the app only sees published ones; admins see and manage everything.
     match /testimonies/{id} {
-      allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
+      allow read: if isAdmin() || (signedIn() && (resource.data.isPublished == true || resource.data.published == true));
       allow write: if isAdmin();
     }
 
@@ -27,12 +27,86 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // In-app notification feed + announcement triggers.
-    match /notifications/{id} {
-      allow read: if isAdmin() || (signedIn() && resource.data.published == true);
+    // =====================================================================
+    // 1. ADOTOPOC RESOURCE CENTER
+    // =====================================================================
+    match /settings/adotopoc {
+      allow read: if signedIn();
       allow write: if isAdmin();
     }
 
+    match /adotopocResources/{id} {
+      allow read: if isAdmin() || (signedIn() && (resource.data.published == true || resource.data.status == 'published'));
+      allow write: if isAdmin();
+    }
+
+    // =====================================================================
+    // 2. PROMOTIONALS SECTION
+    // =====================================================================
+    match /promotions/{id} {
+      allow read: if isAdmin() || (signedIn() && (resource.data.published == true || resource.data.status == 'published'));
+      allow write: if isAdmin();
+    }
+
+    // =====================================================================
+    // 3. WRITE-UPS & ARTICLES
+    // =====================================================================
+    match /articles/{id} {
+      allow read: if isAdmin() || (signedIn() && (resource.data.published == true || resource.data.status == 'published'));
+      allow write: if isAdmin();
+    }
+
+    // In-app notification feed + announcement triggers.
+    match /notifications/{id} {
+      allow read: if isAdmin() || (signedIn() && (resource.data.published == true || resource.data.status == 'published'));
+      allow write: if isAdmin();
+    }
+
+    // Per-user notification state (e.g., read/unread tracking).
+    match /users/{uid}/notifications/{id} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, delete: if isAdmin();
+      allow update: if signedIn() 
+        && request.auth.uid == uid 
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'readAt']);
+    }
+
+    // =====================================================================
+    // 4. TOP RADIO & AUDIO TESTIMONIES
+    // =====================================================================
+    // TOP Radio stream configuration (stream URL, programme title, live status).
+    match /settings/radio {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // Audio testimonies library.
+    match /audioTestimonies/{id} {
+      allow read: if isAdmin() || (signedIn() && (resource.data.published == true || resource.data.status == 'published'));
+      allow write: if isAdmin();
+    }
+
+    // TOP Radio listener presence (matches existing liveViewers subcollection pattern).
+    match /radioListeners/{sessionId} {
+      allow read, delete: if isAdmin();
+    }
+    match /radioListeners/{sessionId}/listeners/{uid} {
+      allow read: if isAdmin();
+      allow write, delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Direct radio session heartbeats & analytics.
+    match /radioSessions/{sessionId} {
+      allow read, delete: if isAdmin();
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if signedIn() 
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastHeartbeat', 'status', 'endTime']);
+    }
+
+    // =====================================================================
+    // EXISTING APP COLLECTIONS
+    // =====================================================================
     // Testimonies shared from the app. Users can create their own; only admins can read/manage them.
     match /testimonySubmissions/{id} {
       allow create: if signedIn()
@@ -102,51 +176,6 @@ service cloud.firestore {
       allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
       allow update: if isAdmin();
       allow delete: if isAdmin();
-    }
-
-    // Promotions: public read for published promotions; admin full access.
-    match /promotions/{id} {
-      allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
-      allow write: if isAdmin();
-    }
-
-    // Updates & Articles: public read for published articles; admin full access.
-    match /articles/{id} {
-      allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
-      allow write: if isAdmin();
-    }
-
-    // Audio Testimonies: public read for published items; admin full access.
-    match /audioTestimonies/{id} {
-      allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
-      allow write: if isAdmin();
-    }
-
-    // TOP Radio Settings (single document settings/radio).
-    match /settings/radio {
-      allow read: if signedIn();
-      allow write: if isAdmin();
-    }
-
-    // ADOTOPOC Settings (single document settings/adotopoc).
-    match /settings/adotopoc {
-      allow read: if signedIn();
-      allow write: if isAdmin();
-    }
-
-    // TOP Radio listener heartbeat presence.
-    match /radioListeners/{sessionId} {
-      allow read, delete: if isAdmin();
-    }
-    match /radioListeners/{sessionId}/listeners/{listenerId} {
-      allow read: if isAdmin();
-      allow write, delete: if signedIn() && request.auth.uid == listenerId;
-    }
-
-    // TOP Radio historical analytics.
-    match /radioAnalytics/{id} {
-      allow read: if isAdmin();
-      allow write: if isAdmin();
     }
   }
 }

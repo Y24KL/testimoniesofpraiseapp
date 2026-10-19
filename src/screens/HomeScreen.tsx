@@ -80,7 +80,7 @@ export function HomeScreen() {
           >
             <View style={styles.radioLiveIndicator}>
               <View style={styles.radioDot} />
-              <Ionicons name="radio" size={16} color="#34C759" />
+              <Ionicons name="radio" size={16} color={colors.live} />
             </View>
             <View style={styles.radioInfo}>
               <Text style={styles.radioBarTitle} numberOfLines={1}>
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: 'rgba(52, 199, 89, 0.3)',
+    borderColor: 'rgba(255, 59, 78, 0.35)',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#34C759',
+    backgroundColor: colors.live,
   },
   radioInfo: {
     flex: 1,

@@ -194,9 +194,9 @@ export function RadioPage({ onBack }: Props) {
               padding: '6px 14px',
               borderRadius: radius.pill,
               backgroundColor: radioConfig.isLive
-                ? 'rgba(52,199,89,0.15)'
+                ? 'rgba(255,59,78,0.18)'
                 : 'rgba(255,255,255,0.08)',
-              border: `1px solid ${radioConfig.isLive ? 'rgba(52,199,89,0.4)' : 'rgba(255,255,255,0.1)'}`,
+              border: `1px solid ${radioConfig.isLive ? 'rgba(255,59,78,0.45)' : 'rgba(255,255,255,0.1)'}`,
             }}
           >
             {radioConfig.isLive && (
@@ -205,7 +205,7 @@ export function RadioPage({ onBack }: Props) {
                   width: '8px',
                   height: '8px',
                   borderRadius: '50%',
-                  backgroundColor: '#34C759',
+                  backgroundColor: colors.live,
                   animation: 'pulse 1.5s infinite',
                 }}
               />
@@ -214,7 +214,7 @@ export function RadioPage({ onBack }: Props) {
               style={{
                 fontSize: '11px',
                 fontWeight: 800,
-                color: radioConfig.isLive ? '#34C759' : colors.textMuted,
+                color: radioConfig.isLive ? colors.live : colors.textMuted,
                 letterSpacing: '1px',
                 textTransform: 'uppercase',
               }}

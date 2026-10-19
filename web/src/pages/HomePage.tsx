@@ -98,14 +98,14 @@ export function HomePage({
               width: '36px',
               height: '36px',
               borderRadius: '50%',
-              backgroundColor: 'rgba(52, 199, 89, 0.15)',
+              backgroundColor: 'rgba(255, 59, 78, 0.15)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
             }}
           >
-            <Radio size={20} color="#34C759" />
+            <Radio size={20} color={colors.live} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div

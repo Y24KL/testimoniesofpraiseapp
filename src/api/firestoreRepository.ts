@@ -31,7 +31,7 @@ import {
   normalizeRadio,
   normalizeTestimony,
 } from './normalize';
-import type { ContentRepository, PageOptions } from './repository';
+import type { ContentRepository, PageOptions, CreateArticleInput } from './repository';
 
 async function getPage<T>(
   col: string,
@@ -212,6 +212,24 @@ export const firestoreRepository: ContentRepository = {
 
   getArticle(id) {
     return getOne(CONFIG.collections.articles, id, normalizeArticle);
+  },
+
+  async publishArticle(input: CreateArticleInput) {
+    const isPublished = input.isPublished ?? true;
+    
+    const docRef = await addDoc(collection(db, CONFIG.collections.articles), {
+      title: input.title,
+      author: input.author,
+      category: input.category,
+      body: input.body,
+      coverImageUrl: input.coverImageUrl ?? '',
+      isPublished: isPublished,
+      published: isPublished, // Fallback for security rules
+      createdAt: serverTimestamp(),
+      publishedAt: isPublished ? serverTimestamp() : null,
+    });
+    
+    return docRef.id;
   },
 
   async getAudioTestimonies(max = 30) {

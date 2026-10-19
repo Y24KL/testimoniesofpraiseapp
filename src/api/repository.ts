@@ -24,6 +24,15 @@ export interface SubmissionInput {
   userEmail?: string | null;
 }
 
+export interface CreateArticleInput {
+  title: string;
+  author: string;
+  category: string;
+  body: string;
+  coverImageUrl?: string;
+  isPublished?: boolean;
+}
+
 /** The only surface the UI talks to. Implementations: Firestore (default) and REST. */
 export interface ContentRepository {
   getTestimonies(opts: PageOptions): Promise<Page<Testimony>>;
@@ -40,6 +49,7 @@ export interface ContentRepository {
   getPromotions(): Promise<Promotion[]>;
   getArticles(limit?: number): Promise<Article[]>;
   getArticle(id: string): Promise<Article | null>;
+  publishArticle(input: CreateArticleInput): Promise<string>;
   getAudioTestimonies(limit?: number): Promise<AudioTestimony[]>;
   getRadioConfig(): Promise<RadioConfig>;
   subscribeRadio(cb: (cfg: RadioConfig) => void, onError?: (e: unknown) => void): () => void;

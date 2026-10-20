@@ -4,7 +4,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Testimonies of Praise',
   slug: 'testimonies-of-praise',
-  version: '1.0.1',
+  version: '1.0.2',
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'dark',
@@ -20,7 +20,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'com.testimoniesofpraise.app',
-    buildNumber: '3',
+    buildNumber: '4',
     googleServicesFile: process.env.GOOGLE_SERVICE_INFO_PLIST || './GoogleService-Info.plist',
     infoPlist: {
       // Allows HLS streams and WebView traffic over HTTP (needed for some stream providers).
@@ -35,7 +35,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#0a0a0a',
     },
     package: 'com.testimoniesofpraise.app',
-    versionCode: 3,
+    versionCode: 4,
     googleServicesFile: process.env.GOOGLE_SERVICES_JSON || './google-services.json',
     // Required for expo-notifications foreground banners on Android 13+
     permissions: ['android.permission.POST_NOTIFICATIONS', 'android.permission.VIBRATE'],

@@ -106,7 +106,7 @@ export function AppDrawer() {
       subtitle: 'Resource Center & Media',
       customImage: require('../../assets/LOG_xcvt3v.png'),
 
-      iconBg: 'rgba(127, 4, 4, 0.35)',
+      iconBg: 'transparent',
       onPress: () => nav.navigate('Adotopoc'),
     },
     {
@@ -308,7 +308,11 @@ export function AppDrawer() {
                   ]}
                 >
                   {item.customImage ? (
-                    <Image source={item.customImage} style={{ width: 24, height: 24, borderRadius: 12 }} contentFit="contain" />
+                    <Image
+                      source={item.customImage}
+                      style={{ width: 38, height: 38, borderRadius: 19 }}
+                      contentFit="cover"
+                    />
                   ) : (
                     <Ionicons
                     name={item.icon!}
@@ -516,6 +520,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },

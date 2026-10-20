@@ -107,7 +107,7 @@ export function AdotopocScreen() {
           >
             <View style={styles.ctaContent}>
               <Text style={styles.ctaPrompt}>
-                Want to host a day of Testimonies of Praise outreaches and crusade?
+                Want to host A Day of Testimonies of Praise Outreaches and Crusade ?
               </Text>
               <Text style={styles.ctaSubText}>
                 Click below to go to our resource center.

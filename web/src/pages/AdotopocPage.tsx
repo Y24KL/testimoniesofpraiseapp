@@ -164,7 +164,7 @@ export function AdotopocPage({ onBack }: Props) {
               textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)',
             }}
           >
-            Want to host a day of Testimonies of Praise outreaches and crusade?
+            Want to host A Day of Testimonies of Praise Outreaches and Crusade?
           </h2>
           <p
             style={{

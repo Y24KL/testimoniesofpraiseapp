@@ -94,7 +94,8 @@ export function normalizeTestimony(id: string, r: Raw): Testimony {
     publishedAt: toIso(pick(r, ['publishedAt', 'published_at'])),
     isPublished: isPublished(r),
     isFeatured: pick(r, ['isFeatured', 'featured']) === true,
-    isDownloadable: pick(r, ['isDownloadable', 'downloadable', 'allowDownload']) === true,
+    // Every testimony is downloadable unless explicitly marked false
+    isDownloadable: pick(r, ['isDownloadable', 'downloadable', 'allowDownload']) !== false,
   };
 }
 

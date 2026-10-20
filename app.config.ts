@@ -21,7 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: true,
     bundleIdentifier: 'com.testimoniesofpraise.app',
     buildNumber: '3',
-    googleServicesFile: './GoogleService-Info.plist',
+    googleServicesFile: process.env.GOOGLE_SERVICE_INFO_PLIST || './GoogleService-Info.plist',
     infoPlist: {
       // Allows HLS streams and WebView traffic over HTTP (needed for some stream providers).
       NSAppTransportSecurity: {
@@ -36,7 +36,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     package: 'com.testimoniesofpraise.app',
     versionCode: 3,
-    googleServicesFile: './google-services.json',
+    googleServicesFile: process.env.GOOGLE_SERVICES_JSON || './google-services.json',
     // Required for expo-notifications foreground banners on Android 13+
     permissions: ['android.permission.POST_NOTIFICATIONS', 'android.permission.VIBRATE'],
   },

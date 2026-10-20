@@ -11,4 +11,3 @@ android/
 *.mobileprovision
 .env
 .env.local
-GoogleService-Info.plist

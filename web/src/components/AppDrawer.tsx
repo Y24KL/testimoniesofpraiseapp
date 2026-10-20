@@ -103,7 +103,17 @@ export function AppDrawer({
       id: 'adotopoc',
       title: 'ADOTOPOC',
       subtitle: 'Resource Center & Media',
-      icon: <Library size={18} color="#FBFAF5" />,
+      icon: (
+        <img
+          src="/LOG_xcvt3v.png"
+          alt="ADOTOPOC"
+          style={{ width: '22px', height: '22px', objectFit: 'contain', borderRadius: '50%' }}
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).src =
+              'https://res.cloudinary.com/duw6xrnpn/image/upload/v1789425387/LOG_xcvt3v.png';
+          }}
+        />
+      ),
       iconBg: 'rgba(127, 4, 4, 0.35)',
       action: onGoToAdotopoc,
     },

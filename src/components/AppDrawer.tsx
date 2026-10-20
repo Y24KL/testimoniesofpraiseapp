@@ -26,7 +26,8 @@ interface MenuItem {
   id: string;
   title: string;
   subtitle?: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
+  icon?: React.ComponentProps<typeof Ionicons>['name'];
+  customImage?: any;
   iconColor?: string;
   iconBg?: string;
   badge?: string;
@@ -103,8 +104,8 @@ export function AppDrawer() {
       id: 'adotopoc',
       title: 'ADOTOPOC',
       subtitle: 'Resource Center & Media',
-      icon: 'library-outline',
-      iconColor: '#FBFAF5',
+      customImage: require('../../assets/LOG_xcvt3v.png'),
+
       iconBg: 'rgba(127, 4, 4, 0.35)',
       onPress: () => nav.navigate('Adotopoc'),
     },
@@ -306,11 +307,15 @@ export function AppDrawer() {
                     { backgroundColor: item.iconBg || 'rgba(255, 255, 255, 0.08)' },
                   ]}
                 >
-                  <Ionicons
-                    name={item.icon}
+                  {item.customImage ? (
+                    <Image source={item.customImage} style={{ width: 24, height: 24, borderRadius: 12 }} contentFit="contain" />
+                  ) : (
+                    <Ionicons
+                    name={item.icon!}
                     size={20}
                     color={item.iconColor || colors.text}
                   />
+                  )}
                 </View>
 
                 <View style={styles.itemTextWrap}>

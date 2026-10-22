@@ -8,9 +8,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'dark',
-  // Deep-link scheme — MUST match what is listed in AndroidManifest and Info.plist.
-  // Also required for expo-auth-session (Google OAuth) redirects to work on device.
-  scheme: 'testimoniesofpraise',
+  // Deep-link and OAuth callback schemes:
+  // 1. 'testimoniesofpraise': Canonical app deep-linking scheme.
+  // 2. 'com.testimoniesofpraise.app': Default Android OAuth callback scheme for expo-auth-session.
+  // 3. 'com.googleusercontent.apps.754997860722-fjfanme5itf82ue8sbch2m8rjkuvqnpq': Reversed iOS client ID for Google OAuth.
+  scheme: [
+    'testimoniesofpraise',
+    'com.testimoniesofpraise.app',
+    'com.googleusercontent.apps.754997860722-fjfanme5itf82ue8sbch2m8rjkuvqnpq',
+  ],
   splash: {
     image: './assets/splash.png',
     resizeMode: 'contain',
@@ -23,9 +29,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     buildNumber: '4',
     googleServicesFile: process.env.GOOGLE_SERVICE_INFO_PLIST || './GoogleService-Info.plist',
     infoPlist: {
-      // Allows HLS streams and WebView traffic over HTTP (needed for some stream providers).
+      // Scoped ATS: Allows HTTP for live media streams and web views without blanket exemption
       NSAppTransportSecurity: {
-        NSAllowsArbitraryLoads: true,
+        NSAllowsArbitraryLoadsInWebContent: true,
+        NSAllowsArbitraryLoadsForMedia: true,
       },
     },
   },

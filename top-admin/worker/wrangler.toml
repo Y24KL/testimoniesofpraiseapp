@@ -4,7 +4,7 @@ compatibility_date = "2025-01-01"
 
 [vars]
 FIREBASE_PROJECT_ID = "testimoniesofpraiseapp"  
-ALLOWED_ORIGINS = "http://localhost:5173,https://testimoniesofpraiseweb.onrender.com"
+ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174,https://testimoniesofpraiseweb.onrender.com"
 BUNNY_STORAGE_ZONE_NAME = "top-media-storage"
 BUNNY_STORAGE_ENDPOINT = "storage.bunnycdn.com"
 BUNNY_CDN_HOSTNAME = "top-media.b-cdn.net"

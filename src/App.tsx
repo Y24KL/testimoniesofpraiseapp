@@ -22,18 +22,26 @@ void SplashScreen.preventAutoHideAsync();
 // --- FORCES FOREGROUND DROP-DOWN NOTIFICATIONS ---
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true, // <--- THIS is what triggers the drop-down banner
+    shouldShowAlert: true,
     shouldShowBanner: true,
     shouldShowList: true,
-    shouldPlaySound: true, // Plays the default notification sound
+    shouldPlaySound: true,
     shouldSetBadge: false,
+    priority: Notifications.AndroidNotificationPriority.HIGH,
   }),
 });
 // -------------------------------------------------
 
 const theme = {
   ...DarkTheme,
-  colors: { ...DarkTheme.colors, background: colors.bg, card: colors.surface, primary: colors.accent, text: colors.text, border: colors.border },
+  colors: {
+    ...DarkTheme.colors,
+    background: colors.bg,
+    card: colors.surface,
+    primary: colors.accent,
+    text: colors.text,
+    border: colors.border,
+  },
 };
 
 function Shell() {

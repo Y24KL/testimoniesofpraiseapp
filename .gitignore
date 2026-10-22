@@ -11,3 +11,5 @@ android/
 *.mobileprovision
 .env
 .env.local
+lib/
+backend-reference/functions/lib/

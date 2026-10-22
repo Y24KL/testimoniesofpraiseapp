@@ -1,34 +1,62 @@
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { repo } from '@/api';
 import { loadPrefs } from '@/storage/prefs';
 import type { NotificationPrefs } from '@/types';
 
-// NOTE: The global notification handler is set once in App.tsx (shouldShowAlert: true).
+// NOTE: The global notification handler is set once in App.tsx.
 // Do NOT set a second handler here — the last registration wins and can suppress banners.
 
+/**
+ * Creates the high-importance Android notification channel required for
+ * system dropdown / heads-up banners on Android 8.0+ (API 26+).
+ */
 export async function ensureAndroidChannel() {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync('default', {
     name: 'Testimonies of Praise',
+    description: 'Notifications for new testimonies, live broadcasts, and announcements',
     importance: Notifications.AndroidImportance.HIGH,
-    vibrationPattern: [0, 200, 100, 200],
+    vibrationPattern: [0, 250, 150, 250],
     lightColor: '#4B006E',
+    enableLights: true,
+    enableVibrate: true,
+    showBadge: true,
+    sound: 'default',
   });
 }
 
-export async function getPermissionStatus() {
+export async function getPermissionStatus(): Promise<Notifications.PermissionStatus> {
   const p = await Notifications.getPermissionsAsync();
   return p.status; // 'granted' | 'denied' | 'undetermined'
 }
 
-/** Triggers the OFFICIAL OS permission dialog. Call only after explaining why (see NotificationPrimerScreen). */
+/**
+ * Triggers the OFFICIAL OS permission dialog requesting alert, sound, and badge.
+ */
 export async function requestPermission(): Promise<boolean> {
   await ensureAndroidChannel();
-  const res = await Notifications.requestPermissionsAsync();
+  const res = await Notifications.requestPermissionsAsync({
+    ios: {
+      allowAlert: true,
+      allowBadge: true,
+      allowSound: true,
+    },
+  });
   return res.status === 'granted';
+}
+
+/**
+ * Opens system application settings so the user can enable notifications after denial.
+ */
+export async function openNotificationSettings(): Promise<void> {
+  if (Platform.OS === 'ios') {
+    await Linking.openURL('app-settings:');
+  } else {
+    await Linking.openSettings();
+  }
 }
 
 let currentToken: string | null = null;
@@ -59,4 +87,21 @@ export async function unregisterPushToken(): Promise<void> {
     /* best effort */
   }
   currentToken = null;
+}
+
+/**
+ * Diagnostic local notification to verify heads-up dropdown banner presentation on device.
+ */
+export async function triggerLocalDiagnosticNotification(): Promise<void> {
+  await ensureAndroidChannel();
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'Testimonies of Praise - Banner Check',
+      body: 'Your notification system is working! Dropdown banners and alerts are active.',
+      sound: 'default',
+      priority: Notifications.AndroidNotificationPriority.HIGH,
+      data: { type: 'announcement', isDiagnostic: true },
+    },
+    trigger: null, // triggers immediately
+  });
 }

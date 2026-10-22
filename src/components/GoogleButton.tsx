@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, ActivityIndicator, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, ActivityIndicator, View, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Google from 'expo-auth-session/providers/google';
+import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { CONFIG, isGoogleConfigured } from '@/constants/config';
 import { radius, type as t } from '@/constants/theme';
@@ -12,45 +13,116 @@ WebBrowser.maybeCompleteAuthSession();
 
 /**
  * Real Google OAuth (system browser / account chooser) -> Firebase credential.
- * Google's brand rules want a white button with the multicolour "G"; swap the icon for the official
- * asset before store submission.
+ * Automatically enforces 6-digit email OTP verification via AuthContext.
  */
 export function GoogleButton({ onError }: { onError: (message: string) => void }) {
   const { signInWithGoogleIdToken } = useAuth();
   const [busy, setBusy] = useState(false);
-  // The hook throws if a platform's client id is empty, so pass a placeholder and guard in onPress.
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    webClientId: CONFIG.google.webClientId || 'not-configured',
-    iosClientId: CONFIG.google.iosClientId || 'not-configured',
-    androidClientId: CONFIG.google.androidClientId || 'not-configured',
-    selectAccount: true,
-  });
+
+  // Determine platform client ID and reverse scheme
+  const clientId = useMemo(() => {
+    if (Platform.OS === 'ios') return CONFIG.google.iosClientId;
+    if (Platform.OS === 'android') return CONFIG.google.androidClientId;
+    return CONFIG.google.webClientId;
+  }, []);
+
+  const redirectUri = useMemo(() => {
+    if (Platform.OS === 'ios') {
+      // iOS Google OAuth strictly requires the reversed iOS client ID as the scheme
+      const reversedClientId = CONFIG.google.iosClientId
+        ? `com.googleusercontent.apps.${CONFIG.google.iosClientId.replace(/\.apps\.googleusercontent\.com$/, '')}`
+        : 'com.testimoniesofpraise.app';
+      return AuthSession.makeRedirectUri({
+        scheme: reversedClientId,
+        path: 'oauthredirect',
+      });
+    }
+
+    if (Platform.OS === 'android') {
+      return AuthSession.makeRedirectUri({
+        scheme: 'com.testimoniesofpraise.app',
+        path: 'oauthredirect',
+      });
+    }
+
+    return AuthSession.makeRedirectUri();
+  }, []);
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest(
+    {
+      webClientId: CONFIG.google.webClientId || undefined,
+      iosClientId: CONFIG.google.iosClientId || undefined,
+      androidClientId: CONFIG.google.androidClientId || undefined,
+      selectAccount: true,
+      redirectUri,
+    },
+    {
+      scheme: Platform.OS === 'ios' ? undefined : 'com.testimoniesofpraise.app',
+    },
+  );
 
   useEffect(() => {
     if (!response) return;
+
+    if (__DEV__) {
+      console.log('[GoogleAuth] OAuth response received:', {
+        type: response.type,
+        platform: Platform.OS,
+        redirectUri,
+        hasIdToken:
+          response.type === 'success' &&
+          Boolean(
+            (response as any).params?.id_token || (response as any).authentication?.idToken,
+          ),
+      });
+    }
+
     if (response.type === 'success') {
-      const idToken = response.params?.id_token ?? response.authentication?.idToken;
+      const idToken = response.params?.id_token ?? (response as any).authentication?.idToken;
+      const accessToken = response.params?.access_token ?? (response as any).authentication?.accessToken;
+
       if (!idToken) {
         setBusy(false);
-        return onError('Unable to sign you in.\nPlease check your details.');
+        return onError('Unable to sign you in with Google: Missing ID token.');
       }
-      signInWithGoogleIdToken(idToken, response.authentication?.accessToken)
-        .catch((e) => onError(authMessage(e)))
+
+      signInWithGoogleIdToken(idToken, accessToken)
+        .catch((e: any) => {
+          if (__DEV__) console.warn('[GoogleAuth] Firebase credential error:', e);
+          onError(authMessage(e));
+        })
         .finally(() => setBusy(false));
-    } else {
+    } else if (response.type === 'error') {
       setBusy(false);
-      if (response.type === 'error') onError('Unable to sign you in.\nPlease check your details.');
+      if (__DEV__) {
+        console.warn('[GoogleAuth] Authentication error:', response.error);
+      }
+      onError('Unable to sign you in with Google. Please try again.');
+    } else {
+      // 'cancel' or 'dismiss': user closed account chooser
+      setBusy(false);
     }
-  }, [response, signInWithGoogleIdToken, onError]);
+  }, [response, signInWithGoogleIdToken, onError, redirectUri]);
 
   const press = async () => {
-    if (!isGoogleConfigured) return onError('Google sign-in is not available right now.');
+    if (busy) return;
+
+    if (!isGoogleConfigured || !clientId) {
+      return onError('Google sign-in is not configured for this build.');
+    }
+
     setBusy(true);
     try {
-      await promptAsync();
-    } catch {
+      const result = await promptAsync();
+      if (result.type === 'cancel' || result.type === 'dismiss') {
+        setBusy(false);
+      }
+    } catch (err: any) {
       setBusy(false);
-      onError('Unable to sign you in.\nPlease check your details.');
+      if (__DEV__) {
+        console.warn('[GoogleAuth] promptAsync failed:', err);
+      }
+      onError('Unable to launch Google sign-in. Please check your network connection.');
     }
   };
 
@@ -58,7 +130,11 @@ export function GoogleButton({ onError }: { onError: (message: string) => void }
     <Pressable
       onPress={press}
       disabled={!request || busy}
-      style={({ pressed }) => [styles.btn, pressed && { opacity: 0.85 }, (!request || busy) && { opacity: 0.6 }]}
+      style={({ pressed }) => [
+        styles.btn,
+        pressed && { opacity: 0.85 },
+        (!request || busy) && { opacity: 0.6 },
+      ]}
       accessibilityRole="button"
       accessibilityLabel="Sign in with Google"
     >
@@ -75,7 +151,22 @@ export function GoogleButton({ onError }: { onError: (message: string) => void }
 }
 
 const styles = StyleSheet.create({
-  btn: { minHeight: 52, borderRadius: radius.pill, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  text: { ...t.h3, color: '#1F1F1F', letterSpacing: 0.6 },
+  btn: {
+    minHeight: 52,
+    borderRadius: radius.pill,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  text: {
+    ...t.h3,
+    color: '#1F1F1F',
+    letterSpacing: 0.6,
+  },
 });

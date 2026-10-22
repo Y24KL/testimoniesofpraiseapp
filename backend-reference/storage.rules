@@ -1,0 +1,59 @@
+rules_version = '2';
+
+/**
+ * Testimonies of Praise - Firebase Storage Security Rules
+ *
+ * Rules:
+ * 1. Public Content: Thumbnails, banners, and published assets are readable by all clients.
+ * 2. Sponsorship Receipts: Only verified users can upload receipts (max 10MB, images or PDF).
+ *    Read access is restricted to the owning user and administrators.
+ * 3. Profile Pictures: Signed-in users can manage their own avatar images (max 5MB).
+ * 4. General Media: Only administrators can upload or delete media files.
+ */
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { 
+      return request.auth != null; 
+    }
+
+    function isAdmin() {
+      return signedIn() && (
+        request.auth.token.admin == true ||
+        firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isVerifiedUser() {
+      return signedIn() && (
+        request.auth.token.emailVerified == true ||
+        request.auth.token.email_verified == true ||
+        firestore.exists(/databases/(default)/documents/userProfiles/$(request.auth.uid))
+      );
+    }
+
+    // Sponsorship bank transfer payment receipts
+    match /sponsorshipReceipts/{uid}/{fileName} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow write: if (isAdmin() || isVerifiedUser())
+        && request.auth.uid == uid
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*|application/pdf');
+    }
+
+    // User profile avatars
+    match /profilePictures/{uid}/{fileName} {
+      allow read: if true;
+      allow write: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // General app and media assets (admin-managed)
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && (request.resource == null || request.resource.size < 250 * 1024 * 1024);
+    }
+  }
+}

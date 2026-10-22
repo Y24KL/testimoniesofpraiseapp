@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Platform } from 'react-native';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,11 +6,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GoogleButton } from '@/components/GoogleButton';
 import { Logo } from '@/components/Logo';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { isGoogleConfigured } from '@/constants/config';
 import { colors, gradients, type as t } from '@/constants/theme';
 
 export function WelcomeScreen() {
   const nav = useNavigation();
   const [error, setError] = useState<string | null>(null);
+
   return (
     <LinearGradient colors={gradients.hero} style={{ flex: 1 }}>
       <SafeAreaView style={{ flex: 1 }}>
@@ -20,13 +21,26 @@ export function WelcomeScreen() {
             <Logo size={110} />
             <Text style={styles.welcome}>WELCOME TO</Text>
             <Text style={styles.brand}>TESTIMONIES OF PRAISE</Text>
-            <Text style={styles.tag}>"No one ever praises God and goes away empty, he always blesses you for praising Him."- Rev. Chris Oyakhilome Dsc.Dsc.DD</Text>
+            <Text style={styles.tag}>
+              "No one ever praises God and goes away empty, he always blesses you for praising Him." - Rev. Chris Oyakhilome Dsc.Dsc.DD
+            </Text>
           </View>
           <View style={{ gap: 12 }}>
-            {Platform.OS === 'android' ? <GoogleButton onError={setError} /> : null}
-            <PrimaryButton title="CONTINUE WITH EMAIL" icon="mail-outline" variant="outline" onPress={() => nav.navigate('EmailAuth', { mode: 'signin' })} />
-            {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}
-            <Text style={styles.legal}>By continuing you agree to the Terms of Service and Privacy Policy.</Text>
+            {isGoogleConfigured ? <GoogleButton onError={setError} /> : null}
+            <PrimaryButton
+              title="CONTINUE WITH EMAIL"
+              icon="mail-outline"
+              variant="outline"
+              onPress={() => nav.navigate('EmailAuth', { mode: 'signin' })}
+            />
+            {error ? (
+              <Text style={styles.error} accessibilityRole="alert">
+                {error}
+              </Text>
+            ) : null}
+            <Text style={styles.legal}>
+              By continuing you agree to the Terms of Service and Privacy Policy.
+            </Text>
           </View>
         </ScrollView>
       </SafeAreaView>

@@ -12,6 +12,7 @@ export type RootStackParamList = {
   Welcome: undefined;
   EmailAuth: { mode?: 'signin' | 'signup' } | undefined;
   ForgotPassword: undefined;
+  VerifyEmail: { email?: string; isNewAccount?: boolean } | undefined;
   // Onboarding
   NotificationPrimer: undefined;
   FirstTimeWelcome: undefined;

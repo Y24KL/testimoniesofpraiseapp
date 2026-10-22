@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import {
-  checkServerMediaStatus,
+  checkDetailedServerMediaStatus,
   verifyMediaReachability,
   identifyProvider,
   getProviderDisplayName,
   isCloudinaryAvailable,
   isWorkerAvailable,
+  workerBaseUrl,
   type ServerMediaStatus,
   type MediaVerifyResult,
 } from '../mediaService';
@@ -14,14 +15,32 @@ import { Field, Message } from '../components/Field';
 export function MediaManager() {
   const [serverStatus, setServerStatus] = useState<ServerMediaStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [isStale, setIsStale] = useState(false);
   const [testUrl, setTestUrl] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [verifyResult, setVerifyResult] = useState<MediaVerifyResult | null>(null);
 
+  const fetchStatus = async () => {
+    setLoading(true);
+    const res = await checkDetailedServerMediaStatus();
+    setLastChecked(res.lastChecked);
+    if (res.ok && res.data) {
+      setServerStatus(res.data);
+      setStatusError(null);
+      setIsStale(false);
+    } else {
+      setStatusError(res.error || 'Failed to fetch status from worker relay.');
+      if (serverStatus) {
+        setIsStale(true);
+      }
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
-    checkServerMediaStatus()
-      .then(setServerStatus)
-      .finally(() => setLoading(false));
+    fetchStatus();
   }, []);
 
   const handleVerify = async (e: React.FormEvent) => {
@@ -39,8 +58,10 @@ export function MediaManager() {
     }
   };
 
-  const bunnyConfigured = serverStatus?.providers?.bunny?.configured;
+  const bunnyConfigured = Boolean(serverStatus?.providers?.bunny?.configured);
+  const bunnyHasAccessKey = serverStatus?.providers?.bunny?.hasAccessKey;
   const cloudinaryConfigured = isCloudinaryAvailable;
+  const firebaseConfigured = Boolean(serverStatus?.providers?.firebase?.configured || import.meta.env.VITE_FIREBASE_PROJECT_ID);
 
   return (
     <>
@@ -51,17 +72,40 @@ export function MediaManager() {
             Multi-cloud media management with Bunny Storage, Cloudinary, and Firebase.
           </p>
         </div>
-        <button
-          className="btn ghost"
-          onClick={() => {
-            setLoading(true);
-            checkServerMediaStatus().then(setServerStatus).finally(() => setLoading(false));
-          }}
-          disabled={loading}
-        >
-          {loading ? 'Refreshing…' : '↻ Refresh Status'}
-        </button>
+        <div style={{ textAlign: 'right' }}>
+          <button className="btn ghost" onClick={fetchStatus} disabled={loading}>
+            {loading ? 'Refreshing…' : '↻ Refresh Status'}
+          </button>
+          {lastChecked ? (
+            <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>
+              Last checked: {lastChecked.toLocaleTimeString()} {isStale ? '(stale)' : ''}
+            </div>
+          ) : null}
+        </div>
       </div>
+
+      {statusError ? (
+        <div style={{ marginBottom: 20 }}>
+          <Message kind="err">
+            <div className="row between" style={{ alignItems: 'center' }}>
+              <div>
+                <b>Worker Status Error:</b> {statusError}
+                <div style={{ fontSize: 12, marginTop: 4, opacity: 0.9 }}>
+                  Target: <code>{workerBaseUrl || 'Not configured'}</code>
+                </div>
+              </div>
+              <button
+                className="btn primary"
+                style={{ fontSize: 12, padding: '4px 12px', minHeight: 32 }}
+                onClick={fetchStatus}
+                disabled={loading}
+              >
+                Retry
+              </button>
+            </div>
+          </Message>
+        </div>
+      ) : null}
 
       {/* Storage Providers Overview Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 24 }}>
@@ -69,8 +113,16 @@ export function MediaManager() {
         <div className="card" style={{ borderTop: '4px solid #FF8000' }}>
           <div className="row between" style={{ alignItems: 'center' }}>
             <h3 style={{ margin: 0, color: '#FF8000' }}>🐰 Bunny Storage</h3>
-            <span className={`pill ${bunnyConfigured ? 'ok' : 'ghost'}`}>
-              {bunnyConfigured ? 'Active & Ready' : 'Needs Config'}
+            <span
+              className={`pill ${
+                bunnyConfigured ? 'ok' : bunnyHasAccessKey === false ? 'warn' : 'ghost'
+              }`}
+            >
+              {bunnyConfigured
+                ? 'Active & Ready'
+                : bunnyHasAccessKey === false
+                ? 'Missing Secret'
+                : 'Needs Config'}
             </span>
           </div>
           <p className="small muted" style={{ marginTop: 8 }}>
@@ -78,9 +130,23 @@ export function MediaManager() {
             Uploads are streamed securely server-side so access keys are never exposed.
           </p>
           <div style={{ fontSize: 13, background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 8, marginTop: 12 }}>
-            <div><b>Storage Zone:</b> {serverStatus?.providers?.bunny?.storageZone || <span className="muted">Not set in worker</span>}</div>
-            <div style={{ marginTop: 4 }}><b>CDN Hostname:</b> {serverStatus?.providers?.bunny?.cdnHostname || <span className="muted">Not set in worker</span>}</div>
-            <div style={{ marginTop: 4 }}><b>Edge Endpoint:</b> {serverStatus?.providers?.bunny?.endpoint || 'storage.bunnycdn.com'}</div>
+            <div>
+              <b>Storage Zone:</b> {serverStatus?.providers?.bunny?.storageZone || <span className="muted">Not set in worker</span>}
+            </div>
+            <div style={{ marginTop: 4 }}>
+              <b>CDN Hostname:</b> {serverStatus?.providers?.bunny?.cdnHostname || <span className="muted">Not set in worker</span>}
+            </div>
+            <div style={{ marginTop: 4 }}>
+              <b>Edge Endpoint:</b> {serverStatus?.providers?.bunny?.endpoint || 'storage.bunnycdn.com'}
+            </div>
+            <div style={{ marginTop: 4 }}>
+              <b>Server Secret:</b>{' '}
+              {serverStatus?.providers?.bunny?.hasAccessKey ? (
+                <span style={{ color: '#4CAF50' }}>Configured on Worker</span>
+              ) : (
+                <span className="muted">Missing in Worker Secrets</span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -89,7 +155,7 @@ export function MediaManager() {
           <div className="row between" style={{ alignItems: 'center' }}>
             <h3 style={{ margin: 0, color: '#4A72FF' }}>☁️ Cloudinary</h3>
             <span className={`pill ${cloudinaryConfigured ? 'ok' : 'ghost'}`}>
-              {cloudinaryConfigured ? 'Active & Ready' : 'Needs Config'}
+              {cloudinaryConfigured ? 'Configured (Client)' : 'Needs Config'}
             </span>
           </div>
           <p className="small muted" style={{ marginTop: 8 }}>
@@ -107,7 +173,9 @@ export function MediaManager() {
         <div className="card" style={{ borderTop: '4px solid #FFA000' }}>
           <div className="row between" style={{ alignItems: 'center' }}>
             <h3 style={{ margin: 0, color: '#FFA000' }}>🔥 Firebase</h3>
-            <span className="pill ok">Active</span>
+            <span className={`pill ${serverStatus?.providers?.firebase?.configured ? 'ok' : 'ghost'}`}>
+              {serverStatus?.providers?.firebase?.configured ? 'Configured & Connected' : firebaseConfigured ? 'Configured (Local)' : 'Needs Config'}
+            </span>
           </div>
           <p className="small muted" style={{ marginTop: 8 }}>
             Handles <b>structured Firestore metadata, authentication tokens, real-time presence</b>, and listener heartbeats.

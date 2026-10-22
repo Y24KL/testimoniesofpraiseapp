@@ -16,7 +16,13 @@ const TYPES = new Set(['testimony', 'live', 'announcement', 'featured', 'article
 const MAX_DEVICES = 5000;
 
 const json = (body, status, headers) =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } });
+  new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+  });
 
 /** Verifies that the caller has admin rights in Firestore */
 async function verifyAdmin(auth, env) {
@@ -37,11 +43,21 @@ async function verifyAdmin(auth, env) {
 
 export default {
   async fetch(request, env) {
-    const allowed = (env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
+    const allowed = (env.ALLOWED_ORIGINS || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
     const origin = request.headers.get('Origin') || '';
+
+    // Allow exact matches, localhost/127.0.0.1 in development, or fallback if allowed is empty
+    const isOriginAllowed =
+      allowed.length === 0 ||
+      allowed.includes(origin) ||
+      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
     const cors = {
-      'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : (allowed.length === 0 ? '*' : 'null'),
-      'Access-Control-Allow-Headers': 'authorization, content-type, x-file-name, x-folder',
+      'Access-Control-Allow-Origin': isOriginAllowed && origin ? origin : allowed[0] || '*',
+      'Access-Control-Allow-Headers': 'authorization, content-type, x-file-name, x-folder, cache-control',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       Vary: 'Origin',
     };
@@ -55,31 +71,60 @@ export default {
     // 1) Health & Media Provider Status Endpoint (GET /api/media/status)
     // -------------------------------------------------------------
     if (request.method === 'GET' && (pathname === '/api/media/status' || pathname === '/status')) {
-      const bunnyConfigured = Boolean(env.BUNNY_STORAGE_ACCESS_KEY && env.BUNNY_STORAGE_ZONE_NAME);
-      return json({
-        status: 'ok',
-        version: '2.1.0',
-        providers: {
-          bunny: {
-            configured: bunnyConfigured,
-            storageZone: env.BUNNY_STORAGE_ZONE_NAME || null,
-            cdnHostname: env.BUNNY_CDN_HOSTNAME || (env.BUNNY_STORAGE_ZONE_NAME ? `${env.BUNNY_STORAGE_ZONE_NAME}.b-cdn.net` : null),
-            endpoint: env.BUNNY_STORAGE_ENDPOINT || 'storage.bunnycdn.com',
-          },
-          cloudinary: {
-            configured: Boolean(env.CLOUDINARY_CLOUD_NAME || env.VITE_CLOUDINARY_CLOUD_NAME),
-            cloudName: env.CLOUDINARY_CLOUD_NAME || env.VITE_CLOUDINARY_CLOUD_NAME || null,
-          },
-          firebase: {
-            configured: Boolean(env.FIREBASE_PROJECT_ID),
-            projectId: env.FIREBASE_PROJECT_ID || null,
+      const hasAccessKey = Boolean(env.BUNNY_STORAGE_ACCESS_KEY);
+      const hasZoneName = Boolean(env.BUNNY_STORAGE_ZONE_NAME);
+      const hasCdnHost = Boolean(env.BUNNY_CDN_HOSTNAME);
+      const hasEndpoint = Boolean(env.BUNNY_STORAGE_ENDPOINT);
+
+      const missingBunny = [];
+      if (!hasAccessKey) missingBunny.push('BUNNY_STORAGE_ACCESS_KEY');
+      if (!hasZoneName) missingBunny.push('BUNNY_STORAGE_ZONE_NAME');
+
+      const bunnyConfigured = hasAccessKey && hasZoneName;
+
+      return json(
+        {
+          status: 'ok',
+          version: '2.2.0',
+          timestamp: new Date().toISOString(),
+          providers: {
+            bunny: {
+              configured: bunnyConfigured,
+              hasAccessKey,
+              storageZone: env.BUNNY_STORAGE_ZONE_NAME || null,
+              cdnHostname:
+                env.BUNNY_CDN_HOSTNAME ||
+                (env.BUNNY_STORAGE_ZONE_NAME ? `${env.BUNNY_STORAGE_ZONE_NAME}.b-cdn.net` : null),
+              endpoint: env.BUNNY_STORAGE_ENDPOINT || 'storage.bunnycdn.com',
+              missingConfig: missingBunny,
+              state: bunnyConfigured
+                ? 'ready'
+                : !hasZoneName
+                ? 'missing_zone'
+                : 'missing_secret',
+            },
+            cloudinary: {
+              configured: Boolean(env.CLOUDINARY_CLOUD_NAME || env.VITE_CLOUDINARY_CLOUD_NAME),
+              cloudName: env.CLOUDINARY_CLOUD_NAME || env.VITE_CLOUDINARY_CLOUD_NAME || null,
+            },
+            firebase: {
+              configured: Boolean(env.FIREBASE_PROJECT_ID),
+              projectId: env.FIREBASE_PROJECT_ID || null,
+            },
           },
         },
-      }, 200, cors);
+        200,
+        {
+          ...cors,
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
+        },
+      );
     }
 
     if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405, cors);
-    if (allowed.length > 0 && !allowed.includes(origin)) return json({ error: 'Origin not allowed.' }, 403, cors);
+    if (!isOriginAllowed && allowed.length > 0) return json({ error: 'Origin not allowed.' }, 403, cors);
 
     const auth = request.headers.get('Authorization') || '';
     if (!auth.startsWith('Bearer ')) return json({ error: 'Sign in required.' }, 401, cors);
@@ -92,9 +137,14 @@ export default {
       if (!isAdmin) return json({ error: 'Admins only.' }, 403, cors);
 
       if (!env.BUNNY_STORAGE_ACCESS_KEY || !env.BUNNY_STORAGE_ZONE_NAME) {
-        return json({
-          error: 'Bunny Storage is not configured on the server. Set BUNNY_STORAGE_ZONE_NAME and BUNNY_STORAGE_ACCESS_KEY in worker secrets.',
-        }, 503, cors);
+        return json(
+          {
+            error:
+              'Bunny Storage is not configured on the server. Set BUNNY_STORAGE_ZONE_NAME and BUNNY_STORAGE_ACCESS_KEY in worker secrets.',
+          },
+          503,
+          cors,
+        );
       }
 
       let fileBody;
@@ -152,16 +202,20 @@ export default {
       }
 
       const cdnUrl = `https://${cdnHost}/${folder}/${cleanFilename}`;
-      return json({
-        ok: true,
-        url: cdnUrl,
-        provider: 'bunny',
-        filename: cleanFilename,
-        folder,
-        path: `${folder}/${cleanFilename}`,
-        size: fileBody.byteLength,
-        contentType,
-      }, 200, cors);
+      return json(
+        {
+          ok: true,
+          url: cdnUrl,
+          provider: 'bunny',
+          filename: cleanFilename,
+          folder,
+          path: `${folder}/${cleanFilename}`,
+          size: fileBody.byteLength,
+          contentType,
+        },
+        200,
+        cors,
+      );
     }
 
     // -------------------------------------------------------------
@@ -184,12 +238,16 @@ export default {
 
       try {
         const headRes = await fetch(targetUrl, { method: 'HEAD' });
-        return json({
-          verified: headRes.ok,
-          status: headRes.status,
-          contentType: headRes.headers.get('content-type') || null,
-          contentLength: headRes.headers.get('content-length') || null,
-        }, 200, cors);
+        return json(
+          {
+            verified: headRes.ok,
+            status: headRes.status,
+            contentType: headRes.headers.get('content-type') || null,
+            contentLength: headRes.headers.get('content-length') || null,
+          },
+          200,
+          cors,
+        );
       } catch (e) {
         return json({ verified: false, error: e?.message || 'Verification request failed' }, 200, cors);
       }
@@ -208,7 +266,11 @@ export default {
     if (!PREFS.has(pref)) return json({ error: 'Unknown notification type.' }, 400, cors);
     if (typeof title !== 'string' || !title.trim() || title.length > 100) return json({ error: 'Invalid title.' }, 400, cors);
     if (typeof body !== 'string' || !body.trim() || body.length > 300) return json({ error: 'Invalid message.' }, 400, cors);
-    if (!data || !TYPES.has(data.type) || (data.contentId !== undefined && (typeof data.contentId !== 'string' || data.contentId.length > 100))) {
+    if (
+      !data ||
+      !TYPES.has(data.type) ||
+      (data.contentId !== undefined && (typeof data.contentId !== 'string' || data.contentId.length > 100))
+    ) {
       return json({ error: 'Invalid data.' }, 400, cors);
     }
 
@@ -234,7 +296,7 @@ export default {
       .filter((d) => typeof d.token === 'string' && d.token.startsWith('Expo'));
     if (devices.length === 0) return json({ sent: 0, failed: 0, removed: 0 }, 200, cors);
 
-    // Send through Expo in batches of 100
+    // Send through Expo in batches of 100 with high priority and notification channels
     let sent = 0;
     let failed = 0;
     const dead = [];
@@ -247,6 +309,8 @@ export default {
         data,
         sound: 'default',
         channelId: 'default',
+        priority: 'high',
+        _displayInForeground: true,
       }));
       let res;
       try {

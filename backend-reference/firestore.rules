@@ -1,46 +1,203 @@
 rules_version = '2';
-// MERGE into your existing rules. `request.auth.token.admin == true` assumes admins carry an `admin`
-// custom claim; use whatever your Admin Portal already uses.
+
+/**
+ * Testimonies of Praise - Unified Firestore Security Rules
+ * 
+ * Access Control:
+ * 1. Dual Admin Verification: Checks both custom claim `request.auth.token.admin == true`
+ *    and hand-created documents in `admins/{uid}`.
+ * 2. Email Verification Gate: Non-admin write operations to sensitive collections
+ *    (testimonySubmissions, sponsorships, liveChat) require verified email status.
+ * 3. Server-Only Collections: `emailVerifications` (OTP records) and `deviceTrust` (trusted sessions)
+ *    are completely denied to client reads and writes (managed exclusively by Cloud Functions Admin SDK).
+ * 4. Input Validation: Field allowlists, data types, and length bounds on all user writes.
+ */
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAdmin() { return request.auth != null && request.auth.token.admin == true; }
-    function signedIn() { return request.auth != null; }
+    function signedIn() { 
+      return request.auth != null; 
+    }
 
-    // Published content is readable by any signed-in user (or make it public if the website is public).
+    function isAdmin() {
+      return signedIn() && (
+        request.auth.token.admin == true ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isVerifiedUser() {
+      return signedIn() && (
+        request.auth.token.emailVerified == true ||
+        request.auth.token.email_verified == true ||
+        exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid))
+      );
+    }
+
+    // A user may check whether THEY are an admin. Nobody can write here from a client.
+    match /admins/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+
+    // Server-Controlled OTP Verification Records: STRICTLY DENIED TO CLIENTS
+    match /emailVerifications/{uid} {
+      allow read, write: if false;
+    }
+
+    // Server-Controlled Trusted Device / Session Records: STRICTLY DENIED TO CLIENTS
+    match /deviceTrust/{id} {
+      allow read, write: if false;
+    }
+
+    // User Profile Metadata
+    match /userProfiles/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Testimonies: clients read published items; admins manage everything.
     match /testimonies/{id} {
-      allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
+      allow read: if isAdmin() || (signedIn() && (resource.data.isPublished == true || resource.data.published == true));
       allow write: if isAdmin();
     }
-    match /notifications/{id} {
-      allow read: if isAdmin() || (signedIn() && resource.data.published == true);
-      allow write: if isAdmin();
-    }
+
+    // Live stream settings (single document).
     match /settings/live {
       allow read: if signedIn();
       allow write: if isAdmin();
     }
 
-    // Submissions: users may create their own, never read/modify others'.
+    // ADOTOPOC Resource Center
+    match /settings/adotopoc {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /adotopocResources/{id} {
+      allow read: if isAdmin() || (signedIn() && (resource.data.published == true || resource.data.status == 'published'));
+      allow write: if isAdmin();
+    }
+
+    // Promotionals Section
+    match /promotions/{id} {
+      allow read: if isAdmin() || resource.data.isPublished == true || resource.data.published == true || resource.data.status == 'published';
+      allow write: if isAdmin();
+    }
+
+    // Articles & Write-ups
+    match /articles/{id} {
+      allow read: if isAdmin() || resource.data.isPublished == true || resource.data.published == true || resource.data.status == 'published';
+      allow write: if isAdmin();
+    }
+
+    // In-app Notification Feed
+    match /notifications/{id} {
+      allow read: if isAdmin() || (signedIn() && (resource.data.published == true || resource.data.status == 'published' || resource.data.isPublished == true));
+      allow write: if isAdmin();
+    }
+
+    // Per-user Notification State
+    match /users/{uid}/notifications/{id} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, delete: if isAdmin();
+      allow update: if signedIn() 
+        && request.auth.uid == uid 
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'readAt']);
+    }
+
+    // TOP Radio Stream Configuration
+    match /settings/radio {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Audio Testimonies Library
+    match /audioTestimonies/{id} {
+      allow read: if isAdmin() || resource.data.isPublished == true || resource.data.published == true || resource.data.status == 'published';
+      allow write: if isAdmin();
+    }
+
+    // TOP Radio Listener Heartbeats
+    match /radioListeners/{sessionId} {
+      allow read, delete: if isAdmin();
+    }
+    match /radioListeners/{sessionId}/listeners/{uid} {
+      allow read: if isAdmin();
+      allow write, delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /radioSessions/{sessionId} {
+      allow read, delete: if isAdmin();
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if signedIn() 
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastHeartbeat', 'status', 'endTime']);
+    }
+
+    // Live Viewer Presence
+    match /liveViewers/{sessionId} {
+      allow read, delete: if isAdmin();
+    }
+    match /liveViewers/{sessionId}/viewers/{uid} {
+      allow read: if isAdmin();
+      allow write, delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Live Chat (Requires Email Verification to prevent spam)
+    match /liveChat/{sessionId} {
+      allow read, delete: if isAdmin();
+    }
+    match /liveChat/{sessionId}/messages/{id} {
+      allow read: if signedIn();
+      allow create: if (isAdmin() || isVerifiedUser())
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() < 60
+        && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 300;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    match /liveChatReports/{id} {
+      allow create: if signedIn() && request.resource.data.reporterUid == request.auth.uid;
+      allow read, delete: if isAdmin();
+      allow update: if false;
+    }
+
+    // Testimony Submissions (Requires Email Verification)
     match /testimonySubmissions/{id} {
-      allow create: if signedIn()
+      allow create: if (isAdmin() || isVerifiedUser())
         && request.resource.data.keys().hasOnly(['fullName','churchZone','testimony','userId','userEmail','source','status','createdAt'])
-        && request.resource.data.fullName is string && request.resource.data.fullName.size() < 200
-        && request.resource.data.testimony is string && request.resource.data.testimony.size() < 5001
-        && request.resource.data.userId == request.auth.uid;
+        && request.resource.data.fullName is string && request.resource.data.fullName.size() > 0 && request.resource.data.fullName.size() < 200
+        && request.resource.data.churchZone is string && request.resource.data.churchZone.size() < 200
+        && request.resource.data.testimony is string && request.resource.data.testimony.size() > 0 && request.resource.data.testimony.size() < 5001
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending';
       allow read, update, delete: if isAdmin();
     }
 
-    // Push tokens: a user can only manage tokens they own.
+    // Bank-Transfer Sponsorships (Requires Email Verification)
+    match /sponsorships/{id} {
+      allow create: if (isAdmin() || isVerifiedUser())
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.receiptUrl is string && request.resource.data.receiptUrl.size() > 0;
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Push Tokens: Users manage only tokens matching their authenticated uid
     match /pushTokens/{token} {
       allow create, update: if signedIn() && request.resource.data.uid == request.auth.uid;
-      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
       allow read: if isAdmin();
     }
 
-    // Analytics: write-only from clients.
+    // Analytics: write-only from signed-in clients
     match /analyticsEvents/{id} {
       allow create: if signedIn();
-      allow read: if isAdmin();
+      allow read, delete: if isAdmin();
+      allow update: if false;
     }
   }
 }

@@ -2,11 +2,9 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
-  deleteUser,
   getAdditionalUserInfo,
   onAuthStateChanged,
   reload,
-  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithCredential,
   signInWithEmailAndPassword,
@@ -16,21 +14,33 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/api/firebase';
 import { isNewAccountPending, markNewAccount } from '@/onboarding/welcome';
+import {
+  checkDeviceSessionTrust,
+  deleteAccountOnServer,
+  requestEmailVerification,
+  verifyEmailCode,
+} from '@/api/authService';
 
 interface AuthValue {
   user: User | null;
   /** true until Firebase has restored (or failed to restore) the persisted session */
   initializing: boolean;
+  /** True when the current session/installation has been server-verified with 6-digit OTP */
+  isSessionVerified: boolean;
+  /** Masked email or target destination for OTP display */
+  verificationEmail: string | null;
   signInWithEmail(email: string, password: string): Promise<void>;
   register(fullName: string, email: string, password: string): Promise<void>;
   signInWithGoogleIdToken(idToken: string, accessToken?: string): Promise<void>;
+  verifyOtp(code: string): Promise<void>;
+  resendOtp(): Promise<void>;
   resetPassword(email: string): Promise<void>;
   signOut(): Promise<void>;
   deleteAccount(): Promise<void>;
   /** True once this uid's welcome flow has been consumed; see src/onboarding/welcome.ts. */
   isNewAccount: boolean;
   clearNewAccount(): void;
-  /** Re-reads emailVerified from Firebase (e.g. after the user taps the link) and re-renders. */
+  /** Re-reads emailVerified from Firebase and re-renders. */
   refreshEmailVerified(): Promise<void>;
   resendVerificationEmail(): Promise<void>;
   needsEmailVerification: boolean;
@@ -43,48 +53,134 @@ const Ctx = createContext<AuthValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [initializing, setInitializing] = useState(true);
+  const [isSessionVerified, setIsSessionVerified] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
   const [isNewAccount, setIsNewAccount] = useState(false);
 
-  useEffect(
-    () =>
-      onAuthStateChanged(auth, async (u) => {
-        setUser(u);
-        // Resolved here, as part of the same restore, so by the time `initializing` clears
-        // (and RootNavigator mounts) this is already correct — no separate check, no race.
-        setIsNewAccount(u ? await isNewAccountPending(u.uid) : false);
-        setInitializing(false);
-      }),
-    [],
-  );
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      setUser(u);
+      if (u) {
+        try {
+          // Check server-side device trust / fresh login status
+          const trust = await checkDeviceSessionTrust();
+          setIsSessionVerified(trust.trusted && trust.emailVerified);
+          if (!trust.trusted || !trust.emailVerified) {
+            setVerificationEmail(u.email);
+            // Initiate verification code dispatch for unverified/fresh session
+            void requestEmailVerification(u.email || undefined)
+              .then((res) => {
+                if (res.maskedEmail) setVerificationEmail(res.maskedEmail);
+              })
+              .catch(() => undefined);
+          }
+        } catch {
+          setIsSessionVerified(false);
+        }
+
+        try {
+          setIsNewAccount(await isNewAccountPending(u.uid));
+        } catch {
+          setIsNewAccount(false);
+        }
+      } else {
+        setIsSessionVerified(false);
+        setVerificationEmail(null);
+        setIsNewAccount(false);
+      }
+      setInitializing(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email.trim(), password);
+    const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+    setUser({ ...cred.user } as User);
+    setVerificationEmail(cred.user.email);
+
+    // Validate server session trust
+    try {
+      const trust = await checkDeviceSessionTrust();
+      if (trust.trusted && trust.emailVerified) {
+        setIsSessionVerified(true);
+        return;
+      }
+    } catch {
+      /* proceed to OTP challenge */
+    }
+
+    setIsSessionVerified(false);
+    const res = await requestEmailVerification(cred.user.email || undefined);
+    if (res.maskedEmail) setVerificationEmail(res.maskedEmail);
   }, []);
 
   const register = useCallback(async (fullName: string, email: string, password: string) => {
-    // Firebase hashes and stores credentials server-side; the app never stores passwords.
-    const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+    const cleanEmail = email.trim();
+    // 1. Create account with Firebase Auth
+    const cred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
     await updateProfile(cred.user, { displayName: fullName.trim() });
-    await sendEmailVerification(cred.user).catch(() => undefined); // account still works if this fails; they can resend
+
     void markNewAccount(cred.user.uid);
     setIsNewAccount(true);
     setUser({ ...cred.user } as User);
+    setVerificationEmail(cleanEmail);
+    setIsSessionVerified(false);
+
+    // 2. Dispatch 6-digit OTP code to registered email
+    const res = await requestEmailVerification(cleanEmail);
+    if (res.maskedEmail) setVerificationEmail(res.maskedEmail);
   }, []);
 
   const signInWithGoogleIdToken = useCallback(async (idToken: string, accessToken?: string) => {
-    // Creates the account if new, signs in if existing.
     const cred = await signInWithCredential(auth, GoogleAuthProvider.credential(idToken, accessToken));
+    setUser({ ...cred.user } as User);
+    setVerificationEmail(cred.user.email);
+
     if (getAdditionalUserInfo(cred)?.isNewUser) {
       void markNewAccount(cred.user.uid);
       setIsNewAccount(true);
     }
+
+    // Google email returning verified does NOT bypass app-level OTP verification
+    try {
+      const trust = await checkDeviceSessionTrust();
+      if (trust.trusted && trust.emailVerified) {
+        setIsSessionVerified(true);
+        return;
+      }
+    } catch {
+      /* proceed to OTP challenge */
+    }
+
+    setIsSessionVerified(false);
+    const res = await requestEmailVerification(cred.user.email || undefined);
+    if (res.maskedEmail) setVerificationEmail(res.maskedEmail);
   }, []);
+
+  const verifyOtp = useCallback(async (code: string) => {
+    await verifyEmailCode(code);
+    if (auth.currentUser) {
+      await reload(auth.currentUser);
+      await auth.currentUser.getIdToken(true);
+      setUser({ ...auth.currentUser } as User);
+    }
+    setIsSessionVerified(true);
+  }, []);
+
+  const resendOtp = useCallback(async () => {
+    const emailToUse = verificationEmail || user?.email || undefined;
+    const res = await requestEmailVerification(emailToUse);
+    if (res.maskedEmail) setVerificationEmail(res.maskedEmail);
+  }, [verificationEmail, user?.email]);
 
   const clearNewAccount = useCallback(() => setIsNewAccount(false), []);
 
   const refreshEmailVerified = useCallback(async () => {
     if (!auth.currentUser) return;
     await reload(auth.currentUser);
+    const trust = await checkDeviceSessionTrust();
+    setIsSessionVerified(trust.trusted && trust.emailVerified);
     setUser({ ...auth.currentUser } as User);
   }, []);
 
@@ -95,31 +191,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const resendVerificationEmail = useCallback(async () => {
-    if (auth.currentUser) await sendEmailVerification(auth.currentUser);
-  }, []);
+    await resendOtp();
+  }, [resendOtp]);
 
   const resetPassword = useCallback(async (email: string) => {
     await sendPasswordResetEmail(auth, email.trim());
   }, []);
 
   const signOut = useCallback(async () => {
+    setIsSessionVerified(false);
+    setVerificationEmail(null);
     await fbSignOut(auth);
   }, []);
 
   const deleteAccount = useCallback(async () => {
-    if (auth.currentUser) await deleteUser(auth.currentUser);
-  }, []);
+    try {
+      // 1. Purge server-side records (push tokens, device trust, profile, verification docs)
+      await deleteAccountOnServer();
+    } catch {
+      /* continue with client signout */
+    }
+    await signOut();
+  }, [signOut]);
 
-  // Only password accounts need this: federated sign-in (Google) already verifies the email.
-  const needsEmailVerification = !!user && !user.emailVerified && user.providerData.some((p) => p.providerId === 'password');
+  const needsEmailVerification = Boolean(user && !isSessionVerified);
 
   const value = useMemo(
     () => ({
       user,
       initializing,
+      isSessionVerified,
+      verificationEmail,
       signInWithEmail,
       register,
       signInWithGoogleIdToken,
+      verifyOtp,
+      resendOtp,
       resetPassword,
       signOut,
       deleteAccount,
@@ -130,8 +237,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       needsEmailVerification,
       updatePhoto,
     }),
-    [user, initializing, signInWithEmail, register, signInWithGoogleIdToken, resetPassword, signOut, deleteAccount, isNewAccount, clearNewAccount, refreshEmailVerified, resendVerificationEmail, needsEmailVerification, updatePhoto],
+    [
+      user,
+      initializing,
+      isSessionVerified,
+      verificationEmail,
+      signInWithEmail,
+      register,
+      signInWithGoogleIdToken,
+      verifyOtp,
+      resendOtp,
+      resetPassword,
+      signOut,
+      deleteAccount,
+      isNewAccount,
+      clearNewAccount,
+      refreshEmailVerified,
+      resendVerificationEmail,
+      needsEmailVerification,
+      updatePhoto,
+    ],
   );
+
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

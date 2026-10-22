@@ -24,12 +24,17 @@ export interface MediaUploadResult {
 
 export interface ServerMediaStatus {
   status: string;
+  version?: string;
+  timestamp?: string;
   providers: {
     bunny: {
       configured: boolean;
+      hasAccessKey?: boolean;
       storageZone: string | null;
       cdnHostname: string | null;
       endpoint: string;
+      missingConfig?: string[];
+      state?: string;
     };
     cloudinary: {
       configured: boolean;
@@ -42,6 +47,15 @@ export interface ServerMediaStatus {
   };
 }
 
+export interface DetailedMediaStatusResult {
+  ok: boolean;
+  data: ServerMediaStatus | null;
+  error?: string;
+  errorKind?: 'missing_url' | 'network' | 'cors' | 'server_error' | 'invalid_response';
+  lastChecked: Date;
+  workerUrl: string;
+}
+
 export interface MediaVerifyResult {
   verified: boolean;
   status?: number;
@@ -50,18 +64,29 @@ export interface MediaVerifyResult {
   error?: string;
 }
 
-// Environment variables
-const workerBaseUrl = (
-  (import.meta.env.VITE_WORKER_URL as string | undefined) ||
-  (import.meta.env.VITE_PUSH_URL as string | undefined) ||
-  ''
-).replace(/\/$/, '');
+// Clean and validate environment variables
+const rawWorkerUrl = (import.meta.env.VITE_WORKER_URL as string | undefined)?.trim();
+const rawPushUrl = (import.meta.env.VITE_PUSH_URL as string | undefined)?.trim();
 
-const cloudinaryCloud = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined;
-const cloudinaryPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string | undefined;
+// Strip any stray markdown / citation annotations if present in env strings
+const cleanUrl = (url?: string) => (url ? url.replace(/\[cite:[^\]]+\]/g, '').trim().replace(/\/$/, '') : '');
+
+const workerUrlCandidate = cleanUrl(rawWorkerUrl);
+const pushUrlCandidate = cleanUrl(rawPushUrl);
+
+if (workerUrlCandidate && pushUrlCandidate && workerUrlCandidate !== pushUrlCandidate) {
+  console.warn(
+    `[MediaService] Configuration conflict: VITE_WORKER_URL (${workerUrlCandidate}) differs from VITE_PUSH_URL (${pushUrlCandidate}). Using VITE_WORKER_URL as canonical relay.`,
+  );
+}
+
+export const workerBaseUrl = workerUrlCandidate || pushUrlCandidate || '';
+
+const cloudinaryCloud = cleanUrl(import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined);
+const cloudinaryPreset = cleanUrl(import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string | undefined);
 
 export const isCloudinaryAvailable = Boolean(cloudinaryCloud && cloudinaryPreset);
-export const isWorkerAvailable = Boolean(workerBaseUrl);
+export const isWorkerAvailable = Boolean(workerBaseUrl && /^https?:\/\//i.test(workerBaseUrl));
 export const MAX_CLOUDINARY_VIDEO_MB = 100;
 
 /**
@@ -124,17 +149,91 @@ export function getProviderDisplayName(provider: MediaProvider): string {
 }
 
 /**
- * Checks server media status (which providers are configured on the server)
+ * Checks server media status with comprehensive error diagnostics, timeout, and cache-busting.
+ */
+export async function checkDetailedServerMediaStatus(): Promise<DetailedMediaStatusResult> {
+  const now = new Date();
+  if (!workerBaseUrl) {
+    return {
+      ok: false,
+      data: null,
+      error: 'Worker URL (VITE_WORKER_URL or VITE_PUSH_URL) is not configured in admin environment.',
+      errorKind: 'missing_url',
+      lastChecked: now,
+      workerUrl: '',
+    };
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const res = await fetch(`${workerBaseUrl}/api/media/status?_t=${Date.now()}`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'Cache-Control': 'no-store, no-cache',
+      },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      return {
+        ok: false,
+        data: null,
+        error: `Worker returned HTTP ${res.status}: ${errText.slice(0, 150) || res.statusText}`,
+        errorKind: 'server_error',
+        lastChecked: now,
+        workerUrl: workerBaseUrl,
+      };
+    }
+
+    const json = await res.json();
+    if (!json || typeof json !== 'object' || !json.providers) {
+      return {
+        ok: false,
+        data: null,
+        error: 'Invalid response format received from Cloudflare Worker.',
+        errorKind: 'invalid_response',
+        lastChecked: now,
+        workerUrl: workerBaseUrl,
+      };
+    }
+
+    return {
+      ok: true,
+      data: json as ServerMediaStatus,
+      lastChecked: now,
+      workerUrl: workerBaseUrl,
+    };
+  } catch (err: any) {
+    clearTimeout(timer);
+    const isTimeout = err?.name === 'AbortError';
+    const isCors = err instanceof TypeError && /failed to fetch|networkerror/i.test(err?.message || '');
+    return {
+      ok: false,
+      data: null,
+      error: isTimeout
+        ? `Connection to Worker relay timed out after 8 seconds.`
+        : isCors
+        ? `Network or CORS request failed. Ensure "${window.location.origin}" is in Worker's ALLOWED_ORIGINS.`
+        : err?.message || 'Failed to fetch status from worker.',
+      errorKind: isTimeout ? 'network' : isCors ? 'cors' : 'network',
+      lastChecked: now,
+      workerUrl: workerBaseUrl,
+    };
+  }
+}
+
+/**
+ * Backward-compatible helper returning ServerMediaStatus or null.
  */
 export async function checkServerMediaStatus(): Promise<ServerMediaStatus | null> {
-  if (!workerBaseUrl) return null;
-  try {
-    const res = await fetch(`${workerBaseUrl}/api/media/status`);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
+  const result = await checkDetailedServerMediaStatus();
+  return result.ok ? result.data : null;
 }
 
 /**
@@ -142,7 +241,6 @@ export async function checkServerMediaStatus(): Promise<ServerMediaStatus | null
  */
 export async function verifyMediaReachability(targetUrl: string): Promise<MediaVerifyResult> {
   if (!workerBaseUrl) {
-    // Client-side fallback check
     try {
       const res = await fetch(targetUrl, { method: 'HEAD', mode: 'no-cors' });
       return { verified: true, status: 200 };
@@ -321,12 +419,10 @@ export async function uploadVideo(
   file: File,
   onProgress?: (pct: number) => void,
 ): Promise<MediaUploadResult> {
-  // If worker is configured, Bunny Storage is the preferred host for videos (no 100MB free credit limits!)
   if (isWorkerAvailable) {
     try {
       return await uploadToBunnyStorage(file, 'videos', onProgress);
     } catch (err: any) {
-      // If Bunny upload fails because it's not configured on the worker, try Cloudinary if small enough
       if (
         isCloudinaryAvailable &&
         file.size <= MAX_CLOUDINARY_VIDEO_MB * 1024 * 1024
@@ -337,7 +433,6 @@ export async function uploadVideo(
     }
   }
 
-  // Fallback to Cloudinary if worker is not configured
   if (isCloudinaryAvailable) {
     if (file.size > MAX_CLOUDINARY_VIDEO_MB * 1024 * 1024) {
       throw new Error(

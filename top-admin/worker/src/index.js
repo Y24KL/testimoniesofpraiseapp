@@ -355,12 +355,16 @@ async function handle(request, env) {
   let sent = 0;
   let failed = 0;
   const reasons = {}; // Expo error code -> count (e.g. InvalidCredentials = FCM key missing on EAS)
+  const ticketIds = []; // Expo ticket ids: look up delivery receipts at /--/api/v2/push/getReceipts
   let firstMessage = '';
   const dead = [];
   const message = (d) => ({ to: d.token, title, body, data, sound: 'default', channelId: 'default', priority: 'high', _displayInForeground: true });
   const countTickets = (tickets, chunk) =>
     tickets.forEach((t, idx) => {
-      if (t.status === 'ok') sent += 1;
+      if (t.status === 'ok') {
+        sent += 1;
+        if (t.id && ticketIds.length < 20) ticketIds.push(t.id);
+      }
       else {
         failed += 1;
         const reason = t.details?.error || 'Unknown';
@@ -416,6 +420,6 @@ async function handle(request, env) {
   }
 
   // Visible with `npx wrangler tail`; contains no tokens or secrets.
-  console.log(`[push] pref=${pref} devices=${devices.length} sent=${sent} failed=${failed}` + (failed ? ` reasons=${JSON.stringify(reasons)} first="${firstMessage}"` : ''));
+  console.log(`[push] pref=${pref} devices=${devices.length} sent=${sent} failed=${failed}` + (failed ? ` reasons=${JSON.stringify(reasons)} first="${firstMessage}"` : '') + (ticketIds.length ? ` tickets=${ticketIds.join(',')}` : ''));
   return json({ sent, failed, removed, devices: devices.length, ...(failed ? { reasons, firstError: firstMessage } : {}) }, 200, cors);
 }

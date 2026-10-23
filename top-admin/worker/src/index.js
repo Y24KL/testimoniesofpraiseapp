@@ -10,11 +10,13 @@
  * Admin authorization is verified against Firestore rules using the caller's Firebase token.
  */
 
+import { AUTH_ROUTES, AuthError, verifyFirebaseToken } from './auth.js';
+
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 const PREFS = new Set(['testimonies', 'live', 'announcements']);
 const TYPES = new Set(['testimony', 'live', 'announcement', 'featured', 'article', 'promotion', 'radio']);
 const MAX_DEVICES = 5000;
-export const WORKER_VERSION = '2.3.0';
+export const WORKER_VERSION = '2.4.0';
 
 const json = (body, status, headers) =>
   new Response(JSON.stringify(body), {
@@ -154,6 +156,23 @@ async function handle(request, env) {
         Expires: '0',
       },
     );
+  }
+
+  // -------------------------------------------------------------
+  // 0) Email verification + trusted devices (POST /auth/...), used by the mobile app.
+  //    Native apps send no Origin header; browsers from unknown sites are still refused.
+  // -------------------------------------------------------------
+  if (pathname.startsWith('/auth/') && AUTH_ROUTES[pathname]) {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405, cors);
+    if (origin && !isOriginAllowed) return json({ error: 'Origin not allowed.' }, 403, cors);
+    try {
+      const caller = await verifyFirebaseToken(request.headers.get('Authorization'), env.FIREBASE_PROJECT_ID);
+      const body = await request.json().catch(() => ({}));
+      return json(await AUTH_ROUTES[pathname](env, caller, body), 200, { ...cors, 'Cache-Control': 'no-store' });
+    } catch (e) {
+      if (e instanceof AuthError) return json({ error: e.message, code: e.code }, e.status, { ...cors, 'Cache-Control': 'no-store' });
+      throw e;
+    }
   }
 
   if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405, cors);

@@ -2,6 +2,8 @@
 export const CONFIG = {
   backendMode: (process.env.EXPO_PUBLIC_BACKEND_MODE ?? 'firestore') as 'firestore' | 'rest',
   apiBaseUrl: (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, ''),
+  /** Cloudflare Worker that sends/verifies the 6-digit email codes (top-admin/worker). */
+  authApiUrl: (process.env.EXPO_PUBLIC_AUTH_API_URL ?? 'https://top-push-relay.gtrusouth116.workers.dev').replace(/\/$/, ''),
   websiteUrl: process.env.EXPO_PUBLIC_WEBSITE_URL ?? 'https://testimoniesofpraiseweb.onrender.com',
   firebase: {
     apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY ?? '',

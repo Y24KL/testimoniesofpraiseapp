@@ -10,9 +10,21 @@ BUNNY_CDN_HOSTNAME = "top-media.b-cdn.net"
 BUNNY_STORAGE_ENDPOINT = "storage.bunnycdn.com"
 BUNNY_STORAGE_ZONE_NAME = "top-media-storage"
 FIREBASE_PROJECT_ID = "testimoniesofpraiseapp"
+# Sender for verification-code emails (must be a sender verified with Resend or Brevo)
+MAIL_FROM = "Testimonies of Praise <auth@testimoniesofpraise.org>"
 
 
 # NOTE ON SECRETS:
 # The Bunny Storage AccessKey is a private credential and MUST NOT be committed to git.
 # Add it via Cloudflare CLI before deploying:
 #   npx wrangler secret put BUNNY_STORAGE_ACCESS_KEY
+
+# EMAIL VERIFICATION (6-digit codes) — see docs/EMAIL_VERIFICATION_WORKER.md
+# 1. Create the storage once:   npx wrangler kv namespace create OTP_KV
+#    then uncomment the 3 lines below and paste the id it prints.
+# [[kv_namespaces]]
+# binding = "OTP_KV"
+# id = "PASTE_KV_NAMESPACE_ID_HERE"
+# 2. Secrets (never commit them):
+#    npx wrangler secret put OTP_PEPPER        (any long random string)
+#    npx wrangler secret put RESEND_API_KEY    (or: npx wrangler secret put BREVO_API_KEY)

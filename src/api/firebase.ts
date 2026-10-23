@@ -5,7 +5,6 @@ import { getAuth, initializeAuth, type Auth } from 'firebase/auth';
 // @ts-ignore - not present in the default (web) type declarations
 import { getReactNativePersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getFunctions } from 'firebase/functions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CONFIG } from '@/constants/config';
 
@@ -21,4 +20,3 @@ try {
 
 export const auth = authInstance;
 export const db = getFirestore(app);
-export const functions = getFunctions(app);

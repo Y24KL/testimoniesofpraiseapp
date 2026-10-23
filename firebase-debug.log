@@ -1,0 +1,59 @@
+[debug] [2026-10-23T10:58:31.196Z] ----------------------------------------------------------------------
+[debug] [2026-10-23T10:58:31.199Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\hp\AppData\Local\npm-cache\_npx\ba4f1959e38407b5\node_modules\firebase-tools\lib\bin\firebase.js functions:list --project testimoniesofpraiseapp --debug
+[debug] [2026-10-23T10:58:31.200Z] CLI Version:   15.34.1
+[debug] [2026-10-23T10:58:31.200Z] Platform:      win32
+[debug] [2026-10-23T10:58:31.201Z] Node Version:  v22.20.0
+[debug] [2026-10-23T10:58:31.202Z] Detected Agent: claude-code_2-1-308_agent
+[debug] [2026-10-23T10:58:31.202Z] Time:          Fri Oct 23 2026 11:58:31 GMT+0100 (West Africa Standard Time)
+[debug] [2026-10-23T10:58:31.202Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-10-23T10:58:31.257Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-10-23T10:58:31.257Z] > authorizing via signed-in user (gtrusouth116@gmail.com)
+[debug] [2026-10-23T10:58:31.258Z] [iam] checking project testimoniesofpraiseapp for permissions ["cloudfunctions.functions.list","firebase.projects.get","run.services.list"]
+[debug] [2026-10-23T10:58:31.271Z] Checked if tokens are valid: false, expires at: 1762358395032
+[debug] [2026-10-23T10:58:31.271Z] Checked if tokens are valid: false, expires at: 1762358395032
+[debug] [2026-10-23T10:58:31.272Z] > refreshing access token with scopes: []
+[debug] [2026-10-23T10:58:31.275Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-10-23T10:58:31.275Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-10-23T10:58:31.792Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
+[debug] [2026-10-23T10:58:31.793Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-10-23T10:58:31.793Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/testimoniesofpraiseapp:testIamPermissions [none]
+[debug] [2026-10-23T10:58:31.793Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/testimoniesofpraiseapp:testIamPermissions  x-goog-user-project=testimoniesofpraiseapp
+[debug] [2026-10-23T10:58:31.793Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/testimoniesofpraiseapp:testIamPermissions {"permissions":["cloudfunctions.functions.list","firebase.projects.get","run.services.list"]}
+[debug] [2026-10-23T10:58:32.811Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/testimoniesofpraiseapp:testIamPermissions 401
+[debug] [2026-10-23T10:58:32.812Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/testimoniesofpraiseapp:testIamPermissions {"error":{"code":401,"message":"Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project.","status":"UNAUTHENTICATED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"CREDENTIALS_MISSING","metadata":{"service":"cloudresourcemanager.googleapis.com","method":"google.cloudresourcemanager.v1.Projects.TestIamPermissions"}}]}}
+[debug] [2026-10-23T10:58:32.812Z] Got a 401 Unauthenticated error for a call that required authentication. Refreshing tokens.
+[debug] [2026-10-23T10:58:32.812Z] Checked if tokens are valid: false, expires at: 1762358395032
+[debug] [2026-10-23T10:58:32.812Z] Checked if tokens are valid: false, expires at: 1762358395032
+[debug] [2026-10-23T10:58:32.812Z] > refreshing access token with scopes: []
+[debug] [2026-10-23T10:58:32.813Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-10-23T10:58:32.814Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-10-23T10:58:32.977Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
+[debug] [2026-10-23T10:58:32.977Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-10-23T10:58:32.979Z] [iam] error while checking permissions, command may fail: Request to https://cloudresourcemanager.googleapis.com/v1/projects/testimoniesofpraiseapp:testIamPermissions had HTTP Error: 401, Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project.
+[debug] [2026-10-23T10:58:32.980Z] Checked if tokens are valid: false, expires at: 1762358395032
+[debug] [2026-10-23T10:58:32.980Z] Checked if tokens are valid: false, expires at: 1762358395032
+[debug] [2026-10-23T10:58:32.980Z] > refreshing access token with scopes: []
+[debug] [2026-10-23T10:58:32.981Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-10-23T10:58:32.981Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-10-23T10:58:33.226Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
+[debug] [2026-10-23T10:58:33.226Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-10-23T10:58:33.227Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v1/projects/testimoniesofpraiseapp/locations/-/functions [none]
+[debug] [2026-10-23T10:58:34.013Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v1/projects/testimoniesofpraiseapp/locations/-/functions 401
+[debug] [2026-10-23T10:58:34.013Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v1/projects/testimoniesofpraiseapp/locations/-/functions {"error":{"code":401,"message":"Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project.","status":"UNAUTHENTICATED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"CREDENTIALS_MISSING","metadata":{"method":"google.cloud.functions.v1.CloudFunctionsService.ListFunctions","service":"cloudfunctions.googleapis.com"}}]}}
+[debug] [2026-10-23T10:58:34.014Z] Got a 401 Unauthenticated error for a call that required authentication. Refreshing tokens.
+[debug] [2026-10-23T10:58:34.014Z] Checked if tokens are valid: false, expires at: 1762358395032
+[debug] [2026-10-23T10:58:34.014Z] Checked if tokens are valid: false, expires at: 1762358395032
+[debug] [2026-10-23T10:58:34.014Z] > refreshing access token with scopes: []
+[debug] [2026-10-23T10:58:34.014Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-10-23T10:58:34.015Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-10-23T10:58:34.227Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
+[debug] [2026-10-23T10:58:34.227Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-10-23T10:58:34.228Z] [functions] failed to list functions for testimoniesofpraiseapp
+[debug] [2026-10-23T10:58:34.228Z] [functions] Request to https://cloudfunctions.googleapis.com/v1/projects/testimoniesofpraiseapp/locations/-/functions had HTTP Error: 401, Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project.
+[debug] [2026-10-23T10:58:34.769Z] FirebaseError: Request to https://cloudfunctions.googleapis.com/v1/projects/testimoniesofpraiseapp/locations/-/functions had HTTP Error: 401, Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project.
+    at responseToError (C:\Users\hp\AppData\Local\npm-cache\_npx\ba4f1959e38407b5\node_modules\firebase-tools\lib\responseToError.js:53:12)
+    at RetryOperation._fn (C:\Users\hp\AppData\Local\npm-cache\_npx\ba4f1959e38407b5\node_modules\firebase-tools\lib\apiv2.js:415:77)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+[error] 
+[error] Error: Failed to list functions for testimoniesofpraiseapp

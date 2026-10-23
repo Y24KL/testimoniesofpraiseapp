@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
+  deleteUser,
   getAdditionalUserInfo,
   onAuthStateChanged,
   reload,
@@ -206,11 +207,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const deleteAccount = useCallback(async () => {
     try {
-      // 1. Purge server-side records (push tokens, device trust, profile, verification docs)
+      // 1. Remove verification codes and trusted devices from the verification service
       await deleteAccountOnServer();
     } catch {
-      /* continue with client signout */
+      /* best effort: the records expire on their own */
     }
+    // 2. Delete the Firebase account itself. Firebase may require a recent sign-in
+    //    (auth/requires-recent-login); the Profile screen then asks the user to sign in again.
+    if (auth.currentUser) await deleteUser(auth.currentUser);
     await signOut();
   }, [signOut]);
 

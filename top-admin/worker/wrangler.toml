@@ -20,11 +20,11 @@ MAIL_FROM = "Testimonies of Praise <auth@testimoniesofpraise.org>"
 #   npx wrangler secret put BUNNY_STORAGE_ACCESS_KEY
 
 # EMAIL VERIFICATION (6-digit codes) — see docs/EMAIL_VERIFICATION_WORKER.md
-# 1. Create the storage once:   npx wrangler kv namespace create OTP_KV
-#    then uncomment the 3 lines below and paste the id it prints.
-# [[kv_namespaces]]
-# binding = "OTP_KV"
-# id = "PASTE_KV_NAMESPACE_ID_HERE"
-# 2. Secrets (never commit them):
+# Storage for codes and trusted devices (created with: npx wrangler kv namespace create OTP_KV)
+[[kv_namespaces]]
+binding = "OTP_KV"
+id = "25ff69eb55b34cdea4869cad477a6977"
+
+# Secrets (never commit them):
 #    npx wrangler secret put OTP_PEPPER        (any long random string)
 #    npx wrangler secret put RESEND_API_KEY    (or: npx wrangler secret put BREVO_API_KEY)

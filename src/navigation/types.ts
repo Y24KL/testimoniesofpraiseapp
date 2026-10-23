@@ -4,6 +4,7 @@ export type TabParamList = {
   Home: undefined;
   Testimonies: undefined;
   Live: undefined;
+  Listen: undefined;
   Downloads: undefined;
 };
 
@@ -27,7 +28,6 @@ export type RootStackParamList = {
   Search: undefined;
   // Upgrade Features
   Adotopoc: undefined;
-  Radio: undefined;
   Promotions: undefined;
   Articles: undefined;
   ArticleDetails: { id: string };

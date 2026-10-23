@@ -89,7 +89,7 @@ export function NotificationSettingsPage({ onBack }: Props) {
             <span style={{ fontSize: '14px', color: colors.text }}>
               Browser notifications are not yet enabled for this device.
             </span>
-            <PrimaryButton title="ENABLE BROWSER NOTIFICATIONS" onClick={requestPerm} />
+            <PrimaryButton title="Enable browser notifications" onClick={requestPerm} />
           </div>
         )}
 

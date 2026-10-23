@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { type RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { repo } from '@/api';
 import { ErrorState } from '@/components/ErrorState';

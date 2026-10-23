@@ -2,14 +2,15 @@ name = "top-push-relay"
 main = "src/index.js"
 compatibility_date = "2025-01-01"
 
-# ...
+
 [vars]
-ALLOWED_ORIGINS = "http://localhost:5173,https://testimoniesofpraiseweb.onrender.com, https://top-admin.onrender.com"
+# Exact origins only (scheme + host [+ port]); no paths or trailing slashes. localhost is always allowed.
+ALLOWED_ORIGINS = "http://localhost:5173,https://testimoniesofpraiseweb.onrender.com,https://top-admin.onrender.com"
 BUNNY_CDN_HOSTNAME = "top-media.b-cdn.net"
 BUNNY_STORAGE_ENDPOINT = "storage.bunnycdn.com"
 BUNNY_STORAGE_ZONE_NAME = "top-media-storage"
 FIREBASE_PROJECT_ID = "testimoniesofpraiseapp"
-# ...
+
 
 # NOTE ON SECRETS:
 # The Bunny Storage AccessKey is a private credential and MUST NOT be committed to git.

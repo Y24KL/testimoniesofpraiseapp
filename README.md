@@ -3,6 +3,9 @@
 React Native + Expo (SDK 54) + TypeScript. One codebase, native UI, no WebView.
 Auth: Google + Email/Password only. Data: your EXISTING backend (Firebase by default, REST optional).
 
+> **New (2026 redesign):** see `docs/REDESIGN_2026.md` (what changed, size measurements, required manual
+> steps) and `docs/ONBOARDING_MEDIA.md` (how to set the Welcome screen image or video).
+>
 > **Read `docs/SETUP.md` first.** It lists exactly what you must configure (Firebase keys, Google OAuth
 > IDs, collection names, logo/colors) and what could not be verified when this project was generated.
 
@@ -24,6 +27,7 @@ src/
   components/     TopBar, BottomNavigation, TestimonyCard, VideoCard, DownloadButton,
                   LoadingSpinner, LoadingPraise, SkeletonCard, EmptyState, ErrorState, PrimaryButton,
                   GoogleButton, NotificationCard, LiveCard, TestimonySubmissionForm, ...
+  audio/          app-wide audio player (TOP Radio + audio testimonies) and mini player
   screens/        Welcome, EmailAuth, ForgotPassword, NotificationPrimer, Home, Testimonies,
                   TestimonyDetails, Live, Downloads, ShareTestimony,
                   Notifications, NotificationSettings, Profile, Search

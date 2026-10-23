@@ -14,14 +14,14 @@ export default defineConfig({
     host: true,
   },
   build: {
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 700,
     rollupOptions: {
       output: {
+        // Long-lived vendor chunks cache well across deploys. hls.js is NOT listed: it is loaded
+        // with import() only when an HLS stream is played, so most visits never download it.
         manualChunks: {
           vendor: ['react', 'react-dom'],
           firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
-          hls: ['hls.js'],
-          idb: ['idb'],
         },
       },
     },

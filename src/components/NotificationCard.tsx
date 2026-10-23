@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, radius, type as t } from '@/constants/theme';
 import type { AppNotification } from '@/types';
 import { formatDate } from '@/utils/format';

@@ -108,7 +108,7 @@ export function DownloadButton({ data }: Props) {
           Download failed. Please try again.
         </span>
         <PrimaryButton
-          title="RETRY DOWNLOAD"
+          title="Retry download"
           icon={<RefreshCw size={16} />}
           onClick={() => dl.start(data)}
         />
@@ -118,7 +118,7 @@ export function DownloadButton({ data }: Props) {
 
   return (
     <PrimaryButton
-      title="DOWNLOAD"
+      title="Download"
       icon={<Download size={18} />}
       onClick={() => dl.start(data)}
     />

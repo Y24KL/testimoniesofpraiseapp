@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -176,7 +176,7 @@ export function VerifyEmailScreen() {
 
             <View style={styles.actionContainer}>
               <PrimaryButton
-                title="VERIFY & CONTINUE"
+                title="Verify & continue"
                 onPress={() => handleVerify()}
                 loading={busy}
                 disabled={code.length !== 6 || busy}

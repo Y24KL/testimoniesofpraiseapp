@@ -62,6 +62,13 @@ service cloud.firestore {
     }
 
     // Live stream settings (single document).
+    // Onboarding media shown on the Welcome screen BEFORE sign-in (public, non-sensitive):
+    // { mediaType: 'image'|'video', mediaUrl, posterUrl, overlayOpacity }
+    match /settings/onboarding {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /settings/live {
       allow read: if signedIn();
       allow write: if isAdmin();

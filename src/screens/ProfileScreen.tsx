@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadAvatar } from '@/api/cloudinary';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -122,8 +122,8 @@ export function ProfileScreen() {
           <Row icon="heart-outline" label="Share your testimony" onPress={() => nav.navigate('ShareTestimony')} />
           <Row icon="gift-outline" label="Sponsor Testimonies of Praise" onPress={() => nav.navigate('Sponsor')} />
         </View>
-        <PrimaryButton title="LOG OUT" icon="log-out-outline" variant="outline" onPress={logout} loading={busy} />
-        <PrimaryButton title="DELETE ACCOUNT" variant="danger" onPress={confirmDelete} />
+        <PrimaryButton title="Log out" icon="log-out-outline" variant="outline" onPress={logout} loading={busy} />
+        <PrimaryButton title="Delete account" variant="danger" onPress={confirmDelete} />
       </ScrollView>
     </Screen>
   );

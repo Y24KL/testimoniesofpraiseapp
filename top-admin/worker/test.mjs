@@ -46,3 +46,33 @@ assert.equal((await call({ data: { type: 'hack' } })).status, 400);
 const pre = await worker.fetch(new Request('https://relay/', { method: 'OPTIONS', headers: { Origin: 'http://localhost:5173' } }), env);
 assert.equal(pre.status, 204);
 console.log('relay tests passed');
+
+// ---- CORS policy (regression tests for the "Worker Status Error" in TOP Admin) ----
+const prodEnv = { ...env, ALLOWED_ORIGINS: 'http://localhost:5173,https://testimoniesofpraiseweb.onrender.com, https://top-admin.onrender.com/' };
+const ADMIN = 'https://top-admin.onrender.com';
+// 1. production admin origin passes preflight for the headers the dashboard actually sends
+let p = await worker.fetch(new Request('https://relay/api/media/status', { method: 'OPTIONS', headers: { Origin: ADMIN, 'Access-Control-Request-Method': 'GET', 'Access-Control-Request-Headers': 'cache-control' } }), prodEnv);
+assert.equal(p.status, 204);
+assert.equal(p.headers.get('Access-Control-Allow-Origin'), ADMIN, 'trailing slash / spaces in ALLOWED_ORIGINS must not break matching');
+assert.match(p.headers.get('Access-Control-Allow-Headers'), /cache-control/);
+assert.match(p.headers.get('Access-Control-Allow-Headers'), /authorization/);
+assert.match(p.headers.get('Vary'), /Origin/);
+// 2. status GET from the admin origin returns provider data with CORS headers
+let s = await worker.fetch(new Request('https://relay/api/media/status', { headers: { Origin: ADMIN } }), prodEnv);
+assert.equal(s.status, 200);
+assert.equal(s.headers.get('Access-Control-Allow-Origin'), ADMIN);
+assert.ok((await s.json()).providers, 'status must include providers');
+// 3. a non-allowed origin gets no ACAO header (browser blocks it) and its preflight is refused
+s = await worker.fetch(new Request('https://relay/api/media/status', { headers: { Origin: 'https://evil.example' } }), prodEnv);
+assert.equal(s.headers.get('Access-Control-Allow-Origin'), null);
+p = await worker.fetch(new Request('https://relay/', { method: 'OPTIONS', headers: { Origin: 'https://evil.example' } }), prodEnv);
+assert.equal(p.status, 403);
+assert.equal(p.headers.get('Access-Control-Allow-Origin'), null);
+// 4. empty ALLOWED_ORIGINS no longer means "allow everyone"
+p = await worker.fetch(new Request('https://relay/', { method: 'OPTIONS', headers: { Origin: ADMIN } }), { ...env, ALLOWED_ORIGINS: '' });
+assert.equal(p.status, 403);
+// 5. error responses still carry CORS headers so the dashboard can read them
+s = await worker.fetch(new Request('https://relay/upload/bunny', { method: 'POST', headers: { Origin: ADMIN } }), prodEnv);
+assert.equal(s.status, 401);
+assert.equal(s.headers.get('Access-Control-Allow-Origin'), ADMIN);
+console.log('cors tests passed');

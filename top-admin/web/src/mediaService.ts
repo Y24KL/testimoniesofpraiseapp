@@ -51,7 +51,7 @@ export interface DetailedMediaStatusResult {
   ok: boolean;
   data: ServerMediaStatus | null;
   error?: string;
-  errorKind?: 'missing_url' | 'network' | 'cors' | 'server_error' | 'invalid_response';
+  errorKind?: 'missing_url' | 'network' | 'timeout' | 'server_error' | 'invalid_response' | 'outdated_worker';
   lastChecked: Date;
   workerUrl: string;
 }
@@ -166,41 +166,46 @@ export async function checkDetailedServerMediaStatus(): Promise<DetailedMediaSta
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
+  const fail = (errorKind: DetailedMediaStatusResult['errorKind'], error: string): DetailedMediaStatusResult => ({
+    ok: false,
+    data: null,
+    error,
+    errorKind,
+    lastChecked: now,
+    workerUrl: workerBaseUrl,
+  });
 
   try {
+    // Keep this a CORS "simple request": no custom headers (a Cache-Control *request* header forces a
+    // preflight that older relays reject). `cache: 'no-store'` + the _t param already bypass caches.
     const res = await fetch(`${workerBaseUrl}/api/media/status?_t=${Date.now()}`, {
       method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'Cache-Control': 'no-store, no-cache',
-      },
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
       signal: controller.signal,
     });
 
-    clearTimeout(timer);
-
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
-      return {
-        ok: false,
-        data: null,
-        error: `Worker returned HTTP ${res.status}: ${errText.slice(0, 150) || res.statusText}`,
-        errorKind: 'server_error',
-        lastChecked: now,
-        workerUrl: workerBaseUrl,
-      };
+      return fail('server_error', `Worker returned HTTP ${res.status}: ${errText.slice(0, 150) || res.statusText}`);
     }
 
-    const json = await res.json();
+    let json: any;
+    try {
+      json = await res.json();
+    } catch {
+      return fail('invalid_response', 'Worker responded, but the body was not valid JSON.');
+    }
+    if (json && typeof json === 'object' && !json.providers && json.status === 'ok') {
+      // Reachable, but the deployed script predates the media-status endpoint (it answers every
+      // route with {"status":"ok"}). Uploads and push relay will not work until it is redeployed.
+      return fail(
+        'outdated_worker',
+        'Worker is reachable, but the deployed script is outdated and does not report media status. Redeploy top-admin/worker (npm run deploy).',
+      );
+    }
     if (!json || typeof json !== 'object' || !json.providers) {
-      return {
-        ok: false,
-        data: null,
-        error: 'Invalid response format received from Cloudflare Worker.',
-        errorKind: 'invalid_response',
-        lastChecked: now,
-        workerUrl: workerBaseUrl,
-      };
+      return fail('invalid_response', 'Invalid response format received from Cloudflare Worker.');
     }
 
     return {
@@ -210,21 +215,19 @@ export async function checkDetailedServerMediaStatus(): Promise<DetailedMediaSta
       workerUrl: workerBaseUrl,
     };
   } catch (err: any) {
+    if (err?.name === 'AbortError') return fail('timeout', 'Connection to the Worker relay timed out after 8 seconds.');
+    if (import.meta.env.DEV) console.warn('[MediaService] status check failed', err);
+    // The browser hides the reason for a failed fetch: it may be DNS/offline, a Worker crash, or a
+    // CORS rejection. Say so instead of guessing.
+    const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    return fail(
+      'network',
+      offline
+        ? 'You appear to be offline.'
+        : `Could not reach the Worker (network error or CORS rejection). Check the Worker is deployed and that "${window.location.origin}" is listed in its ALLOWED_ORIGINS.`,
+    );
+  } finally {
     clearTimeout(timer);
-    const isTimeout = err?.name === 'AbortError';
-    const isCors = err instanceof TypeError && /failed to fetch|networkerror/i.test(err?.message || '');
-    return {
-      ok: false,
-      data: null,
-      error: isTimeout
-        ? `Connection to Worker relay timed out after 8 seconds.`
-        : isCors
-        ? `Network or CORS request failed. Ensure "${window.location.origin}" is in Worker's ALLOWED_ORIGINS.`
-        : err?.message || 'Failed to fetch status from worker.',
-      errorKind: isTimeout ? 'network' : isCors ? 'cors' : 'network',
-      lastChecked: now,
-      workerUrl: workerBaseUrl,
-    };
   }
 }
 

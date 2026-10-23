@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Clipboard from 'expo-clipboard';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/api/firebase';
@@ -89,7 +89,7 @@ export function SponsorScreen() {
           <View style={styles.success}>
             <Ionicons name="checkmark-circle" size={64} color={colors.success} />
             <Text style={styles.successText}>Thank you for your seed! We’ve received your receipt and will confirm it shortly.</Text>
-            <PrimaryButton title="DONE" onPress={() => nav.goBack()} />
+            <PrimaryButton title="Done" onPress={() => nav.goBack()} />
           </View>
         ) : (
           <>
@@ -110,14 +110,14 @@ export function SponsorScreen() {
             {receiptUri ? (
               <Image source={{ uri: receiptUri }} style={styles.preview} />
             ) : (
-              <PrimaryButton title="ATTACH RECEIPT" icon="image-outline" variant="outline" onPress={() => void pickReceipt()} />
+              <PrimaryButton title="Attach receipt" icon="image-outline" variant="outline" onPress={() => void pickReceipt()} />
             )}
-            {receiptUri ? <PrimaryButton title="CHANGE RECEIPT" variant="ghost" onPress={() => void pickReceipt()} /> : null}
+            {receiptUri ? <PrimaryButton title="Change receipt" variant="ghost" onPress={() => void pickReceipt()} /> : null}
 
             {!isCloudinaryConfigured ? <Text style={styles.warn}>Receipt uploads aren’t set up yet — ask an admin to finish setup.</Text> : null}
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
-            <PrimaryButton title="SUBMIT" onPress={() => void submit()} loading={submitting} disabled={!isCloudinaryConfigured} />
+            <PrimaryButton title="Submit" onPress={() => void submit()} loading={submitting} disabled={!isCloudinaryConfigured} />
           </>
         )}
       </ScrollView>

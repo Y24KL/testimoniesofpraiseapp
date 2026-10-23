@@ -49,7 +49,11 @@
         "EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET": "top_uploads",
         "EXPO_PUBLIC_BANK_NAME": "Parallex Bank",
         "EXPO_PUBLIC_BANK_ACCOUNT_NAME": "Testimonies of Praise",
-        "EXPO_PUBLIC_BANK_ACCOUNT_NUMBER": "1000316330"
+        "EXPO_PUBLIC_BANK_ACCOUNT_NUMBER": "1000316330",
+        "EXPO_PUBLIC_ONBOARDING_MEDIA_TYPE": "",
+        "EXPO_PUBLIC_ONBOARDING_MEDIA_URL": "",
+        "EXPO_PUBLIC_ONBOARDING_POSTER_URL": "",
+        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "armeabi-v7a,arm64-v8a"
       }
     },
     "production": {
@@ -88,7 +92,10 @@
         "EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET": "top_uploads",
         "EXPO_PUBLIC_BANK_NAME": "Parallex Bank",
         "EXPO_PUBLIC_BANK_ACCOUNT_NAME": "Testimonies of Praise",
-        "EXPO_PUBLIC_BANK_ACCOUNT_NUMBER": "1000316330"
+        "EXPO_PUBLIC_BANK_ACCOUNT_NUMBER": "1000316330",
+        "EXPO_PUBLIC_ONBOARDING_MEDIA_TYPE": "",
+        "EXPO_PUBLIC_ONBOARDING_MEDIA_URL": "",
+        "EXPO_PUBLIC_ONBOARDING_POSTER_URL": ""
       }
     }
   },

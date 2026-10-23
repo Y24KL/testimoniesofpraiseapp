@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { EmptyState } from '@/components/EmptyState';
 import { LiveBadge } from '@/components/LiveCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -16,6 +16,7 @@ import { useLive } from '@/hooks/useContent';
 import { useLiveViewer } from '@/hooks/useLiveViewer';
 import { MESSAGES } from '@/utils/errors';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
+import { useAudioPlayer } from '@/audio/AudioPlayerContext';
 
 export function LiveScreen() {
   const nav = useNavigation();
@@ -27,6 +28,13 @@ export function LiveScreen() {
   // Counts as watching the moment this tab is open while the stream is live — matches how the
   // admin portal's viewer count is meant to work, not tied to whether the video is actually playing.
   useLiveViewer(live?.sessionId, isFocused && !!live?.isLive);
+  // The live video autoplays with sound: pause radio/audio first so two streams never overlap.
+  const audio = useAudioPlayer();
+  const watching = isFocused && !!live?.isLive && !!live.streamUrl;
+  React.useEffect(() => {
+    if (watching && audio.status === 'playing') audio.pause();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watching]);
   return (
     <Screen>
       <TopBar title="Watch Live" onNotifications={() => nav.navigate('Notifications')} onProfile={() => nav.navigate('Profile')} />

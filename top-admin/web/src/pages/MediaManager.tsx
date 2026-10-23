@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   checkDetailedServerMediaStatus,
   verifyMediaReachability,
@@ -22,21 +22,27 @@ export function MediaManager() {
   const [verifying, setVerifying] = useState(false);
   const [verifyResult, setVerifyResult] = useState<MediaVerifyResult | null>(null);
 
+  const inFlight = useRef(false);
+
   const fetchStatus = async () => {
+    if (inFlight.current) return; // ignore rapid repeat clicks
+    inFlight.current = true;
     setLoading(true);
-    const res = await checkDetailedServerMediaStatus();
-    setLastChecked(res.lastChecked);
-    if (res.ok && res.data) {
-      setServerStatus(res.data);
-      setStatusError(null);
-      setIsStale(false);
-    } else {
-      setStatusError(res.error || 'Failed to fetch status from worker relay.');
-      if (serverStatus) {
-        setIsStale(true);
+    try {
+      const res = await checkDetailedServerMediaStatus();
+      setLastChecked(res.lastChecked);
+      if (res.ok && res.data) {
+        setServerStatus(res.data);
+        setStatusError(null);
+        setIsStale(false);
+      } else {
+        setStatusError(res.error || 'Failed to fetch status from worker relay.');
+        setIsStale((prev) => prev || serverStatus !== null);
       }
+    } finally {
+      inFlight.current = false;
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -122,7 +128,9 @@ export function MediaManager() {
                 ? 'Active & Ready'
                 : bunnyHasAccessKey === false
                 ? 'Missing Secret'
-                : 'Needs Config'}
+                : serverStatus
+                ? 'Needs Config'
+                : 'Status Unknown'}
             </span>
           </div>
           <p className="small muted" style={{ marginTop: 8 }}>
@@ -131,10 +139,10 @@ export function MediaManager() {
           </p>
           <div style={{ fontSize: 13, background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 8, marginTop: 12 }}>
             <div>
-              <b>Storage Zone:</b> {serverStatus?.providers?.bunny?.storageZone || <span className="muted">Not set in worker</span>}
+              <b>Storage Zone:</b> {serverStatus?.providers?.bunny?.storageZone || <span className="muted">{serverStatus ? 'Not set in worker' : 'Unknown (status unavailable)'}</span>}
             </div>
             <div style={{ marginTop: 4 }}>
-              <b>CDN Hostname:</b> {serverStatus?.providers?.bunny?.cdnHostname || <span className="muted">Not set in worker</span>}
+              <b>CDN Hostname:</b> {serverStatus?.providers?.bunny?.cdnHostname || <span className="muted">{serverStatus ? 'Not set in worker' : 'Unknown'}</span>}
             </div>
             <div style={{ marginTop: 4 }}>
               <b>Edge Endpoint:</b> {serverStatus?.providers?.bunny?.endpoint || 'storage.bunnycdn.com'}
@@ -144,7 +152,7 @@ export function MediaManager() {
               {serverStatus?.providers?.bunny?.hasAccessKey ? (
                 <span style={{ color: '#4CAF50' }}>Configured on Worker</span>
               ) : (
-                <span className="muted">Missing in Worker Secrets</span>
+                <span className="muted">{serverStatus ? 'Missing in Worker Secrets' : 'Unknown'}</span>
               )}
             </div>
           </div>

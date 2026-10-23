@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AudioPlayerProvider } from '@/audio/AudioPlayerContext';
 import { AuthProvider, useAuth } from '@/auth/AuthContext';
 import { track } from '@/analytics';
 import { LoadingPraise } from '@/components/LoadingPraise';
@@ -77,7 +78,9 @@ export default function App() {
       <AuthProvider>
         <AppFlagsProvider>
           <DownloadsProvider>
-            <Shell />
+            <AudioPlayerProvider>
+              <Shell />
+            </AudioPlayerProvider>
           </DownloadsProvider>
         </AppFlagsProvider>
       </AuthProvider>

@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
-import { CheckCircle, XCircle, Circle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { AlertCircle, ChevronLeft, CheckCircle, Circle, XCircle } from 'lucide-react';
 import { colors, radius } from '../theme';
-import { TopBar } from '../components/TopBar';
+import { Logo } from '../components/Logo';
 import { TextField } from '../components/TextField';
-import { PrimaryButton } from '../components/PrimaryButton';
+import { GoogleIcon } from '../components/GoogleIcon';
 import { useAuth } from '../context/AuthContext';
+import { emailAuthMessage, googleErrorMessage } from '../utils/authErrors';
 
 interface Props {
+  mode: 'signin' | 'signup';
+  onModeChange: (mode: 'signin' | 'signup') => void;
   onBack: () => void;
   onForgotPassword: () => void;
 }
@@ -19,34 +22,36 @@ const PASSWORD_RULES = [
   { id: 'special', label: 'One special character', test: (p: string) => /[^A-Za-z0-9]/.test(p) },
 ];
 
-export function EmailAuthPage({ onBack, onForgotPassword }: Props) {
-  const { signInWithEmail, register } = useAuth();
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+export function EmailAuthPage({ mode, onModeChange, onBack, onForgotPassword }: Props) {
+  const { signInWithEmail, register, signInWithGoogle } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
   const signup = mode === 'signup';
   const mismatch = signup && confirm.length > 0 && password !== confirm;
 
+  useEffect(() => {
+    setError(null);
+    setSubmitted(false);
+  }, [mode]);
+
   const submit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+    e?.preventDefault();
+    if (busy) return;
     setSubmitted(true);
     setError(null);
 
     const emailTrim = email.trim();
-    if (!emailTrim || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailTrim)) {
-      return setError('Please enter a valid email address.');
-    }
-
+    if (!emailTrim || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailTrim)) return setError('Please enter a valid email address.');
     if (signup) {
       if (!fullName.trim()) return setError('Please enter your full name.');
-      const strong = PASSWORD_RULES.every((r) => r.test(password));
-      if (!strong) return setError('Your password does not meet the requirements below.');
+      if (!PASSWORD_RULES.every((r) => r.test(password))) return setError('Your password does not meet the requirements below.');
       if (password !== confirm) return setError('Passwords do not match.');
     } else if (!password) {
       return setError('Please enter your password.');
@@ -54,122 +59,74 @@ export function EmailAuthPage({ onBack, onForgotPassword }: Props) {
 
     setBusy(true);
     try {
-      if (signup) {
-        await register(fullName, emailTrim, password);
-      } else {
-        await signInWithEmail(emailTrim, password);
-      }
-    } catch (err: any) {
-      console.error('Auth error:', err);
-      const code = err?.code ?? '';
-      if (code === 'auth/email-already-in-use') {
-        setError('An account with this email already exists. Try signing in instead.');
-      } else if (code === 'auth/wrong-password' || code === 'auth/user-not-found' || code === 'auth/invalid-credential') {
-        setError('Invalid email or password.');
-      } else if (code === 'auth/too-many-requests') {
-        setError('Too many attempts. Please wait a moment and try again.');
-      } else {
-        setError(err?.message ?? 'Unable to sign in. Please check your details.');
-      }
+      if (signup) await register(fullName, emailTrim, password);
+      else await signInWithEmail(emailTrim, password);
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('Auth error:', err);
+      setError(emailAuthMessage(err));
     } finally {
       setBusy(false);
     }
   };
 
+  const google = async () => {
+    setError(null);
+    setGoogleBusy(true);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      const msg = googleErrorMessage(err);
+      if (msg) setError(msg);
+    } finally {
+      setGoogleBusy(false);
+    }
+  };
+
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: '100dvh',
-        backgroundColor: colors.bg,
-        paddingBottom: 'calc(var(--sab, 0px) + 36px)',
-        boxSizing: 'border-box',
-      }}
-    >
-      <TopBar title={signup ? 'Create account' : 'Sign in'} onBack={onBack} />
-      <div
-        style={{
-          flex: 1,
-          padding: '20px 16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px',
-          width: '100%',
-          boxSizing: 'border-box',
-        }}
-      >
-        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {signup && (
-            <TextField
-              label="Full Name"
-              value={fullName}
-              onChange={setFullName}
-              autoComplete="name"
-            />
-          )}
+    <div className="auth">
+      <div className="auth-card">
+        <div>
+          <button type="button" className="icon-btn" onClick={onBack} aria-label="Go back">
+            <ChevronLeft size={22} />
+          </button>
+        </div>
+        <div className="auth-head">
+          <Logo size={56} />
+          <h1>{signup ? 'Create your account' : 'Welcome back'}</h1>
+          <p>{signup ? 'Join the family and never miss a testimony.' : 'Sign in to continue to Testimonies of Praise.'}</p>
+        </div>
 
-          <TextField
-            label="Email"
-            type="email"
-            value={email}
-            onChange={setEmail}
-            autoComplete="email"
-          />
+        <div className="segment" role="tablist" aria-label="Sign in or create account">
+          <button type="button" role="tab" aria-selected={!signup} onClick={() => onModeChange('signin')}>
+            Sign in
+          </button>
+          <button type="button" role="tab" aria-selected={signup} onClick={() => onModeChange('signup')}>
+            Create account
+          </button>
+        </div>
 
-          <TextField
-            label="Password"
-            secure
-            value={password}
-            onChange={setPassword}
-            autoComplete={signup ? 'new-password' : 'current-password'}
-          />
+        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} noValidate>
+          {signup && <TextField label="Full name" value={fullName} onChange={setFullName} autoComplete="name" />}
+          <TextField label="Email" type="email" value={email} onChange={setEmail} autoComplete="email" />
+          <TextField label="Password" secure value={password} onChange={setPassword} autoComplete={signup ? 'new-password' : 'current-password'} />
 
           {signup ? (
             <>
               <TextField
-                label="Confirm Password"
+                label="Confirm password"
                 secure
                 value={confirm}
                 onChange={setConfirm}
                 error={mismatch ? 'Passwords do not match.' : undefined}
                 autoComplete="new-password"
               />
-
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '6px',
-                  padding: '14px',
-                  borderRadius: radius.md,
-                  backgroundColor: colors.surface,
-                  border: `1px solid ${colors.border}`,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: '800',
-                    letterSpacing: '1px',
-                    color: colors.accent,
-                    marginBottom: '4px',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Password Requirements
-                </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '14px', borderRadius: radius.md, backgroundColor: colors.surface, border: `1px solid ${colors.borderSoft}` }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: colors.accent, marginBottom: '4px' }}>Password requirements</span>
                 {PASSWORD_RULES.map((r) => {
                   const ok = r.test(password);
                   return (
                     <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-                      {ok ? (
-                        <CheckCircle size={16} color={colors.success} />
-                      ) : submitted ? (
-                        <XCircle size={16} color={colors.danger} />
-                      ) : (
-                        <Circle size={16} color={colors.textMuted} />
-                      )}
+                      {ok ? <CheckCircle size={16} color={colors.success} /> : submitted ? <XCircle size={16} color={colors.danger} /> : <Circle size={16} color={colors.textSubtle} />}
                       <span style={{ color: ok ? colors.text : colors.textMuted }}>{r.label}</span>
                     </div>
                   );
@@ -177,63 +134,31 @@ export function EmailAuthPage({ onBack, onForgotPassword }: Props) {
               </div>
             </>
           ) : (
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={onForgotPassword}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: colors.accent,
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  padding: 0,
-                }}
-              >
-                Forgot Password?
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-6px' }}>
+              <button type="button" className="link-btn" onClick={onForgotPassword}>
+                Forgot password?
               </button>
             </div>
           )}
 
           {error && (
-            <div style={{ fontSize: '13px', color: colors.danger, textAlign: 'center' }}>
-              {error}
+            <div className="err-box" role="alert">
+              <AlertCircle size={18} color={colors.danger} style={{ flexShrink: 0 }} />
+              <span>{error}</span>
             </div>
           )}
 
-          <div style={{ marginTop: '8px' }}>
-            <PrimaryButton
-              title={signup ? 'CREATE ACCOUNT' : 'SIGN IN'}
-              onClick={() => submit()}
-              loading={busy}
-            />
-          </div>
+          <button type="submit" className="btn btn-gold btn-block" disabled={busy} aria-busy={busy}>
+            {busy ? <span className="spinner" /> : null}
+            {signup ? 'Create account' : 'Sign in'}
+          </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '12px' }}>
-          <button
-            type="button"
-            onClick={() => {
-              setMode(signup ? 'signin' : 'signup');
-              setError(null);
-              setSubmitted(false);
-            }}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '14px',
-              color: colors.textMuted,
-              cursor: 'pointer',
-              padding: '8px',
-            }}
-          >
-            {signup ? 'Already have an account? ' : 'New here? '}
-            <span style={{ color: colors.accent, fontWeight: '700' }}>
-              {signup ? 'Sign in' : 'Create account'}
-            </span>
-          </button>
-        </div>
+        <div className="divider">or</div>
+        <button type="button" className="btn btn-white btn-block" onClick={google} disabled={googleBusy} aria-busy={googleBusy}>
+          {googleBusy ? <span className="spinner light" /> : <GoogleIcon />}
+          Continue with Google
+        </button>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { DownloadsScreen } from '@/screens/DownloadsScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
+import { ListenScreen } from '@/screens/ListenScreen';
 import { LiveScreen } from '@/screens/LiveScreen';
 import { TestimoniesScreen } from '@/screens/TestimoniesScreen';
 import { colors } from '@/constants/theme';
@@ -24,6 +25,7 @@ export function TabNavigator() {
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
       <Tab.Screen name="Testimonies" component={TestimoniesScreen} options={{ title: 'Testimonies' }} />
       <Tab.Screen name="Live" component={LiveScreen} options={{ title: 'Live' }} />
+      <Tab.Screen name="Listen" component={ListenScreen} options={{ title: 'Listen' }} />
       <Tab.Screen name="Downloads" component={DownloadsScreen} options={{ title: 'Downloads' }} />
     </Tab.Navigator>
   );

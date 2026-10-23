@@ -1,0 +1,44 @@
+# Deploys the Cloudflare Worker (top-admin/worker) whenever its source or config changes on main.
+# Requires repository secrets CLOUDFLARE_API_TOKEN (template "Edit Cloudflare Workers") and
+# CLOUDFLARE_ACCOUNT_ID. Without them the job is skipped, not failed.
+name: Deploy push relay worker
+
+on:
+  push:
+    branches: [main]
+    paths: ['top-admin/worker/**']
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    defaults:
+      run:
+        working-directory: top-admin/worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check Cloudflare credentials
+        id: creds
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID secrets are not set; skipping deploy."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - run: npm ci
+        if: steps.creds.outputs.ok == 'true'
+      - run: node test.mjs && node ../../tests/mediaManagerWorker.test.mjs
+        if: steps.creds.outputs.ok == 'true'
+      - run: npx wrangler deploy
+        if: steps.creds.outputs.ok == 'true'
+      - name: Smoke-test deployed status endpoint
+        if: steps.creds.outputs.ok == 'true'
+        run: |
+          curl -fsS -H "Origin: https://top-admin.onrender.com" https://top-push-relay.gtrusouth116.workers.dev/api/media/status | grep -q '"providers"'

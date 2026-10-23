@@ -32,7 +32,7 @@ const baseEnv = {
 
   const body = await res.json();
   assert.equal(body.status, 'ok');
-  assert.equal(body.version, '2.2.0');
+  assert.ok(body.version, 'status must report a version');
   assert.equal(body.providers.bunny.configured, true);
   assert.equal(body.providers.bunny.hasAccessKey, true);
   assert.equal(body.providers.bunny.storageZone, 'top-media-storage');

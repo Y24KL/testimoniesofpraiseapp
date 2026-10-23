@@ -5,17 +5,22 @@
   "start_url": "/",
   "display": "standalone",
   "background_color": "#12001C",
-  "theme_color": "#4B006E",
-  "orientation": "portrait",
+  "theme_color": "#12001C",
   "icons": [
     {
-      "src": "/icon.png",
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/adaptive-icon.png",
+      "src": "/maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

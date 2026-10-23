@@ -1,360 +1,273 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DownloadsProvider } from './context/DownloadsContext';
-import { BottomNavigation, type TabName } from './components/BottomNavigation';
+import { AudioPlayerProvider, useAudioPlayer } from './audio/AudioPlayerContext';
+import { MiniPlayer } from './audio/MiniPlayer';
+import { BottomNavigation } from './components/BottomNavigation';
+import { SideNav } from './components/SideNav';
 import { OfflineBanner } from './components/OfflineBanner';
 import { AddToHomeScreenModal } from './components/AddToHomeScreenModal';
 import { AppDrawer } from './components/AppDrawer';
 import { Logo } from './components/Logo';
+import { useLive } from './hooks/useContent';
+import { TAB_ROUTES, goBack, navigate, parseHash, useRoute, type Route } from './router';
+import type { Promotion } from './types';
 import { colors, gradients } from './theme';
 
-// Pages
-import { WelcomePage } from './pages/WelcomePage';
-import { EmailAuthPage } from './pages/EmailAuthPage';
-import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
-import { FirstTimeWelcomePage } from './pages/FirstTimeWelcomePage';
-import { NotificationPrimerPage } from './pages/NotificationPrimerPage';
+// Home and Welcome are the entry screens, so they ship in the main bundle; everything else is
+// code-split and fetched on first visit.
 import { HomePage } from './pages/HomePage';
-import { TestimoniesPage } from './pages/TestimoniesPage';
-import { TestimonyDetailPage } from './pages/TestimonyDetailPage';
-import { LivePage } from './pages/LivePage';
-import { DownloadsPage } from './pages/DownloadsPage';
-import { ShareTestimonyPage } from './pages/ShareTestimonyPage';
-import { SponsorPage } from './pages/SponsorPage';
-import { NotificationsPage } from './pages/NotificationsPage';
-import { NotificationSettingsPage } from './pages/NotificationSettingsPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { SearchPage } from './pages/SearchPage';
-import { PromotionsPage } from './pages/PromotionsPage';
-import { ArticlesPage } from './pages/ArticlesPage';
-import { ArticleDetailPage } from './pages/ArticleDetailPage';
-import { RadioPage } from './pages/RadioPage';
-import { AdotopocPage } from './pages/AdotopocPage';
+import { WelcomePage } from './pages/WelcomePage';
 
+const named = <K extends string>(load: () => Promise<Record<K, React.ComponentType<any>>>, key: K) =>
+  lazy(() => load().then((m) => ({ default: m[key] })));
 
-type ViewState =
-  | { type: 'tabs' }
-  | { type: 'testimonyDetail'; id: string }
-  | { type: 'shareTestimony' }
-  | { type: 'sponsor' }
-  | { type: 'notifications' }
-  | { type: 'notificationSettings' }
-  | { type: 'profile' }
-  | { type: 'search' }
-  | { type: 'promotions' }
-  | { type: 'articles' }
-  | { type: 'articleDetail'; id: string }
-  | { type: 'radio' }
-  | { type: 'adotopoc' };
+const EmailAuthPage = named(() => import('./pages/EmailAuthPage'), 'EmailAuthPage');
+const ForgotPasswordPage = named(() => import('./pages/ForgotPasswordPage'), 'ForgotPasswordPage');
+const FirstTimeWelcomePage = named(() => import('./pages/FirstTimeWelcomePage'), 'FirstTimeWelcomePage');
+const NotificationPrimerPage = named(() => import('./pages/NotificationPrimerPage'), 'NotificationPrimerPage');
+const TestimoniesPage = named(() => import('./pages/TestimoniesPage'), 'TestimoniesPage');
+const TestimonyDetailPage = named(() => import('./pages/TestimonyDetailPage'), 'TestimonyDetailPage');
+const LivePage = named(() => import('./pages/LivePage'), 'LivePage');
+const ListenPage = named(() => import('./pages/ListenPage'), 'ListenPage');
+const DownloadsPage = named(() => import('./pages/DownloadsPage'), 'DownloadsPage');
+const ShareTestimonyPage = named(() => import('./pages/ShareTestimonyPage'), 'ShareTestimonyPage');
+const SponsorPage = named(() => import('./pages/SponsorPage'), 'SponsorPage');
+const NotificationsPage = named(() => import('./pages/NotificationsPage'), 'NotificationsPage');
+const NotificationSettingsPage = named(() => import('./pages/NotificationSettingsPage'), 'NotificationSettingsPage');
+const ProfilePage = named(() => import('./pages/ProfilePage'), 'ProfilePage');
+const SearchPage = named(() => import('./pages/SearchPage'), 'SearchPage');
+const PromotionsPage = named(() => import('./pages/PromotionsPage'), 'PromotionsPage');
+const ArticlesPage = named(() => import('./pages/ArticlesPage'), 'ArticlesPage');
+const ArticleDetailPage = named(() => import('./pages/ArticleDetailPage'), 'ArticleDetailPage');
+const AdotopocPage = named(() => import('./pages/AdotopocPage'), 'AdotopocPage');
 
-type AuthScreen = 'welcome' | 'emailAuth' | 'forgotPassword';
+function Splash() {
+  return (
+    <div style={{ width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: gradients.hero, gap: '22px' }}>
+      <Logo size={96} />
+      <div style={{ width: '30px', height: '30px', border: `3px solid ${colors.border}`, borderTopColor: colors.accent, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} aria-label="Loading" />
+    </div>
+  );
+}
 
-function AppContent() {
-  const { user, initializing, isNewAccount } = useAuth();
-  const [authScreen, setAuthScreen] = useState<AuthScreen>('welcome');
-  const [primerSeen, setPrimerSeen] = useState<boolean>(() => {
-    return localStorage.getItem('top:notification-primer-seen:v1') === 'true';
-  });
+function PageFallback() {
+  return (
+    <div style={{ minHeight: '60dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }} aria-busy="true" aria-label="Loading">
+      <span className="spinner light" style={{ width: 28, height: 28 }} />
+    </div>
+  );
+}
 
-  const [currentTab, setCurrentTab] = useState<TabName>('home');
-  const [viewState, setViewState] = useState<ViewState>({ type: 'tabs' });
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+/** Internal promotion targets ("radio", "articles", "article:<id>", ...) map onto real routes. */
+function routeForDestination(dest: string): Route | null {
+  const d = dest.trim();
+  const lower = d.toLowerCase();
+  if (lower === 'radio' || lower === 'listen') return { name: 'listen' };
+  if (lower === 'adotopoc') return { name: 'adotopoc' };
+  if (lower === 'articles') return { name: 'articles' };
+  if (lower === 'sponsor') return { name: 'sponsor' };
+  if (lower === 'share') return { name: 'share' };
+  if (lower === 'live') return { name: 'live' };
+  const m = d.match(/^(?:articledetails|article)[:/](.+)$/i);
+  if (m) return { name: 'article', id: m[1] };
+  const t = d.match(/^testimony[:/](.+)$/i);
+  if (t) return { name: 'testimony', id: t[1] };
+  return null;
+}
 
-  // Handle URL deep links like #testimony/:id or #live
+const AFTER_AUTH_KEY = 'top:after-auth-route';
+const isAuthRoute = (r: Route) => r.name === 'signin' || r.name === 'signup' || r.name === 'forgot';
+
+function SignedOut({ route }: { route: Route }) {
+  // Remember a shared deep link (e.g. #/testimony/abc) so signing in returns the visitor there.
   useEffect(() => {
-    const handleHash = () => {
-      const hash = window.location.hash;
-      if (hash.startsWith('#testimony/')) {
-        const id = hash.replace('#testimony/', '');
-        if (id) setViewState({ type: 'testimonyDetail', id });
-      } else if (hash.startsWith('#article/')) {
-        const id = hash.replace('#article/', '');
-        if (id) setViewState({ type: 'articleDetail', id });
-      } else if (hash === '#live') {
-        setCurrentTab('live');
-        setViewState({ type: 'tabs' });
-      } else if (hash === '#radio') {
-        setViewState({ type: 'radio' });
-      } else if (hash === '#adotopoc') {
-        setViewState({ type: 'adotopoc' });
-      } else if (hash === '#articles') {
-        setViewState({ type: 'articles' });
-      } else if (hash === '#promotions') {
-        setViewState({ type: 'promotions' });
+    if (!isAuthRoute(route) && route.name !== 'home') {
+      try {
+        sessionStorage.setItem(AFTER_AUTH_KEY, window.location.hash);
+      } catch {
+        /* storage unavailable */
       }
-    };
-    handleHash();
-    window.addEventListener('hashchange', handleHash);
-    return () => window.removeEventListener('hashchange', handleHash);
+    }
+  }, [route]);
+
+  if (route.name === 'signin' || route.name === 'signup') {
+    return (
+      <EmailAuthPage
+        mode={route.name}
+        onModeChange={(m: 'signin' | 'signup') => navigate({ name: m }, { replace: true })}
+        onBack={() => goBack({ name: 'home' })}
+        onForgotPassword={() => navigate({ name: 'forgot' })}
+      />
+    );
+  }
+  if (route.name === 'forgot') return <ForgotPasswordPage onBack={() => goBack({ name: 'signin' })} />;
+  // Any other URL (including a shared deep link) shows Welcome; the URL is kept, so after signing in
+  // the visitor lands exactly where the link pointed.
+  return <WelcomePage onGetStarted={() => navigate({ name: 'signup' })} onSignIn={() => navigate({ name: 'signin' })} />;
+}
+
+function Shell({ route }: { route: Route }) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { live } = useLive();
+  const audio = useAudioPlayer();
+  const openDrawer = useCallback(() => setDrawerOpen(true), []);
+  const isTab = TAB_ROUTES.has(route.name);
+  const back = () => goBack({ name: 'home' });
+  const go = (r: Route) => () => navigate(r);
+
+  const openPromotion = useCallback((p: Promotion) => {
+    if (!p.destinationUrl) return;
+    if (/^https?:\/\//i.test(p.destinationUrl)) {
+      window.open(p.destinationUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    const r = routeForDestination(p.destinationUrl);
+    if (r) navigate(r);
   }, []);
 
-  // 1. Initializing / Session Restore
-  if (initializing) {
-    return (
-      <div
-        style={{
-          width: '100%',
-          height: '100dvh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: gradients.hero,
-          gap: '20px',
-        }}
-      >
-        <Logo size={110} />
-        <span
-          style={{
-            fontSize: '15px',
-            fontWeight: '800',
-            letterSpacing: '4px',
-            color: colors.accent,
-            textTransform: 'uppercase',
-          }}
-        >
-          LOADING PRAISE
-        </span>
-        <div
-          style={{
-            width: '32px',
-            height: '32px',
-            border: `3px solid ${colors.border}`,
-            borderTopColor: colors.accent,
-            borderRadius: '50%',
-            animation: 'spin 0.8s linear infinite',
-          }}
-        />
-      </div>
-    );
-  }
-
-  // 2. Unauthenticated flows
-  if (!user) {
-    if (authScreen === 'emailAuth') {
-      return (
-        <EmailAuthPage
-          onBack={() => setAuthScreen('welcome')}
-          onForgotPassword={() => setAuthScreen('forgotPassword')}
+  let page: React.ReactNode;
+  switch (route.name) {
+    case 'testimonies':
+      page = <TestimoniesPage onSearch={go({ name: 'search' })} onNotifications={go({ name: 'notifications' })} onProfile={openDrawer} onSelectTestimony={(id: string) => navigate({ name: 'testimony', id })} />;
+      break;
+    case 'live':
+      page = <LivePage onNotifications={go({ name: 'notifications' })} onProfile={openDrawer} />;
+      break;
+    case 'listen':
+      page = <ListenPage onMenu={openDrawer} />;
+      break;
+    case 'downloads':
+      page = <DownloadsPage onNotifications={go({ name: 'notifications' })} onProfile={openDrawer} onSelectTestimony={(id: string) => navigate({ name: 'testimony', id })} />;
+      break;
+    case 'testimony':
+      page = <TestimonyDetailPage key={route.id} id={route.id} onBack={back} />;
+      break;
+    case 'share':
+      page = <ShareTestimonyPage onBack={back} />;
+      break;
+    case 'sponsor':
+      page = <SponsorPage onBack={back} />;
+      break;
+    case 'notifications':
+      page = <NotificationsPage onBack={back} onSelectTestimony={(id: string) => navigate({ name: 'testimony', id })} onGoToLive={go({ name: 'live' })} />;
+      break;
+    case 'notificationSettings':
+      page = <NotificationSettingsPage onBack={() => goBack({ name: 'profile' })} />;
+      break;
+    case 'profile':
+      page = (
+        <ProfilePage
+          onBack={back}
+          onGoToNotifications={go({ name: 'notificationSettings' })}
+          onGoToDownloads={go({ name: 'downloads' })}
+          onGoToShare={go({ name: 'share' })}
+          onGoToSponsor={go({ name: 'sponsor' })}
         />
       );
-    }
-    if (authScreen === 'forgotPassword') {
-      return <ForgotPasswordPage onBack={() => setAuthScreen('emailAuth')} />;
-    }
-    return <WelcomePage onGoToEmail={() => setAuthScreen('emailAuth')} />;
+      break;
+    case 'search':
+      page = <SearchPage onBack={back} onSelectTestimony={(id: string) => navigate({ name: 'testimony', id })} />;
+      break;
+    case 'promotions':
+      page = (
+        <PromotionsPage
+          onBack={back}
+          onNavigateInternal={(dest: string) => {
+            const r = routeForDestination(dest);
+            if (r) navigate(r);
+          }}
+        />
+      );
+      break;
+    case 'articles':
+      page = <ArticlesPage onBack={back} onSelectArticle={(id: string) => navigate({ name: 'article', id })} />;
+      break;
+    case 'article':
+      page = <ArticleDetailPage key={route.id} articleId={route.id} onBack={() => goBack({ name: 'articles' })} />;
+      break;
+    case 'adotopoc':
+      page = <AdotopocPage onBack={back} />;
+      break;
+    default:
+      page = <HomePage onMenu={openDrawer} onOpenPromotion={openPromotion} />;
   }
 
-  // 3. First time new account welcome modal
-  if (isNewAccount) {
-    return <FirstTimeWelcomePage onDone={() => {}} />;
-  }
-
-  // 4. Notification primer (shown once after registration)
-  if (!primerSeen) {
-    return <NotificationPrimerPage onDone={() => setPrimerSeen(true)} />;
-  }
-
-  // 5. Modals / Stack Views
-  if (viewState.type === 'testimonyDetail') {
-    return (
-      <TestimonyDetailPage
-        id={viewState.id}
-        onBack={() => setViewState({ type: 'tabs' })}
-      />
-    );
-  }
-
-  if (viewState.type === 'shareTestimony') {
-    return <ShareTestimonyPage onBack={() => setViewState({ type: 'tabs' })} />;
-  }
-
-  if (viewState.type === 'sponsor') {
-    return <SponsorPage onBack={() => setViewState({ type: 'tabs' })} />;
-  }
-
-  if (viewState.type === 'notifications') {
-    return (
-      <NotificationsPage
-        onBack={() => setViewState({ type: 'tabs' })}
-        onSelectTestimony={(id) => setViewState({ type: 'testimonyDetail', id })}
-        onGoToLive={() => {
-          setCurrentTab('live');
-          setViewState({ type: 'tabs' });
-        }}
-      />
-    );
-  }
-
-  if (viewState.type === 'notificationSettings') {
-    return <NotificationSettingsPage onBack={() => setViewState({ type: 'profile' })} />;
-  }
-
-  if (viewState.type === 'profile') {
-    return (
-      <ProfilePage
-        onBack={() => setViewState({ type: 'tabs' })}
-        onGoToNotifications={() => setViewState({ type: 'notificationSettings' })}
-        onGoToDownloads={() => {
-          setCurrentTab('downloads');
-          setViewState({ type: 'tabs' });
-        }}
-        onGoToShare={() => setViewState({ type: 'shareTestimony' })}
-        onGoToSponsor={() => setViewState({ type: 'sponsor' })}
-      />
-    );
-  }
-
-  if (viewState.type === 'search') {
-    return (
-      <SearchPage
-        onBack={() => setViewState({ type: 'tabs' })}
-        onSelectTestimony={(id) => setViewState({ type: 'testimonyDetail', id })}
-      />
-    );
-  }
-
-  if (viewState.type === 'promotions') {
-    return (
-      <PromotionsPage
-        onBack={() => setViewState({ type: 'tabs' })}
-        onNavigateInternal={(route) => {
-          if (route === 'Radio') setViewState({ type: 'radio' });
-          else if (route === 'Adotopoc') setViewState({ type: 'adotopoc' });
-          else if (route === 'Articles') setViewState({ type: 'articles' });
-          else if (route.startsWith('ArticleDetails:')) {
-            const id = route.split(':')[1];
-            setViewState({ type: 'articleDetail', id });
-          }
-        }}
-      />
-    );
-  }
-
-  if (viewState.type === 'articles') {
-    return (
-      <ArticlesPage
-        onBack={() => setViewState({ type: 'tabs' })}
-        onSelectArticle={(id) => setViewState({ type: 'articleDetail', id })}
-      />
-    );
-  }
-
-  if (viewState.type === 'articleDetail') {
-    return (
-      <ArticleDetailPage
-        articleId={viewState.id}
-        onBack={() => setViewState({ type: 'articles' })}
-      />
-    );
-  }
-
-  if (viewState.type === 'radio') {
-    return <RadioPage onBack={() => setViewState({ type: 'tabs' })} />;
-  }
-
-  if (viewState.type === 'adotopoc') {
-    return <AdotopocPage onBack={() => setViewState({ type: 'tabs' })} />;
-  }
-
-  // 6. Main Tab Navigation
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: '100dvh',
-        width: '100%',
-        backgroundColor: colors.bg,
-        position: 'relative',
-      }}
-    >
-      <OfflineBanner />
-
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {currentTab === 'home' && (
-          <HomePage
-            onSearch={() => setViewState({ type: 'search' })}
-            onNotifications={() => setViewState({ type: 'notifications' })}
-            onProfile={() => setIsDrawerOpen(true)}
-            onMenu={() => setIsDrawerOpen(true)}
-            onSelectTestimony={(id) => setViewState({ type: 'testimonyDetail', id })}
-            onGoToLive={() => setCurrentTab('live')}
-            onGoToTestimonies={() => setCurrentTab('testimonies')}
-            onShareTestimony={() => setViewState({ type: 'shareTestimony' })}
-            onGoToRadio={() => setViewState({ type: 'radio' })}
-            onGoToAdotopoc={() => setViewState({ type: 'adotopoc' })}
-            onGoToArticles={() => setViewState({ type: 'articles' })}
-            onGoToPromotions={() => setViewState({ type: 'promotions' })}
-          />
-        )}
-
-        {currentTab === 'testimonies' && (
-          <TestimoniesPage
-            onSearch={() => setViewState({ type: 'search' })}
-            onNotifications={() => setViewState({ type: 'notifications' })}
-            onProfile={() => setIsDrawerOpen(true)}
-            onSelectTestimony={(id) => setViewState({ type: 'testimonyDetail', id })}
-          />
-        )}
-
-        {currentTab === 'live' && (
-          <LivePage
-            onNotifications={() => setViewState({ type: 'notifications' })}
-            onProfile={() => setIsDrawerOpen(true)}
-          />
-        )}
-
-        {currentTab === 'downloads' && (
-          <DownloadsPage
-            onNotifications={() => setViewState({ type: 'notifications' })}
-            onProfile={() => setIsDrawerOpen(true)}
-            onSelectTestimony={(id) => setViewState({ type: 'testimonyDetail', id })}
-          />
-        )}
+    <div className="app-shell">
+      <SideNav current={route.name} isLive={!!live?.isLive} />
+      <main className="app-main" key={route.name === 'testimony' || route.name === 'article' ? `${route.name}:${route.id}` : route.name}>
+        <OfflineBanner />
+        <Suspense fallback={<PageFallback />}>{page}</Suspense>
       </main>
 
-      <BottomNavigation
-        currentTab={currentTab}
-        onTabChange={(t) => setCurrentTab(t)}
-      />
-
+      {isTab ? <BottomNavigation current={route.name} /> : null}
+      {audio.track ? <MiniPlayer withNav={isTab} onOpen={go({ name: 'listen' })} /> : null}
       <AddToHomeScreenModal />
 
       <AppDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        onProfile={() => setViewState({ type: 'profile' })}
-        onGoToRadio={() => setViewState({ type: 'radio' })}
-        onGoToAdotopoc={() => setViewState({ type: 'adotopoc' })}
-        onGoToArticles={() => setViewState({ type: 'articles' })}
-        onGoToPromotions={() => setViewState({ type: 'promotions' })}
-        onGoToLive={() => {
-          setCurrentTab('live');
-          setViewState({ type: 'tabs' });
-        }}
-        onGoToTestimonies={() => {
-          setCurrentTab('testimonies');
-          setViewState({ type: 'tabs' });
-        }}
-        onShareTestimony={() => setViewState({ type: 'shareTestimony' })}
-        onSponsor={() => setViewState({ type: 'sponsor' })}
-        onGoToDownloads={() => {
-          setCurrentTab('downloads');
-          setViewState({ type: 'tabs' });
-        }}
-        onNotifications={() => setViewState({ type: 'notifications' })}
-        onNotificationSettings={() => setViewState({ type: 'notificationSettings' })}
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onProfile={go({ name: 'profile' })}
+        onGoToRadio={go({ name: 'listen' })}
+        onGoToAdotopoc={go({ name: 'adotopoc' })}
+        onGoToArticles={go({ name: 'articles' })}
+        onGoToPromotions={go({ name: 'promotions' })}
+        onGoToLive={go({ name: 'live' })}
+        onGoToTestimonies={go({ name: 'testimonies' })}
+        onShareTestimony={go({ name: 'share' })}
+        onSponsor={go({ name: 'sponsor' })}
+        onGoToDownloads={go({ name: 'downloads' })}
+        onNotifications={go({ name: 'notifications' })}
+        onNotificationSettings={go({ name: 'notificationSettings' })}
       />
     </div>
   );
+}
+
+function AppContent() {
+  const { user, initializing, isNewAccount } = useAuth();
+  const route = useRoute();
+  const [primerSeen, setPrimerSeen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('top:notification-primer-seen:v1') === 'true';
+    } catch {
+      return true;
+    }
+  });
+
+  // Auth-only URLs make no sense once signed in: continue to the remembered deep link, or Home.
+  useEffect(() => {
+    if (!user || !isAuthRoute(route)) return;
+    let pending: string | null = null;
+    try {
+      pending = sessionStorage.getItem(AFTER_AUTH_KEY);
+      sessionStorage.removeItem(AFTER_AUTH_KEY);
+    } catch {
+      /* storage unavailable */
+    }
+    const target = pending ? parseHash(pending) : null;
+    navigate(target && !isAuthRoute(target) ? target : { name: 'home' }, { replace: true });
+  }, [user, route]);
+
+  if (initializing) return <Splash />;
+
+  let content: React.ReactNode;
+  if (!user) content = <SignedOut route={route} />;
+  else if (isNewAccount) content = <FirstTimeWelcomePage onDone={() => {}} />;
+  else if (!primerSeen) content = <NotificationPrimerPage onDone={() => setPrimerSeen(true)} />;
+  else content = <Shell route={route} />;
+
+  return <Suspense fallback={<Splash />}>{content}</Suspense>;
 }
 
 export function App() {
   return (
     <AuthProvider>
       <DownloadsProvider>
-        <AppContent />
+        <AudioPlayerProvider>
+          <AppContent />
+        </AudioPlayerProvider>
       </DownloadsProvider>
     </AuthProvider>
   );

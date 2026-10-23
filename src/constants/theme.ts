@@ -35,7 +35,7 @@ export const gradients = {
   brand: ['#7A1FA2', '#4B006E'] as const,
   gold: ['#FFE08A', '#F5C542', '#D99A1E'] as const,
   /** Scrim for media behind text (onboarding, heroes). Top stays clear, bottom is near-opaque. */
-  scrim: ['rgba(18,0,28,0.15)', 'rgba(18,0,28,0.55)', 'rgba(18,0,28,0.97)'] as const,
+  scrim: ['rgba(18,0,28,0.25)', 'rgba(18,0,28,0.72)', 'rgba(18,0,28,0.97)'] as const,
   live: ['rgba(255,59,78,0.0)', 'rgba(75,0,110,0.65)', 'rgba(18,0,28,0.97)'] as const,
 };
 

@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Hls from 'hls.js';
+import type Hls from 'hls.js';
 import { colors, radius } from '../theme';
 import { isHls } from '../api/repository';
 import { track } from '../api/analytics';
 import { ErrorState } from './ErrorState';
+import { useAudioPlayer } from '../audio/AudioPlayerContext';
 
 interface Props {
   uri: string;
@@ -21,6 +22,11 @@ export function VideoPlayer({ uri, contentId, live = false, autoPlay = true, lab
   const [error, setError] = useState(false);
   const playedRef = useRef(false);
   const resumedRef = useRef(false);
+  const audio = useAudioPlayer();
+  const pauseAudioRef = useRef(audio.pause);
+  const audioPlayingRef = useRef(false);
+  pauseAudioRef.current = audio.pause;
+  audioPlayingRef.current = audio.status === 'playing';
 
   useEffect(() => {
     const video = videoRef.current;
@@ -29,6 +35,7 @@ export function VideoPlayer({ uri, contentId, live = false, autoPlay = true, lab
     setError(false);
     setLoading(true);
     let hls: Hls | null = null;
+    let cancelled = false;
 
     const isHlsStream = isHls(uri);
 
@@ -38,24 +45,28 @@ export function VideoPlayer({ uri, contentId, live = false, autoPlay = true, lab
       if (autoPlay) {
         video.play().catch(() => {});
       }
-    } else if (isHlsStream && Hls.isSupported()) {
-      hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-      });
-      hls.loadSource(uri);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        setLoading(false);
-        if (autoPlay) {
-          video.play().catch(() => {});
-        }
-      });
-      hls.on(Hls.Events.ERROR, (_event, data) => {
-        if (data.fatal) {
-          setError(true);
-        }
-      });
+    } else if (isHlsStream) {
+      // hls.js is ~590 KB: fetch it only when an HLS stream is actually opened.
+      import('hls.js')
+        .then(({ default: HlsLib }) => {
+          if (cancelled) return;
+          if (!HlsLib.isSupported()) {
+            setError(true);
+            return;
+          }
+          const h = new HlsLib({ enableWorker: true, lowLatencyMode: true });
+          hls = h;
+          h.loadSource(uri);
+          h.attachMedia(video);
+          h.on(HlsLib.Events.MANIFEST_PARSED, () => {
+            setLoading(false);
+            if (autoPlay) video.play().catch(() => {});
+          });
+          h.on(HlsLib.Events.ERROR, (_event, data) => {
+            if (data.fatal) setError(true);
+          });
+        })
+        .catch(() => setError(true));
     } else {
       // Standard MP4 or video source
       video.src = uri;
@@ -66,6 +77,8 @@ export function VideoPlayer({ uri, contentId, live = false, autoPlay = true, lab
 
     const onPlay = () => {
       setLoading(false);
+      // Starting a video pauses radio / audio testimonies so two soundtracks never overlap.
+      if (audioPlayingRef.current) pauseAudioRef.current();
       if (!playedRef.current) {
         playedRef.current = true;
         track(live ? 'live_play' : 'video_play', contentId ? { contentId } : {});
@@ -115,6 +128,7 @@ export function VideoPlayer({ uri, contentId, live = false, autoPlay = true, lab
       video.removeEventListener('timeupdate', onTimeUpdate);
       video.removeEventListener('ended', onEnded);
       video.removeEventListener('error', onError);
+      cancelled = true;
       if (hls) {
         hls.destroy();
       }

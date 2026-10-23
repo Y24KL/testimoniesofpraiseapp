@@ -33,7 +33,7 @@ export function ErrorState({
       </p>
       {onRetry && (
         <div style={{ marginTop: '4px', width: '100%', maxWidth: '240px' }}>
-          <PrimaryButton title="TRY AGAIN" variant="outline" onClick={onRetry} />
+          <PrimaryButton title="Try again" variant="outline" onClick={onRetry} />
         </div>
       )}
     </div>

@@ -90,7 +90,7 @@ export function FirstTimeWelcomePage({ onDone }: Props) {
       </div>
 
       <div style={{ width: '100%', maxWidth: '400px', margin: '0 auto' }}>
-        <PrimaryButton title="GET STARTED" onClick={handleDone} />
+        <PrimaryButton title="Get started" onClick={handleDone} />
       </div>
     </div>
   );

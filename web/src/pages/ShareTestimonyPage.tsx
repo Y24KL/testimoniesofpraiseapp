@@ -106,8 +106,8 @@ export function ShareTestimonyPage({ onBack }: Props) {
               Your testimony has been received and will be reviewed shortly.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginTop: '16px' }}>
-              <PrimaryButton title="SUBMIT ANOTHER" onClick={resetForm} />
-              <PrimaryButton title="DONE" variant="outline" onClick={onBack} />
+              <PrimaryButton title="Submit another" onClick={resetForm} />
+              <PrimaryButton title="Done" variant="outline" onClick={onBack} />
             </div>
           </div>
         ) : (
@@ -144,7 +144,7 @@ export function ShareTestimonyPage({ onBack }: Props) {
 
             <div style={{ marginTop: '8px' }}>
               <PrimaryButton
-                title="SUBMIT TESTIMONY"
+                title="Submit testimony"
                 icon={<Send size={18} />}
                 onClick={submit}
                 loading={busy}

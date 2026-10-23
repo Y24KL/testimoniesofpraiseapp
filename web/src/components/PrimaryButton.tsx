@@ -34,14 +34,13 @@ export function PrimaryButton({
     padding: '0 20px',
     fontSize: '15px',
     fontWeight: '700',
-    letterSpacing: '0.6px',
+    letterSpacing: '0.2px',
     cursor: inactive ? 'not-allowed' : 'pointer',
     opacity: inactive ? 0.6 : 1,
     transition: 'transform 0.15s ease, opacity 0.15s ease',
     outline: 'none',
     width: '100%',
     boxSizing: 'border-box',
-    textTransform: 'uppercase',
     ...style,
   };
 
@@ -49,21 +48,21 @@ export function PrimaryButton({
 
   if (variant === 'primary') {
     variantStyle = {
-      background: gradients.brand,
-      color: colors.text,
-      border: `1px solid ${colors.primaryLight}`,
-      boxShadow: '0 4px 14px rgba(75, 0, 110, 0.4)',
+      background: gradients.gold,
+      color: colors.onAccent,
+      border: 'none',
+      boxShadow: '0 6px 18px rgba(245, 197, 66, 0.22)',
     };
   } else if (variant === 'outline') {
     variantStyle = {
-      background: colors.surface,
+      background: 'rgba(28,8,41,0.6)',
       color: colors.text,
-      border: `1.5px solid ${colors.border}`,
+      border: '1.5px solid rgba(245,197,66,0.45)',
     };
   } else if (variant === 'ghost') {
     variantStyle = {
       background: 'transparent',
-      color: colors.textMuted,
+      color: colors.accent,
       border: 'none',
     };
   } else if (variant === 'danger') {

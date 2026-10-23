@@ -281,14 +281,14 @@ export function ProfilePage({
         {/* Account actions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
           <PrimaryButton
-            title="LOG OUT"
+            title="Log out"
             variant="outline"
             icon={<LogOut size={18} />}
             onClick={handleLogout}
             loading={busy}
           />
           <PrimaryButton
-            title="DELETE ACCOUNT"
+            title="Delete account"
             variant="danger"
             icon={<Trash2 size={18} />}
             onClick={() => setShowDeleteConfirm(true)}

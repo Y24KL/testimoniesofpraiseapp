@@ -92,13 +92,13 @@ export function NotificationPrimerPage({ onDone }: Props) {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '400px', margin: '0 auto' }}>
         <PrimaryButton
-          title="TURN ON NOTIFICATIONS"
+          title="Turn on notifications"
           icon={<Bell size={18} />}
           onClick={enable}
           loading={busy}
         />
         <PrimaryButton
-          title="NOT NOW"
+          title="Not now"
           variant="ghost"
           onClick={skip}
           disabled={busy}

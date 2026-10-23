@@ -4,6 +4,7 @@ import {
   createUserWithEmailAndPassword,
   deleteUser,
   getAdditionalUserInfo,
+  getRedirectResult,
   onAuthStateChanged,
   reload,
   sendEmailVerification,
@@ -40,6 +41,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [initializing, setInitializing] = useState(true);
   const [isNewAccount, setIsNewAccount] = useState(false);
+
+  // Completes a Google sign-in that fell back to the redirect flow (popup blocked) and keeps the
+  // "new account" flag that the popup path sets. Errors are only logged: the Welcome page offers email.
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then((cred) => {
+        if (cred && getAdditionalUserInfo(cred)?.isNewUser) {
+          localStorage.setItem(`top:new-account:${cred.user.uid}`, 'true');
+          setIsNewAccount(true);
+        }
+      })
+      .catch((e) => console.warn('[auth] redirect sign-in failed', e?.code ?? e));
+  }, []);
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {

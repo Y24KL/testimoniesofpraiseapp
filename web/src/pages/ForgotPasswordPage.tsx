@@ -65,7 +65,7 @@ export function ForgotPasswordPage({ onBack }: Props) {
               If an account exists for {email.trim()}, we’ve sent a link to reset your password.
             </p>
             <div style={{ marginTop: '16px' }}>
-              <PrimaryButton title="BACK TO SIGN IN" onClick={onBack} />
+              <PrimaryButton title="Back to sign in" onClick={onBack} />
             </div>
           </div>
         ) : (
@@ -86,7 +86,7 @@ export function ForgotPasswordPage({ onBack }: Props) {
               </span>
             )}
             <div style={{ marginTop: '8px' }}>
-              <PrimaryButton title="SEND RESET LINK" onClick={submit} loading={busy} />
+              <PrimaryButton title="Send reset link" onClick={submit} loading={busy} />
             </div>
           </div>
         )}

@@ -161,7 +161,7 @@ export function SponsorPage({ onBack }: Props) {
               We've received your receipt and will confirm it shortly. May God bless your partnership.
             </p>
             <div style={{ width: '100%', marginTop: '16px' }}>
-              <PrimaryButton title="DONE" onClick={onBack} />
+              <PrimaryButton title="Done" onClick={onBack} />
             </div>
           </div>
         ) : (
@@ -267,7 +267,7 @@ export function SponsorPage({ onBack }: Props) {
 
               <div style={{ marginTop: '8px' }}>
                 <PrimaryButton
-                  title="SUBMIT RECEIPT"
+                  title="Submit receipt"
                   onClick={submit}
                   loading={busy}
                 />

@@ -11,7 +11,7 @@ hard-coded.
 
 | Platform | Where | Variables |
 |---|---|---|
-| Android + iOS | `eas.json` → `build.preview.env` and `build.production.env` (already present, empty), or `.env` for local builds | `EXPO_PUBLIC_ONBOARDING_MEDIA_URL`, optional `EXPO_PUBLIC_ONBOARDING_MEDIA_TYPE`, `EXPO_PUBLIC_ONBOARDING_POSTER_URL`, `EXPO_PUBLIC_ONBOARDING_OVERLAY` |
+| Android + iOS | `eas.json` → `build.preview.env` and `build.production.env` (EAS rejects empty values: only add the keys you use), or `.env` for local builds | `EXPO_PUBLIC_ONBOARDING_MEDIA_URL`, optional `EXPO_PUBLIC_ONBOARDING_MEDIA_TYPE`, `EXPO_PUBLIC_ONBOARDING_POSTER_URL`, `EXPO_PUBLIC_ONBOARDING_OVERLAY` |
 | Website | Render → the web service → Environment (or `web/.env`), then redeploy | `VITE_ONBOARDING_MEDIA_URL`, optional `VITE_ONBOARDING_MEDIA_TYPE`, `VITE_ONBOARDING_POSTER_URL`, `VITE_ONBOARDING_OVERLAY` |
 
 - `..._MEDIA_URL`: `https://` link to the image (JPG/WebP/PNG) or video (MP4 H.264, or HLS `.m3u8`).

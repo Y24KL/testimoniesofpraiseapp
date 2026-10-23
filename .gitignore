@@ -13,3 +13,6 @@ android/
 .env.local
 lib/
 backend-reference/functions/lib/
+firebase-debug.log
+*-debug.log
+.wrangler/

@@ -111,12 +111,12 @@ export function HomePage({ onMenu, onOpenPromotion }: Props) {
   const radioOn = Boolean(radio?.isLive && radio.streamUrl);
   const firstName = user?.displayName?.trim().split(/\s+/)[0];
 
-  const tiles: [React.ComponentType<{ size?: number }>, string, () => void, number?][] = [
+  const tiles: [React.ComponentType<{ size?: number }>, string, () => void, number?, string?][] = [
     [PlayCircle, 'Testimonies', () => navigate({ name: 'testimonies' })],
     [Headphones, 'Listen', () => navigate({ name: 'listen' })],
     [Video, 'Live', () => navigate({ name: 'live' })],
     [BookOpen, 'Articles', () => navigate({ name: 'articles' })],
-    [Globe, 'ADOTOPOC', () => navigate({ name: 'adotopoc' })],
+    [Globe, 'ADOTOPOC', () => navigate({ name: 'adotopoc' }), undefined, '/LOG_xcvt3v.webp'],
     [Megaphone, 'Events', () => navigate({ name: 'promotions' })],
     [Heart, 'Share', () => navigate({ name: 'share' })],
     [CloudDownload, 'Saved', () => navigate({ name: 'downloads' }), saved],
@@ -206,10 +206,10 @@ export function HomePage({ onMenu, onOpenPromotion }: Props) {
 
         <SectionHead title="Explore" />
         <nav className="explore" aria-label="Explore">
-          {tiles.map(([Icon, label, onClick, badge]) => (
+          {tiles.map(([Icon, label, onClick, badge, image]) => (
             <button key={label} type="button" className="tile" onClick={onClick} aria-label={badge ? `${label}, ${badge}` : label}>
               <span className="tile-icon">
-                <Icon size={22} />
+                {image ? <img src={image} alt="" width={52} height={52} className="tile-image" /> : <Icon size={22} />}
                 {badge ? <span className="tile-badge">{badge > 99 ? '99+' : badge}</span> : null}
               </span>
               {label}

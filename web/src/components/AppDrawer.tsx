@@ -105,9 +105,9 @@ export function AppDrawer({
       subtitle: 'Resource Center & Media',
       icon: (
         <img
-          src="/LOG_xcvt3v.png"
+          src="/LOG_xcvt3v.webp"
           alt="ADOTOPOC"
-          style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '50%' }}
+          style={{ width: '48px', height: '48px', objectFit: 'contain', borderRadius: '50%', margin: '-6px' }}
           onError={(e) => {
             (e.currentTarget as HTMLImageElement).src =
               'https://res.cloudinary.com/duw6xrnpn/image/upload/v1789425387/LOG_xcvt3v.png';

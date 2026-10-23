@@ -127,9 +127,9 @@ export function AdotopocPage({ onBack }: Props) {
           <img
             src={LOGO_URL}
             alt="Logo"
-            style={{ width: '18px', height: '18px', objectFit: 'contain' }}
+            style={{ width: '28px', height: '28px', objectFit: 'contain' }}
             onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src = '/LOG_xcvt3v.png';
+              (e.currentTarget as HTMLImageElement).src = '/LOG_xcvt3v.webp';
             }}
           />
           <span>Close</span>

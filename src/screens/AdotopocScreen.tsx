@@ -209,9 +209,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   closeLogo: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
   },
   closeBtnText: {
     color: '#FFFFFF',

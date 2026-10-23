@@ -30,6 +30,10 @@ import { formatDate, formatDuration } from '@/utils/format';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
+// ADOTOPOC's own round badge (transparent corners), shown in place of an icon on its tile.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const ADOTOPOC_LOGO = require('../../assets/LOG_xcvt3v.webp');
+
 function greeting() {
   const h = new Date().getHours();
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
@@ -71,11 +75,15 @@ function Hero({ live, featured, loading, onWatch, onPlay }: { live: ReturnType<t
   );
 }
 
-function Tile({ icon, label, onPress, badge }: { icon: IconName; label: string; onPress: () => void; badge?: number }) {
+function Tile({ icon, image, label, onPress, badge }: { icon: IconName; image?: number; label: string; onPress: () => void; badge?: number }) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.tile, pressed && { opacity: 0.75 }]} accessibilityRole="button" accessibilityLabel={badge ? `${label}, ${badge}` : label}>
       <View style={styles.tileIcon}>
-        <Ionicons name={icon} size={22} color={colors.accent} />
+        {image ? (
+          <Image source={image} style={styles.tileImage} contentFit="contain" accessible={false} />
+        ) : (
+          <Ionicons name={icon} size={22} color={colors.accent} />
+        )}
         {badge ? (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
@@ -196,14 +204,14 @@ export function HomeScreen() {
               ['headset-outline', 'Listen', () => nav.navigate('Tabs', { screen: 'Listen' })],
               ['videocam-outline', 'Live', () => nav.navigate('Tabs', { screen: 'Live' })],
               ['book-outline', 'Articles', () => nav.navigate('Articles')],
-              ['globe-outline', 'ADOTOPOC', () => nav.navigate('Adotopoc')],
+              ['globe-outline', 'ADOTOPOC', () => nav.navigate('Adotopoc'), ADOTOPOC_LOGO],
               ['megaphone-outline', 'Events', () => nav.navigate('Promotions')],
               ['heart-outline', 'Share', () => nav.navigate('ShareTestimony')],
               ['cloud-download-outline', 'Saved', () => nav.navigate('Tabs', { screen: 'Downloads' })],
-            ] as [IconName, string, () => void][]
-          ).map(([icon, label, onPress]) => (
+            ] as [IconName, string, () => void, number?][]
+          ).map(([icon, label, onPress, image]) => (
             <View key={label} style={{ width: tileWidth }}>
-              <Tile icon={icon} label={label} onPress={onPress} badge={label === 'Saved' ? saved : undefined} />
+              <Tile icon={icon} image={image} label={label} onPress={onPress} badge={label === 'Saved' ? saved : undefined} />
             </View>
           ))}
         </View>
@@ -335,6 +343,7 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, gap: 10, rowGap: 16 },
   tile: { alignItems: 'center', gap: 8 },
   tileIcon: { width: 56, height: 56, borderRadius: 18, backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: 'rgba(245,197,66,0.18)', alignItems: 'center', justifyContent: 'center' },
+  tileImage: { width: 50, height: 50 },
   tileLabel: { ...t.small, fontSize: 12, color: colors.textMuted, fontWeight: '600' },
   badge: { position: 'absolute', top: -4, right: -6, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.bg },
   badgeText: { fontSize: 10, fontWeight: '800', color: colors.onAccent },

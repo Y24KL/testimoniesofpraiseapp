@@ -304,15 +304,12 @@ export function AppDrawer() {
                 <View
                   style={[
                     styles.itemIconCircle,
+                    item.customImage && styles.itemImageCircle,
                     { backgroundColor: item.iconBg || 'rgba(255, 255, 255, 0.08)' },
                   ]}
                 >
                   {item.customImage ? (
-                    <Image
-                      source={item.customImage}
-                      style={{ width: 38, height: 38, borderRadius: 19 }}
-                      contentFit="cover"
-                    />
+                    <Image source={item.customImage} style={styles.itemImage} contentFit="contain" />
                   ) : (
                     <Ionicons
                     name={item.icon!}
@@ -524,6 +521,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Logo badges (ADOTOPOC) are detailed artwork: give them more room than a 20px icon.
+  itemImageCircle: { width: 50, height: 50, borderRadius: 25, marginLeft: -6, marginRight: -6 },
+  itemImage: { width: 50, height: 50 },
   itemTextWrap: {
     flex: 1,
     gap: 2,

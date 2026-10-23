@@ -342,6 +342,7 @@ html, body { -webkit-overflow-scrolling: touch; overscroll-behavior-y: none; }
 @media (min-width: 900px) { .explore { grid-template-columns: repeat(8, 1fr); } }
 .tile { display: flex; flex-direction: column; align-items: center; gap: 8px; background: none; border: none; color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; padding: 0; }
 .tile-icon { position: relative; width: 58px; height: 58px; border-radius: 18px; background: var(--surface-raised); border: 1px solid rgba(245, 197, 66, 0.18); display: flex; align-items: center; justify-content: center; color: var(--gold); transition: transform 0.15s var(--ease), background 0.15s ease; }
+.tile-image { width: 52px; height: 52px; object-fit: contain; }
 .tile:hover .tile-icon { background: #2e1442; transform: translateY(-2px); }
 .tile-badge { position: absolute; top: -5px; right: -7px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--gold); color: var(--on-gold); font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg); }
 

@@ -31,11 +31,11 @@ export function FirstTimeWelcomeScreen() {
           </View>
           <View style={styles.row}>
             <Ionicons name="radio-outline" size={20} color={colors.accent} />
-            <Text style={styles.rowText}>Join live services as they happen</Text>
+            <Text style={styles.rowText}>Join us live as they happen</Text>
           </View>
           <View style={styles.row}>
             <Ionicons name="heart-outline" size={20} color={colors.accent} />
-            <Text style={styles.rowText}>Share what God has done for you</Text>
+            <Text style={styles.rowText}>Share testimony with us from listening to the Loveworld Songs</Text>
           </View>
         </View>
         <PrimaryButton title="Get started" onPress={done} />

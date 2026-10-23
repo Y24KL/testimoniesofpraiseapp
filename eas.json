@@ -52,7 +52,6 @@
         "EXPO_PUBLIC_BANK_ACCOUNT_NUMBER": "1000316330",
         "EXPO_PUBLIC_ONBOARDING_MEDIA_TYPE": "video",
         "EXPO_PUBLIC_ONBOARDING_MEDIA_URL": "https://topappstorage.b-cdn.net/video/TESTIMONIES%20OF%20PRAISE%20FINAL%20OPENING%20MONTAGE.mp4",
-        "EXPO_PUBLIC_ONBOARDING_POSTER_URL": "",
         "ORG_GRADLE_PROJECT_reactNativeArchitectures": "armeabi-v7a,arm64-v8a"
       }
     },
@@ -94,8 +93,7 @@
         "EXPO_PUBLIC_BANK_ACCOUNT_NAME": "Testimonies of Praise",
         "EXPO_PUBLIC_BANK_ACCOUNT_NUMBER": "1000316330",
         "EXPO_PUBLIC_ONBOARDING_MEDIA_TYPE": "video",
-        "EXPO_PUBLIC_ONBOARDING_MEDIA_URL": "https://topappstorage.b-cdn.net/video/TESTIMONIES%20OF%20PRAISE%20FINAL%20OPENING%20MONTAGE.mp4",
-        "EXPO_PUBLIC_ONBOARDING_POSTER_URL": "https://topappstorage.b-cdn.net/images/TESTIMONIES%20OF%20PRAISE%20FINAL%20POSTER.jpg"
+        "EXPO_PUBLIC_ONBOARDING_MEDIA_URL": "https://topappstorage.b-cdn.net/video/TESTIMONIES%20OF%20PRAISE%20FINAL%20OPENING%20MONTAGE.mp4"
       }
     }
   },

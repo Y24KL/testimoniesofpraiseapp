@@ -76,3 +76,35 @@ s = await worker.fetch(new Request('https://relay/upload/bunny', { method: 'POST
 assert.equal(s.status, 401);
 assert.equal(s.headers.get('Access-Control-Allow-Origin'), ADMIN);
 console.log('cors tests passed');
+
+// ---- Mixed Expo projects (PUSH_TOO_MANY_EXPERIENCE_IDS) are split and each sent ----
+{
+  const tokens = ['ExponentPushToken[a1]', 'ExponentPushToken[a2]', 'ExponentPushToken[b1]'];
+  const project = (t) => (t.includes('[b') ? '@y24kl/top10' : '@y24kl/testimonies-of-praise');
+  const requests = [];
+  globalThis.fetch = async (url, init = {}) => {
+    url = String(url);
+    if (url.includes(':runQuery')) {
+      return new Response(JSON.stringify(tokens.map((t, i) => ({ document: { name: `projects/demo/databases/(default)/documents/pushTokens/m${i}`, fields: { token: { stringValue: t } } } }))), { status: 200 });
+    }
+    if (url.startsWith('https://exp.host')) {
+      const msgs = JSON.parse(init.body);
+      requests.push(msgs.length);
+      const projects = [...new Set(msgs.map((m) => project(m.to)))];
+      if (projects.length > 1) {
+        const details = {};
+        for (const m of msgs) (details[project(m.to)] ||= []).push(m.to);
+        return new Response(JSON.stringify({ errors: [{ code: 'PUSH_TOO_MANY_EXPERIENCE_IDS', message: 'same project', details }] }), { status: 400 });
+      }
+      return new Response(JSON.stringify({ data: msgs.map(() => ({ status: 'ok' })) }), { status: 200 });
+    }
+    throw new Error('unexpected ' + url);
+  };
+  const res = await call({ pref: 'announcements', data: { type: 'announcement' } });
+  const out = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(out.sent, 3, 'every device gets the push despite mixed projects');
+  assert.equal(out.failed, 0);
+  assert.deepEqual(requests, [3, 2, 1], 'one rejected mixed batch, then one request per project');
+  console.log('mixed-project push tests passed');
+}

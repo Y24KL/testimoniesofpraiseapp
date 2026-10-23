@@ -357,35 +357,8 @@ async function handle(request, env) {
   const reasons = {}; // Expo error code -> count (e.g. InvalidCredentials = FCM key missing on EAS)
   let firstMessage = '';
   const dead = [];
-  for (let i = 0; i < devices.length; i += 100) {
-    const chunk = devices.slice(i, i + 100);
-    const messages = chunk.map((d) => ({
-      to: d.token,
-      title,
-      body,
-      data,
-      sound: 'default',
-      channelId: 'default',
-      priority: 'high',
-      _displayInForeground: true,
-    }));
-    let res;
-    try {
-      res = await fetch(EXPO_PUSH_URL, {
-        method: 'POST',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify(messages),
-      });
-    } catch {
-      failed += chunk.length;
-      continue;
-    }
-    if (!res.ok) {
-      console.error(`[push] Expo push API HTTP ${res.status}: ${(await res.text().catch(() => '')).slice(0, 300)}`);
-      failed += chunk.length;
-      continue;
-    }
-    const tickets = (await res.json()).data || [];
+  const message = (d) => ({ to: d.token, title, body, data, sound: 'default', channelId: 'default', priority: 'high', _displayInForeground: true });
+  const countTickets = (tickets, chunk) =>
     tickets.forEach((t, idx) => {
       if (t.status === 'ok') sent += 1;
       else {
@@ -396,7 +369,44 @@ async function handle(request, env) {
         if (reason === 'DeviceNotRegistered') dead.push(chunk[idx].name);
       }
     });
-  }
+  // Sends one batch. Expo rejects a whole request whose tokens belong to different Expo projects
+  // (PUSH_TOO_MANY_EXPERIENCE_IDS), e.g. phones that installed a build from another project. In that
+  // case it lists the tokens per project, and each project's tokens are sent as their own request.
+  const sendBatch = async (chunk, allowSplit = true) => {
+    let res;
+    try {
+      res = await fetch(EXPO_PUSH_URL, {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(chunk.map(message)),
+      });
+    } catch {
+      failed += chunk.length;
+      return;
+    }
+    if (res.ok) {
+      countTickets((await res.json()).data || [], chunk);
+      return;
+    }
+    const text = await res.text().catch(() => '');
+    let err = null;
+    try {
+      err = JSON.parse(text)?.errors?.[0] ?? null;
+    } catch {
+      /* not JSON */
+    }
+    if (allowSplit && err?.code === 'PUSH_TOO_MANY_EXPERIENCE_IDS' && err.details && typeof err.details === 'object') {
+      const byToken = new Map(chunk.map((d) => [d.token, d]));
+      const groups = Object.entries(err.details).map(([project, tokens]) => [project, (tokens || []).map((t) => byToken.get(t)).filter(Boolean)]);
+      console.log(`[push] tokens span ${groups.length} Expo projects: ${groups.map(([p, g]) => `${p}=${g.length}`).join(', ')}; sending each separately`);
+      for (const [, group] of groups) if (group.length) await sendBatch(group, false);
+      return;
+    }
+    console.error(`[push] Expo push API HTTP ${res.status}: ${text.slice(0, 300)}`);
+    failed += chunk.length;
+  };
+  for (let i = 0; i < devices.length; i += 100) await sendBatch(devices.slice(i, i + 100));
+
 
   // Tidy up invalid tokens
   let removed = 0;

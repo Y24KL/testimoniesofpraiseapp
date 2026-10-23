@@ -1,7 +1,11 @@
 import { auth } from './firebase';
 
-const URL_ = import.meta.env.VITE_PUSH_URL as string | undefined;
-export const pushEnabled = Boolean(URL_);
+// The push relay and the media/verification relay are the same Cloudflare Worker. Fall back to
+// VITE_WORKER_URL so a deployment that only sets that one still sends pushes (Render had only
+// VITE_WORKER_URL, which silently turned every push into "in-app only").
+const clean = (u?: string) => (u ? u.replace(/\[cite:[^\]]+\]/g, '').trim().replace(/\/$/, '') : '');
+const URL_ = clean(import.meta.env.VITE_PUSH_URL as string | undefined) || clean(import.meta.env.VITE_WORKER_URL as string | undefined);
+export const pushEnabled = /^https?:\/\//i.test(URL_);
 
 export interface PushRequest {
   pref: 'testimonies' | 'live' | 'announcements';

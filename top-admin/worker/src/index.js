@@ -346,11 +346,16 @@ async function handle(request, env) {
   const devices = rows
     .map((r) => ({ name: r.document.name, token: r.document.fields?.token?.stringValue }))
     .filter((d) => typeof d.token === 'string' && d.token.startsWith('Expo'));
-  if (devices.length === 0) return json({ sent: 0, failed: 0, removed: 0 }, 200, cors);
+  if (devices.length === 0) {
+    console.log(`[push] no devices opted in to "${pref}" (rows read: ${rows.length})`);
+    return json({ sent: 0, failed: 0, removed: 0, devices: 0 }, 200, cors);
+  }
 
   // Send through Expo in batches of 100 with high priority and notification channels
   let sent = 0;
   let failed = 0;
+  const reasons = {}; // Expo error code -> count (e.g. InvalidCredentials = FCM key missing on EAS)
+  let firstMessage = '';
   const dead = [];
   for (let i = 0; i < devices.length; i += 100) {
     const chunk = devices.slice(i, i + 100);
@@ -376,6 +381,7 @@ async function handle(request, env) {
       continue;
     }
     if (!res.ok) {
+      console.error(`[push] Expo push API HTTP ${res.status}: ${(await res.text().catch(() => '')).slice(0, 300)}`);
       failed += chunk.length;
       continue;
     }
@@ -384,7 +390,10 @@ async function handle(request, env) {
       if (t.status === 'ok') sent += 1;
       else {
         failed += 1;
-        if (t.details?.error === 'DeviceNotRegistered') dead.push(chunk[idx].name);
+        const reason = t.details?.error || 'Unknown';
+        reasons[reason] = (reasons[reason] || 0) + 1;
+        if (!firstMessage) firstMessage = String(t.message || '').slice(0, 300);
+        if (reason === 'DeviceNotRegistered') dead.push(chunk[idx].name);
       }
     });
   }
@@ -396,5 +405,7 @@ async function handle(request, env) {
     if (d.ok) removed += 1;
   }
 
-  return json({ sent, failed, removed }, 200, cors);
+  // Visible with `npx wrangler tail`; contains no tokens or secrets.
+  console.log(`[push] pref=${pref} devices=${devices.length} sent=${sent} failed=${failed}` + (failed ? ` reasons=${JSON.stringify(reasons)} first="${firstMessage}"` : ''));
+  return json({ sent, failed, removed, devices: devices.length, ...(failed ? { reasons, firstError: firstMessage } : {}) }, 200, cors);
 }

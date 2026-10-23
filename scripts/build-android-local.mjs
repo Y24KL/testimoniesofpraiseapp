@@ -17,7 +17,7 @@
  * JAVA_HOME / ANDROID_HOME. Secrets stay on disk: credentials.json and credentials/ are gitignored.
  */
 import { spawnSync, execSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import os from 'node:os';
 
@@ -77,7 +77,20 @@ step(`Generating the native Android project (profile: ${profile})`);
 run('npx', ['expo', 'prebuild', '--platform', 'android', '--clean', '--no-install']);
 
 const androidDir = join(root, 'android');
-writeFileSync(join(androidDir, 'local.properties'), `sdk.dir=${androidHome.replace(/\\/g, '\\\\')}\n`);
+// CMake 3.22.1 (Android's default) bundles ninja 1.10, which fails on Windows with "Filename longer
+// than 260 characters" because React Native's C++ object paths embed the project path twice.
+// ninja 1.12 (CMake 3.31+) handles long paths when Windows LongPathsEnabled is on.
+const props = [`sdk.dir=${androidHome.replace(/\\/g, '\\\\')}`];
+const cmakeRoot = join(androidHome, 'cmake');
+const newestCmake = existsSync(cmakeRoot)
+  ? readdirSync(cmakeRoot)
+      .filter((v) => /^\d+\.\d+\.\d+$/.test(v) && v.startsWith('3.') && Number(v.split('.')[1]) >= 31)
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+      .pop()
+  : undefined;
+if (newestCmake) props.push(`cmake.dir=${join(cmakeRoot, newestCmake).replace(/\\/g, '\\\\')}`);
+else if (isWin) console.warn('  ! CMake 3.31+ not found in the SDK; the C++ build may hit the 260-character path limit.');
+writeFileSync(join(androidDir, 'local.properties'), props.join('\n') + '\n');
 
 // ---- 2. release signing --------------------------------------------------------
 step('Configuring release signing with the EAS keystore');

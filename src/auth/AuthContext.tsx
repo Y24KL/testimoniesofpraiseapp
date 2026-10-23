@@ -30,6 +30,8 @@ interface AuthValue {
   isSessionVerified: boolean;
   /** Masked email or target destination for OTP display */
   verificationEmail: string | null;
+  /** Why the automatic first code could not be sent (shown on the verify screen), else null */
+  codeSendError: string | null;
   signInWithEmail(email: string, password: string): Promise<void>;
   register(fullName: string, email: string, password: string): Promise<void>;
   signInWithGoogleIdToken(idToken: string, accessToken?: string): Promise<void>;
@@ -57,6 +59,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isSessionVerified, setIsSessionVerified] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
   const [isNewAccount, setIsNewAccount] = useState(false);
+  const [codeSendError, setCodeSendError] = useState<string | null>(null);
+
+  // Sends the first code after sign-in. Never throws: the user is already signed in and lands on
+  // the verify screen, which shows the error and offers "Resend code" straight away.
+  const sendFirstCode = useCallback(async () => {
+    try {
+      const res = await requestEmailVerification();
+      if (res.maskedEmail) setVerificationEmail(res.maskedEmail);
+      setCodeSendError(null);
+    } catch (e) {
+      setCodeSendError(e instanceof Error && e.message ? e.message : 'We couldn’t send your code. Tap “Resend code”.');
+    }
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
@@ -69,11 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!trust.trusted || !trust.emailVerified) {
             setVerificationEmail(u.email);
             // Initiate verification code dispatch for unverified/fresh session
-            void requestEmailVerification(u.email || undefined)
-              .then((res) => {
-                if (res.maskedEmail) setVerificationEmail(res.maskedEmail);
-              })
-              .catch(() => undefined);
+            void sendFirstCode();
           }
         } catch {
           setIsSessionVerified(false);
@@ -93,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [sendFirstCode]);
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
@@ -112,9 +123,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     setIsSessionVerified(false);
-    const res = await requestEmailVerification(cred.user.email || undefined);
-    if (res.maskedEmail) setVerificationEmail(res.maskedEmail);
-  }, []);
+    await sendFirstCode();
+  }, [sendFirstCode]);
 
   const register = useCallback(async (fullName: string, email: string, password: string) => {
     const cleanEmail = email.trim();
@@ -129,9 +139,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsSessionVerified(false);
 
     // 2. Dispatch 6-digit OTP code to registered email
-    const res = await requestEmailVerification(cleanEmail);
-    if (res.maskedEmail) setVerificationEmail(res.maskedEmail);
-  }, []);
+    await sendFirstCode();
+  }, [sendFirstCode]);
 
   const signInWithGoogleIdToken = useCallback(async (idToken: string, accessToken?: string) => {
     const cred = await signInWithCredential(auth, GoogleAuthProvider.credential(idToken, accessToken));
@@ -155,9 +164,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     setIsSessionVerified(false);
-    const res = await requestEmailVerification(cred.user.email || undefined);
-    if (res.maskedEmail) setVerificationEmail(res.maskedEmail);
-  }, []);
+    await sendFirstCode();
+  }, [sendFirstCode]);
 
   const verifyOtp = useCallback(async (code: string) => {
     await verifyEmailCode(code);
@@ -173,6 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const emailToUse = verificationEmail || user?.email || undefined;
     const res = await requestEmailVerification(emailToUse);
     if (res.maskedEmail) setVerificationEmail(res.maskedEmail);
+    setCodeSendError(null);
   }, [verificationEmail, user?.email]);
 
   const clearNewAccount = useCallback(() => setIsNewAccount(false), []);
@@ -226,6 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       initializing,
       isSessionVerified,
       verificationEmail,
+      codeSendError,
       signInWithEmail,
       register,
       signInWithGoogleIdToken,
@@ -246,6 +256,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       initializing,
       isSessionVerified,
       verificationEmail,
+      codeSendError,
       signInWithEmail,
       register,
       signInWithGoogleIdToken,

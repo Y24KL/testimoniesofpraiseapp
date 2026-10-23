@@ -25,6 +25,7 @@ export function VerifyEmailScreen() {
     verifyOtp,
     resendOtp,
     signOut,
+    codeSendError,
   } = useAuth();
 
   const [code, setCode] = useState('');
@@ -34,6 +35,14 @@ export function VerifyEmailScreen() {
   const [cooldown, setCooldown] = useState(60);
 
   const inputRef = useRef<TextInput>(null);
+
+  // If the automatic first code could not be sent, say so and allow "Resend code" immediately
+  // instead of a silent 60-second wait.
+  useEffect(() => {
+    if (!codeSendError) return;
+    setError(codeSendError);
+    setCooldown(0);
+  }, [codeSendError]);
 
   // Active 60-second cooldown timer
   useEffect(() => {
@@ -129,43 +138,41 @@ export function VerifyEmailScreen() {
               </Text>
             </View>
 
-            {/* Hidden Input for Keyboard and Paste Support */}
-            <TextInput
-              ref={inputRef}
-              value={code}
-              onChangeText={handleCodeChange}
-              keyboardType="number-pad"
-              maxLength={6}
-              textContentType="oneTimeCode"
-              autoFocus
-              style={styles.hiddenInput}
-              accessibilityLabel="Six-digit verification code"
-            />
-
-            {/* 6-Digit Display Slots */}
-            <Pressable
-              style={styles.digitsRow}
-              onPress={() => inputRef.current?.focus()}
-              accessibilityRole="button"
-              accessibilityLabel="Verification code input slots"
-            >
-              {[0, 1, 2, 3, 4, 5].map((index) => {
-                const char = code[index] || '';
-                const isFocused = code.length === index || (index === 5 && code.length === 6);
-                return (
-                  <View
-                    key={index}
-                    style={[
-                      styles.digitSlot,
-                      Boolean(char) && styles.digitSlotFilled,
-                      isFocused && styles.digitSlotFocused,
-                    ]}
-                  >
-                    <Text style={styles.digitText}>{char}</Text>
-                  </View>
-                );
-              })}
-            </Pressable>
+            {/* The six boxes are only a picture; the real input lies invisibly on top of them, so a
+                tap always lands on it and opens the keyboard (calling focus() on an already-focused
+                hidden input does nothing on Android after the keyboard was dismissed).
+                Long-press pastes a copied code; SMS/email autofill works via textContentType. */}
+            <View style={styles.digitsWrap}>
+              <View style={styles.digitsRow} pointerEvents="none" importantForAccessibility="no-hide-descendants">
+                {[0, 1, 2, 3, 4, 5].map((index) => {
+                  const char = code[index] || '';
+                  const isFocused = code.length === index || (index === 5 && code.length === 6);
+                  return (
+                    <View
+                      key={index}
+                      style={[styles.digitSlot, Boolean(char) && styles.digitSlotFilled, isFocused && styles.digitSlotFocused]}
+                    >
+                      <Text style={styles.digitText}>{char}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+              <TextInput
+                ref={inputRef}
+                value={code}
+                onChangeText={handleCodeChange}
+                keyboardType="number-pad"
+                inputMode="numeric"
+                maxLength={6}
+                textContentType="oneTimeCode"
+                autoComplete="one-time-code"
+                autoFocus
+                caretHidden
+                selectionColor="transparent"
+                style={styles.overlayInput}
+                accessibilityLabel={`Six-digit verification code, ${code.length} of 6 entered`}
+              />
+            </View>
 
             {error ? (
               <View style={styles.errorContainer} accessibilityRole="alert">
@@ -264,17 +271,22 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: '700',
   },
-  hiddenInput: {
-    position: 'absolute',
-    opacity: 0.01,
-    width: 1,
-    height: 1,
+  digitsWrap: {
+    position: 'relative',
+    marginVertical: 12,
+  },
+  overlayInput: {
+    ...StyleSheet.absoluteFillObject,
+    color: 'transparent',
+    backgroundColor: 'transparent',
+    fontSize: 1,
+    // Not 0: Android ignores touches on fully transparent views in some versions.
+    opacity: 0.02,
   },
   digitsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 10,
-    marginVertical: 12,
   },
   digitSlot: {
     width: 48,

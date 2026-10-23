@@ -70,10 +70,29 @@ async function callAuthApi<T>(path: string, body: Record<string, unknown>, isVal
   return data as T;
 }
 
-/** Emails a server-generated 6-digit code to the signed-in user's own address. */
+// Sign-in triggers a code from more than one place at once (the sign-in call and the auth-state
+// listener). Without this, two codes were sent and only the second one worked.
+const RECENT_SEND_MS = 45_000;
+let inflight: { uid: string; promise: Promise<SendOtpResult> } | null = null;
+let lastSent: { uid: string; at: number; result: SendOtpResult } | null = null;
+
+/** Emails a server-generated 6-digit code to the signed-in user's own address (once per sign-in). */
 export async function requestEmailVerification(_emailHint?: string): Promise<SendOtpResult> {
-  const installationId = await getInstallationId();
-  return callAuthApi<SendOtpResult>('/auth/otp/send', { installationId }, (d) => d?.ok === true && typeof d.maskedEmail === 'string');
+  const uid = auth.currentUser?.uid ?? '';
+  if (inflight && inflight.uid === uid) return inflight.promise;
+  if (lastSent && lastSent.uid === uid && Date.now() - lastSent.at < RECENT_SEND_MS) return lastSent.result;
+  const promise = (async () => {
+    const installationId = await getInstallationId();
+    const result = await callAuthApi<SendOtpResult>('/auth/otp/send', { installationId }, (d) => d?.ok === true && typeof d.maskedEmail === 'string');
+    lastSent = { uid, at: Date.now(), result };
+    return result;
+  })();
+  inflight = { uid, promise };
+  try {
+    return await promise;
+  } finally {
+    if (inflight?.promise === promise) inflight = null;
+  }
 }
 
 /** Checks the 6-digit code; on success this installation becomes a trusted device. */

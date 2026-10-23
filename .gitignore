@@ -16,3 +16,13 @@ backend-reference/functions/lib/
 firebase-debug.log
 *-debug.log
 .wrangler/
+
+# Local Android build signing (downloaded from EAS) - never commit
+credentials.json
+credentials/
+*.keystore
+# Local build output
+build-output/
+# Google/Firebase service-account keys (private) - never commit
+*firebase-adminsdk*.json
+*service-account*.json

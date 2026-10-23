@@ -15,7 +15,8 @@
     "build:ios:testflight": "eas build --profile production --platform ios --auto-submit",
     "web:dev": "npm --prefix web run dev",
     "web:build": "npm --prefix web run build",
-    "web:preview": "npm --prefix web run preview"
+    "web:preview": "npm --prefix web run preview",
+    "build:android:local": "node scripts/build-android-local.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

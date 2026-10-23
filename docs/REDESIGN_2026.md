@@ -128,9 +128,14 @@ It should return JSON with `"providers"`, and the Media Manager should show real
    `build:ios:testflight`): the expo-video background-audio plugin and R8 are native changes.
 6. Web Google sign-in: make sure the Render domain is in Firebase Auth → Authorized domains.
    Safari blocks the redirect fallback across domains; the popup flow (default) works.
-7. Android Google sign-in uses a custom-scheme redirect (`com.testimoniesofpraise.app:/oauthredirect`);
-   newer Google Android OAuth clients need "Custom URI scheme" enabled in Google Cloud Console.
-   This was not changed and could not be tested here.
+7. Google sign-in on Android/iOS now uses the native account picker
+   (`@react-native-google-signin/google-signin`). The old browser flow was blocked by Google
+   ("Access blocked … Error 400: invalid_request"). For it to work, the **SHA-1 of the key that signs
+   the APK** must be registered in Firebase: run `npx eas-cli credentials -p android` and copy the
+   SHA-1 → Firebase console → Project settings → your Android app → *Add fingerprint*. If the app is
+   published on Google Play, also add the *App signing key* SHA-1 from Play Console → App integrity.
+   The SHA-1 currently in `google-services.json` is `01:63:58:A6:55:BE:5B:15:EA:92:A4:D2:57:38:14:61:23:13:6A:1A`;
+   if EAS's SHA-1 differs, the app shows "Google sign-in is not set up for this version" (DEVELOPER_ERROR).
 
 ## Verification status
 

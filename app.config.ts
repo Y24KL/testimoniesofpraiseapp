@@ -51,6 +51,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // media-playback foreground service + permissions (Android) that expo-video needs to keep
     // playing with the screen locked and to show notification / lock-screen controls.
     ['expo-video', { supportsBackgroundPlayback: true, supportsPictureInPicture: true }],
+    // Native Google account picker (Android + iOS). iosUrlScheme = reversed iOS OAuth client ID.
+    [
+      '@react-native-google-signin/google-signin',
+      { iosUrlScheme: 'com.googleusercontent.apps.754997860722-fjfanme5itf82ue8sbch2m8rjkuvqnpq' },
+    ],
     // Smaller Android release builds: R8 code shrinking/obfuscation + removal of unused resources.
     [
       'expo-build-properties',

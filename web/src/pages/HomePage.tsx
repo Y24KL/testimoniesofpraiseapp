@@ -35,6 +35,11 @@ interface Props {
   onOpenPromotion: (p: Promotion) => void;
 }
 
+/** A failed thumbnail reveals the branded icon underneath instead of a broken-image glyph. */
+const hideBroken = (e: React.SyntheticEvent<HTMLImageElement>) => {
+  e.currentTarget.style.display = 'none';
+};
+
 function greeting() {
   const h = new Date().getHours();
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
@@ -61,7 +66,8 @@ function TestimonyTile({ item }: { item: Testimony }) {
   return (
     <button type="button" className="media-card" onClick={() => navigate({ name: 'testimony', id: item.id })} aria-label={`${item.title}${item.authorName ? `, by ${item.authorName}` : ''}`}>
       <div className="media-thumb">
-        {item.thumbnail ? <img src={item.thumbnail} alt="" loading="lazy" decoding="async" /> : <PlayCircle size={28} />}
+        <PlayCircle size={28} />
+        {item.thumbnail ? <img src={item.thumbnail} alt="" loading="lazy" decoding="async" onError={hideBroken} /> : null}
         <span className="media-play">
           <Play size={13} fill="currentColor" style={{ marginLeft: 2 }} />
         </span>
@@ -149,7 +155,7 @@ export function HomePage({ onMenu, onOpenPromotion }: Props) {
       <div className="page-pad page-width">
         {live?.isLive ? (
           <button type="button" className="hero live" onClick={() => navigate({ name: 'live' })} aria-label={`Live now: ${live.title ?? 'Live broadcast'}. Watch live`}>
-            {live.thumbnail ? <img src={live.thumbnail} alt="" decoding="async" /> : null}
+            {live.thumbnail ? <img src={live.thumbnail} alt="" decoding="async" onError={hideBroken} /> : null}
             <div className="hero-body">
               <span className="badge-live">
                 <i /> LIVE NOW
@@ -163,7 +169,7 @@ export function HomePage({ onMenu, onOpenPromotion }: Props) {
           </button>
         ) : hero ? (
           <button type="button" className="hero" onClick={() => navigate({ name: 'testimony', id: hero.id })} aria-label={`Featured testimony: ${hero.title}. Play`}>
-            {hero.thumbnail ? <img src={hero.thumbnail} alt="" decoding="async" fetchPriority="high" /> : null}
+            {hero.thumbnail ? <img src={hero.thumbnail} alt="" decoding="async" fetchPriority="high" onError={hideBroken} /> : null}
             <div className="hero-body">
               <span className="badge-gold">
                 <Star size={11} fill="currentColor" /> {hero.isFeatured ? 'FEATURED' : (hero.category ?? 'NEW').toUpperCase()}
@@ -217,7 +223,10 @@ export function HomePage({ onMenu, onOpenPromotion }: Props) {
             <div className="rail no-scrollbar">
               {promotions.slice(0, 8).map((p) => (
                 <button key={p.id} type="button" className="media-card" onClick={() => onOpenPromotion(p)} aria-label={p.title}>
-                  <div className="media-thumb">{p.imageUrl ? <img src={p.imageUrl} alt="" loading="lazy" decoding="async" /> : <Megaphone size={26} />}</div>
+                  <div className="media-thumb">
+                    <Megaphone size={26} />
+                    {p.imageUrl ? <img src={p.imageUrl} alt="" loading="lazy" decoding="async" onError={hideBroken} /> : null}
+                  </div>
                   {p.category ? <span className="media-cat">{p.category}</span> : null}
                   <p className="media-title">{p.title}</p>
                 </button>
@@ -275,7 +284,10 @@ export function HomePage({ onMenu, onOpenPromotion }: Props) {
             <div className="rail no-scrollbar">
               {articles.map((a) => (
                 <button key={a.id} type="button" className="media-card" onClick={() => navigate({ name: 'article', id: a.id })} aria-label={`Article: ${a.title}`}>
-                  <div className="media-thumb">{a.coverImageUrl ? <img src={a.coverImageUrl} alt="" loading="lazy" decoding="async" /> : <BookOpen size={26} />}</div>
+                  <div className="media-thumb">
+                    <BookOpen size={26} />
+                    {a.coverImageUrl ? <img src={a.coverImageUrl} alt="" loading="lazy" decoding="async" onError={hideBroken} /> : null}
+                  </div>
                   {a.category ? <span className="media-cat">{a.category}</span> : null}
                   <p className="media-title">{a.title}</p>
                   <span className="media-meta">{[a.author, formatDate(a.publishedAt ?? a.createdAt)].filter(Boolean).join('  ·  ')}</span>

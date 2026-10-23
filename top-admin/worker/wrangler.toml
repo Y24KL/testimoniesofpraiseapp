@@ -11,7 +11,7 @@ BUNNY_STORAGE_ENDPOINT = "storage.bunnycdn.com"
 BUNNY_STORAGE_ZONE_NAME = "top-media-storage"
 FIREBASE_PROJECT_ID = "testimoniesofpraiseapp"
 # Sender for verification-code emails (must be a sender verified with Resend or Brevo)
-MAIL_FROM = "Testimonies of Praise <auth@testimoniesofpraise.org>"
+MAIL_FROM = "Testimonies of Praise <gtrusouth116@gmail.com>"
 
 
 # NOTE ON SECRETS:

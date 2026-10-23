@@ -104,9 +104,10 @@ npx wrangler deploy
 
 `ALLOWED_ORIGINS` is set in `wrangler.toml` `[vars]`
 (`http://localhost:5173,https://testimoniesofpraiseweb.onrender.com,https://top-admin.onrender.com`)
-and is applied by `wrangler deploy`. Or add repository secrets `CLOUDFLARE_API_TOKEN` and
-`CLOUDFLARE_ACCOUNT_ID`; `.github/workflows/deploy-worker.yml` then deploys and smoke-tests on every
-push that touches `top-admin/worker/`. Verify afterwards:
+and is applied by `wrangler deploy`. Or automate it: copy `docs/deploy-worker.workflow.yml` to `.github/workflows/deploy-worker.yml`
+(it could not be pushed with a token lacking the `workflow` scope) and add repository secrets
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`; it then tests, deploys and smoke-tests the Worker
+on every push that touches `top-admin/worker/`. Verify afterwards:
 
 ```bash
 curl -s -H "Origin: https://top-admin.onrender.com" https://top-push-relay.gtrusouth116.workers.dev/api/media/status

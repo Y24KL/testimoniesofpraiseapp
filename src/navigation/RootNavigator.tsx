@@ -17,7 +17,6 @@ import { SponsorScreen } from '@/screens/SponsorScreen';
 import { TestimonyDetailsScreen } from '@/screens/TestimonyDetailsScreen';
 import { WelcomeScreen } from '@/screens/WelcomeScreen';
 import { AdotopocScreen } from '@/screens/AdotopocScreen';
-import { RadioScreen } from '@/screens/RadioScreen';
 import { PromotionsScreen } from '@/screens/PromotionsScreen';
 import { ArticlesScreen } from '@/screens/ArticlesScreen';
 import { ArticleDetailsScreen } from '@/screens/ArticleDetailsScreen';
@@ -83,7 +82,6 @@ export function RootNavigator() {
           <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
           <Stack.Screen name="Search" component={SearchScreen} options={{ animation: 'fade' }} />
           <Stack.Screen name="Adotopoc" component={AdotopocScreen} />
-          <Stack.Screen name="Radio" component={RadioScreen} />
           <Stack.Screen name="Promotions" component={PromotionsScreen} />
           <Stack.Screen name="Articles" component={ArticlesScreen} />
           <Stack.Screen name="ArticleDetails" component={ArticleDetailsScreen} />

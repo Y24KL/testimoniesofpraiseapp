@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { WebView } from 'react-native-webview';
@@ -92,7 +92,7 @@ export function AdotopocScreen() {
               accessibilityLabel="Close"
             >
               <Image
-                source={require('../../assets/LOG_xcvt3v.png')}
+                source={require('../../assets/LOG_xcvt3v.webp')}
                 style={styles.closeLogo}
                 contentFit="contain"
               />

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { repo } from '@/api';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
@@ -41,8 +41,8 @@ export function ShareTestimonyScreen() {
             <View style={styles.success} accessibilityLiveRegion="polite">
               <Ionicons name="checkmark-circle" size={64} color={colors.success} />
               <Text style={styles.msg}>Praise the Lord! Your testimony has been received.</Text>
-              <PrimaryButton title="SUBMIT ANOTHER" style={{ alignSelf: 'stretch' }} onPress={() => { setDone(false); setFormKey((k) => k + 1); }} />
-              <PrimaryButton title="DONE" variant="outline" style={{ alignSelf: 'stretch' }} onPress={() => nav.goBack()} />
+              <PrimaryButton title="Submit another" style={{ alignSelf: 'stretch' }} onPress={() => { setDone(false); setFormKey((k) => k + 1); }} />
+              <PrimaryButton title="Done" variant="outline" style={{ alignSelf: 'stretch' }} onPress={() => nav.goBack()} />
             </View>
           ) : (
             <TestimonySubmissionForm key={formKey} initialName={user?.displayName ?? ''} submitting={busy} error={error} onSubmit={submit} />

@@ -11,10 +11,9 @@ export const linking: LinkingOptions<RootStackParamList> = {
   prefixes: ['testimoniesofpraise://', Linking.createURL('/', { scheme: 'testimoniesofpraise' })],
   config: {
     screens: {
-      Tabs: { screens: { Live: 'live' } },
+      Tabs: { screens: { Live: 'live', Listen: 'radio' } },
       TestimonyDetails: 'testimony/:id',
       Adotopoc: 'adotopoc',
-      Radio: 'radio',
       Promotions: 'promotions',
       Articles: 'articles',
       ArticleDetails: 'article/:id',

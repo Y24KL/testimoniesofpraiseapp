@@ -22,7 +22,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     resizeMode: 'contain',
     backgroundColor: '#0a0a0a',
   },
-  assetBundlePatterns: ['**/*'],
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'com.testimoniesofpraise.app',
@@ -47,10 +46,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // Required for expo-notifications foreground banners on Android 13+
     permissions: ['android.permission.POST_NOTIFICATIONS', 'android.permission.VIBRATE'],
   },
-  web: {
-    favicon: './assets/favicon.png',
-  },
   plugins: [
+    // Background audio for TOP Radio / audio testimonies: adds UIBackgroundModes=audio (iOS) and the
+    // media-playback foreground service + permissions (Android) that expo-video needs to keep
+    // playing with the screen locked and to show notification / lock-screen controls.
+    ['expo-video', { supportsBackgroundPlayback: true, supportsPictureInPicture: true }],
+    // Smaller Android release builds: R8 code shrinking/obfuscation + removal of unused resources.
+    [
+      'expo-build-properties',
+      { android: { enableMinifyInReleaseBuilds: true, enableShrinkResourcesInReleaseBuilds: true } },
+    ],
     [
       'expo-notifications',
       {

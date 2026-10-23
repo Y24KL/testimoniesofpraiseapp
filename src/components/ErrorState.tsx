@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, type as t } from '@/constants/theme';
 import { PrimaryButton } from './PrimaryButton';
 import { MESSAGES } from '@/utils/errors';
@@ -16,7 +16,7 @@ export function ErrorState({ message = MESSAGES.generic, onRetry, compact }: Pro
     <View style={[styles.wrap, compact && { padding: 16 }]} accessibilityRole="alert">
       <Ionicons name="alert-circle-outline" size={compact ? 32 : 46} color={colors.danger} />
       <Text style={styles.msg}>{message}</Text>
-      {onRetry ? <PrimaryButton title="TRY AGAIN" onPress={onRetry} variant="outline" style={{ alignSelf: 'stretch' }} /> : null}
+      {onRetry ? <PrimaryButton title="Try again" onPress={onRetry} variant="outline" style={{ alignSelf: 'stretch' }} /> : null}
     </View>
   );
 }

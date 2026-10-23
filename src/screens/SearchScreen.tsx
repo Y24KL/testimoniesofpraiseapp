@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { repo } from '@/api';
 import { EmptyState } from '@/components/EmptyState';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -75,7 +75,7 @@ export function SearchScreen() {
           <EmptyState icon="search-outline" title="No results found." />
         ) : (
           <>
-            {tRes.length ? <SectionHeader title="TESTIMONIES" /> : null}
+            {tRes.length ? <SectionHeader title="Testimonies" /> : null}
             {tRes.map((i) => <TestimonyCard key={i.id} item={i} onPress={() => nav.navigate('TestimonyDetails', { id: i.id })} />)}
             {!debounced ? <Text style={styles.hint}>Search by title, name, category or keyword.</Text> : null}
           </>

@@ -21,6 +21,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Onboarding media shown on the Welcome screen BEFORE sign-in (public, non-sensitive):
+    // { mediaType: 'image'|'video', mediaUrl, posterUrl, overlayOpacity }
+    match /settings/onboarding {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Live stream settings (a single document).
     match /settings/live {
       allow read: if signedIn();

@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '@/constants/config';
 import { colors, radius } from '@/constants/theme';
 import { track } from '@/analytics';
+import { useAudioPlayer } from '@/audio/AudioPlayerContext';
 import { ErrorState } from '@/components/ErrorState';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { MESSAGES } from '@/utils/errors';
@@ -57,6 +58,13 @@ export function VideoPlayer({ uri, contentId, live, autoPlay, label }: Props) {
       track('video_complete', { contentId });
     }
   });
+
+  // Starting a video pauses radio / audio testimonies so two soundtracks never overlap.
+  const audio = useAudioPlayer();
+  useEffect(() => {
+    if (isPlaying && audio.status === 'playing') audio.pause();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying]);
 
   useEffect(() => {
     if (isPlaying && !played.current) {

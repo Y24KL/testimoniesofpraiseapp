@@ -20,7 +20,7 @@ import {
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { db } from '@/api/firebase';
 import { useAuth } from '@/auth/AuthContext';
 import { colors, radius, type as t } from '@/constants/theme';

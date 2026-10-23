@@ -26,7 +26,7 @@ export function openTarget({ type, contentId }: NotificationTarget): void {
       navigationRef.navigate('Promotions');
       break;
     case 'radio':
-      navigationRef.navigate('Radio');
+      navigationRef.navigate('Tabs', { screen: 'Listen' });
       break;
     case 'resource':
       navigationRef.navigate('Adotopoc');

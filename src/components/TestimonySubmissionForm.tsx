@@ -48,7 +48,7 @@ export function TestimonySubmissionForm({ initialName = '', submitting, error, o
       />
       {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}
       <PrimaryButton
-        title="SUBMIT TESTIMONY"
+        title="Submit testimony"
         icon="paper-plane-outline"
         loading={submitting}
         onPress={() => {

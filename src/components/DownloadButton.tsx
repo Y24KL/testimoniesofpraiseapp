@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, radius, type as t } from '@/constants/theme';
 import { downloadKey, useDownloads } from '@/downloads/DownloadsContext';
 import type { Testimony } from '@/types';
@@ -30,7 +30,7 @@ export function DownloadButton({ kind, data }: Props) {
         <View style={styles.track} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: pct }}>
           <View style={[styles.fill, { width: `${pct}%` }]} />
         </View>
-        <PrimaryButton title="CANCEL" variant="outline" icon="close" onPress={() => void dl.cancel(key)} />
+        <PrimaryButton title="Cancel" variant="outline" icon="close" onPress={() => void dl.cancel(key)} />
       </View>
     );
   }
@@ -55,12 +55,12 @@ export function DownloadButton({ kind, data }: Props) {
     return (
       <View style={styles.box}>
         <Text style={styles.error} accessibilityRole="alert">{why}</Text>
-        {item.failure !== 'unsupported' ? <PrimaryButton title="RETRY" icon="refresh" onPress={() => { void dl.remove(key).then(go); }} /> : null}
+        {item.failure !== 'unsupported' ? <PrimaryButton title="Retry" icon="refresh" onPress={() => { void dl.remove(key).then(go); }} /> : null}
       </View>
     );
   }
 
-  return <PrimaryButton title="DOWNLOAD" icon="download-outline" onPress={go} accessibilityHint="Saves this for offline viewing" />;
+  return <PrimaryButton title="Download" icon="download-outline" onPress={go} accessibilityHint="Saves this for offline viewing" />;
 }
 
 const styles = StyleSheet.create({

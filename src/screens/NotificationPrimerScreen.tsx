@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -71,7 +71,7 @@ export function NotificationPrimerScreen() {
             loading={busy}
           />
           <PrimaryButton
-            title="NOT NOW"
+            title="Not now"
             variant="ghost"
             onPress={() => void markPrimerSeen()}
             disabled={busy}

@@ -73,7 +73,7 @@ export function TestimonyDetailsScreen() {
           {item.description ? <Text style={styles.desc}>{item.description}</Text> : null}
           <View style={{ gap: 12 }}>
             <DownloadButton kind="testimony" data={item} />
-            <PrimaryButton title="SHARE" icon="share-social-outline" variant="outline" onPress={() => void Share.share({ message: shareMessage(item.title) })} />
+            <PrimaryButton title="Share" icon="share-social-outline" variant="outline" onPress={() => void Share.share({ message: shareMessage(item.title) })} />
           </View>
         </ScrollView>
       )}

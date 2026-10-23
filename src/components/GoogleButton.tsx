@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, ActivityIndicator, View, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Google from 'expo-auth-session/providers/google';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
@@ -136,14 +136,14 @@ export function GoogleButton({ onError }: { onError: (message: string) => void }
         (!request || busy) && { opacity: 0.6 },
       ]}
       accessibilityRole="button"
-      accessibilityLabel="Sign in with Google"
+      accessibilityLabel="Continue with Google"
     >
       {busy ? (
         <ActivityIndicator color="#1F1F1F" />
       ) : (
         <View style={styles.row}>
           <Ionicons name="logo-google" size={20} color="#4285F4" />
-          <Text style={styles.text}>SIGN IN WITH GOOGLE</Text>
+          <Text style={styles.text}>Continue with Google</Text>
         </View>
       )}
     </Pressable>
@@ -167,6 +167,6 @@ const styles = StyleSheet.create({
   text: {
     ...t.h3,
     color: '#1F1F1F',
-    letterSpacing: 0.6,
+    letterSpacing: 0.2,
   },
 });

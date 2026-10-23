@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/auth/AuthContext';
@@ -98,13 +98,13 @@ export function AppDrawer() {
       badge: 'LIVE 24/7',
       badgeBg: 'rgba(255, 59, 78, 0.2)',
       badgeColor: colors.live,
-      onPress: () => nav.navigate('Radio'),
+      onPress: () => nav.navigate('Tabs', { screen: 'Listen' }),
     },
     {
       id: 'adotopoc',
       title: 'ADOTOPOC',
       subtitle: 'Resource Center & Media',
-      customImage: require('../../assets/LOG_xcvt3v.png'),
+      customImage: require('../../assets/LOG_xcvt3v.webp'),
 
       iconBg: 'transparent',
       onPress: () => nav.navigate('Adotopoc'),

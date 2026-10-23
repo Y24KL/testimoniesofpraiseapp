@@ -1,7 +1,7 @@
 import React from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { colors, gradients, radius, type as t } from '@/constants/theme';
@@ -27,7 +27,7 @@ export function PromotionCard({ item, compact = false }: Props) {
 
     // Internal navigation targets (e.g. "radio", "adotopoc", "articles", "sponsor", "share")
     const dest = item.destinationUrl.toLowerCase().trim();
-    if (dest === 'radio') nav.navigate('Radio');
+    if (dest === 'radio') nav.navigate('Tabs', { screen: 'Listen' });
     else if (dest === 'adotopoc') nav.navigate('Adotopoc');
     else if (dest === 'articles') nav.navigate('Articles');
     else if (dest === 'sponsor') nav.navigate('Sponsor');

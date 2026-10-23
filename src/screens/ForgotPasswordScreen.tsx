@@ -38,14 +38,14 @@ export function ForgotPasswordScreen() {
           <>
             <Text style={styles.h}>Check your email</Text>
             <Text style={styles.p}>If an account exists for {email.trim()}, we’ve sent a link to reset your password.</Text>
-            <PrimaryButton title="BACK TO SIGN IN" onPress={() => nav.goBack()} />
+            <PrimaryButton title="Back to sign in" onPress={() => nav.goBack()} />
           </>
         ) : (
           <>
             <Text style={styles.p}>Enter the email you used to sign up and we’ll send you a link to reset your password.</Text>
             <TextField label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" textContentType="emailAddress" />
             {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}
-            <PrimaryButton title="SEND RESET LINK" onPress={submit} loading={busy} />
+            <PrimaryButton title="Send reset link" onPress={submit} loading={busy} />
           </>
         )}
       </View>

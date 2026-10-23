@@ -1,59 +1,99 @@
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GoogleButton } from '@/components/GoogleButton';
 import { Logo } from '@/components/Logo';
+import { OnboardingBackdrop } from '@/components/OnboardingBackdrop';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { isGoogleConfigured } from '@/constants/config';
-import { colors, gradients, type as t } from '@/constants/theme';
+import { colors, type as t } from '@/constants/theme';
+import { useOnboardingMedia } from '@/hooks/useOnboardingMedia';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
+
+const FEATURES = ['Live broadcasts', 'Video testimonies', 'TOP Radio', 'Offline downloads'];
 
 export function WelcomeScreen() {
   const nav = useNavigation();
+  const { media } = useOnboardingMedia();
+  const reducedMotion = useReducedMotion();
   const [error, setError] = useState<string | null>(null);
+  const enter = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (reducedMotion) {
+      enter.setValue(1);
+      return;
+    }
+    Animated.timing(enter, { toValue: 1, duration: 520, delay: 120, useNativeDriver: true }).start();
+  }, [enter, reducedMotion]);
+
+  const rise = { opacity: enter, transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }] };
 
   return (
-    <LinearGradient colors={gradients.hero} style={{ flex: 1 }}>
-      <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.content} bounces={false}>
-          <View style={styles.hero}>
-            <Logo size={110} />
-            <Text style={styles.welcome}>WELCOME TO</Text>
-            <Text style={styles.brand}>TESTIMONIES OF PRAISE</Text>
-            <Text style={styles.tag}>
-              "No one ever praises God and goes away empty, he always blesses you for praising Him." - Rev. Chris Oyakhilome Dsc.Dsc.DD
-            </Text>
+    <View style={styles.root}>
+      <OnboardingBackdrop media={media} />
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        <ScrollView contentContainerStyle={styles.content} bounces={false} showsVerticalScrollIndicator={false}>
+          <View style={styles.top}>
+            <Logo size={media.type === 'none' ? 120 : 64} />
           </View>
-          <View style={{ gap: 12 }}>
+
+          <Animated.View style={[styles.copy, rise]}>
+            <Text style={styles.eyebrow}>WELCOME TO</Text>
+            <Text style={styles.title} accessibilityRole="header">
+              Testimonies{'\n'}of Praise
+            </Text>
+            <Text style={styles.tagline}>
+              “No one ever praises God and goes away empty, He always blesses you for praising Him.”
+            </Text>
+            <Text style={styles.attribution}>Rev. Chris Oyakhilome DSc. DSc. DD</Text>
+            <View style={styles.chips}>
+              {FEATURES.map((f) => (
+                <View key={f} style={styles.chip}>
+                  <Text style={styles.chipText}>{f}</Text>
+                </View>
+              ))}
+            </View>
+          </Animated.View>
+
+          <Animated.View style={[styles.actions, rise]}>
+            <PrimaryButton title="Get started" icon="arrow-forward" onPress={() => nav.navigate('EmailAuth', { mode: 'signup' })} accessibilityHint="Create a free account" />
             {isGoogleConfigured ? <GoogleButton onError={setError} /> : null}
-            <PrimaryButton
-              title="CONTINUE WITH EMAIL"
-              icon="mail-outline"
-              variant="outline"
-              onPress={() => nav.navigate('EmailAuth', { mode: 'signin' })}
-            />
+            <Pressable onPress={() => nav.navigate('EmailAuth', { mode: 'signin' })} style={styles.signIn} accessibilityRole="button" accessibilityLabel="I already have an account. Sign in">
+              <Text style={styles.signInText}>
+                Already have an account? <Text style={styles.signInLink}>Sign in</Text>
+              </Text>
+            </Pressable>
             {error ? (
               <Text style={styles.error} accessibilityRole="alert">
                 {error}
               </Text>
             ) : null}
-            <Text style={styles.legal}>
-              By continuing you agree to the Terms of Service and Privacy Policy.
-            </Text>
-          </View>
+            <Text style={styles.legal}>By continuing you agree to the Terms of Service and Privacy Policy.</Text>
+          </Animated.View>
         </ScrollView>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, justifyContent: 'space-between', padding: 24, gap: 32 },
-  hero: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingTop: 32 },
-  welcome: { ...t.caps, color: colors.textMuted, marginTop: 18, letterSpacing: 4 },
-  brand: { ...t.h1, fontSize: 26, color: colors.accent, textAlign: 'center', letterSpacing: 1.5 },
-  tag: { ...t.body, color: colors.textMuted, textAlign: 'center', marginTop: 6 },
+  root: { flex: 1, backgroundColor: colors.bg },
+  content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 12, justifyContent: 'space-between', gap: 24 },
+  top: { alignItems: 'center', paddingTop: 20 },
+  copy: { flexGrow: 1, justifyContent: 'flex-end', gap: 8 },
+  eyebrow: { ...t.caps, color: colors.accent, letterSpacing: 3 },
+  title: { ...t.display, fontSize: 40, lineHeight: 44, color: colors.text },
+  tagline: { ...t.body, color: colors.textMuted, marginTop: 6 },
+  attribution: { ...t.small, color: colors.textSubtle, fontStyle: 'italic' },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(245,197,66,0.35)' },
+  chipText: { ...t.small, fontSize: 12, color: colors.text, fontWeight: '600' },
+  actions: { gap: 12 },
+  signIn: { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 12 },
+  signInText: { ...t.body, color: colors.textMuted },
+  signInLink: { color: colors.accent, fontWeight: '800' },
   error: { ...t.body, color: colors.danger, textAlign: 'center' },
-  legal: { ...t.small, color: colors.textMuted, textAlign: 'center', fontSize: 12 },
+  legal: { ...t.small, fontSize: 12, color: colors.textSubtle, textAlign: 'center' },
 });

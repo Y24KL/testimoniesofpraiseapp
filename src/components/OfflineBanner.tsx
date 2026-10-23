@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, type as t } from '@/constants/theme';
 import { useNetwork } from '@/offline/useNetwork';
 import { MESSAGES } from '@/utils/errors';

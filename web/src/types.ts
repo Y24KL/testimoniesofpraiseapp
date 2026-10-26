@@ -129,3 +129,18 @@ export interface AdotopocConfig {
   introVideoUrl: string;
   introEnabled: boolean;
 }
+
+export type CommentMediaType = 'video' | 'audio';
+
+/** A comment on a video testimony or audio testimony (one per user per item; id = the user's uid). */
+export interface TestimonyComment {
+  id: string;
+  uid: string;
+  displayName: string;
+  text: string;
+  mediaType: CommentMediaType;
+  mediaId: string;
+  status: 'visible' | 'hidden';
+  createdAt: string | null;
+  updatedAt: string | null;
+}

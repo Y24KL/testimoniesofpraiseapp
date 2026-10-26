@@ -16,7 +16,9 @@
     "web:dev": "npm --prefix web run dev",
     "web:build": "npm --prefix web run build",
     "web:preview": "npm --prefix web run preview",
-    "build:android:local": "node scripts/build-android-local.mjs"
+    "build:android:local": "node scripts/build-android-local.mjs",
+    "test:rules": "firebase-tools emulators:exec --only firestore --project demo-top --config top-admin/firebase.json \"node tests/comments.rules.test.mjs\"",
+    "test:comment-text": "node --experimental-strip-types --no-warnings tests/commentText.test.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -52,6 +54,7 @@
     "react-native-webview": "13.15.0"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@types/react": "~19.1.10",
     "typescript": "~5.9.2"
   }

@@ -259,15 +259,15 @@ export function HomeScreen() {
                 const tr = audioTrack(a);
                 const playing = player.track?.id === tr.id && player.status === 'playing';
                 return (
-                  <Pressable key={a.id} style={styles.audioRow} onPress={() => (playing ? player.pause() : player.play(tr))} accessibilityRole="button" accessibilityLabel={`${playing ? 'Pause' : 'Play'} ${a.title}`}>
-                    <View style={styles.audioPlay}>
+                  <View key={a.id} style={styles.audioRow}>
+                    <Pressable style={styles.audioPlay} onPress={() => (playing ? player.pause() : player.play(tr))} hitSlop={6} accessibilityRole="button" accessibilityLabel={`${playing ? 'Pause' : 'Play'} ${a.title}`}>
                       <Ionicons name={playing ? 'pause' : 'play'} size={16} color={colors.onAccent} style={playing ? undefined : { marginLeft: 2 }} />
-                    </View>
-                    <View style={{ flex: 1 }}>
+                    </Pressable>
+                    <Pressable style={{ flex: 1 }} onPress={() => nav.navigate('AudioTestimony', { id: a.id })} accessibilityRole="button" accessibilityLabel={`Open ${a.title}: details and comments`}>
                       <Text style={styles.audioTitle} numberOfLines={1}>{a.title}</Text>
                       <Text style={styles.audioMeta} numberOfLines={1}>{[a.speaker, formatDuration(a.duration)].filter(Boolean).join('  ·  ')}</Text>
-                    </View>
-                  </Pressable>
+                    </Pressable>
+                  </View>
                 );
               })}
             </View>

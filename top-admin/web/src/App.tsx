@@ -19,6 +19,7 @@ import { ArticleEditor } from './pages/ArticleEditor';
 import { Radio } from './pages/Radio';
 import { AdotopocConfig } from './pages/AdotopocConfig';
 import { MediaManager } from './pages/MediaManager';
+import { Comments } from './pages/Comments';
 
 type Gate = { state: 'loading' } | { state: 'out' } | { state: 'denied'; user: User } | { state: 'admin'; user: User };
 
@@ -75,6 +76,7 @@ export default function App() {
       {route.name === 'adotopoc' && <AdotopocConfig />}
       {route.name === 'media' && <MediaManager />}
       {route.name === 'submissions' && <Submissions go={setRoute} />}
+      {route.name === 'comments' && <Comments go={setRoute} />}
       {route.name === 'announcements' && <Announcements />}
       {route.name === 'sponsorships' && <Sponsorships />}
       {route.name === 'data' && <DataSettings />}

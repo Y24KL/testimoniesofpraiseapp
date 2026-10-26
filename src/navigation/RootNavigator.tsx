@@ -20,6 +20,7 @@ import { AdotopocScreen } from '@/screens/AdotopocScreen';
 import { PromotionsScreen } from '@/screens/PromotionsScreen';
 import { ArticlesScreen } from '@/screens/ArticlesScreen';
 import { ArticleDetailsScreen } from '@/screens/ArticleDetailsScreen';
+import { AudioTestimonyScreen } from '@/screens/AudioTestimonyScreen';
 import { TabNavigator } from './TabNavigator';
 import type { RootStackParamList } from './types';
 
@@ -85,6 +86,7 @@ export function RootNavigator() {
           <Stack.Screen name="Promotions" component={PromotionsScreen} />
           <Stack.Screen name="Articles" component={ArticlesScreen} />
           <Stack.Screen name="ArticleDetails" component={ArticleDetailsScreen} />
+          <Stack.Screen name="AudioTestimony" component={AudioTestimonyScreen} />
         </Stack.Group>
       )}
     </Stack.Navigator>

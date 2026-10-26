@@ -22,6 +22,6 @@ export function Check({ checked, onChange, label, hint, disabled }: { checked: b
   );
 }
 
-export function Message({ kind, children }: { kind: 'err' | 'ok'; children: ReactNode }) {
+export function Message({ kind, children }: { kind: 'err' | 'ok' | 'warn'; children: ReactNode }) {
   return <div className={`msg ${kind}`} role={kind === 'err' ? 'alert' : 'status'}>{children}</div>;
 }

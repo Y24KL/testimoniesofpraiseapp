@@ -187,5 +187,93 @@ service cloud.firestore {
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
+
+    // =====================================================================
+    // COMMENTS on video testimonies (testimonies/{id}/comments) and audio
+    // testimonies (audioTestimonies/{id}/comments).
+    //  - Document id == the commenter's Firebase UID: one comment per account
+    //    per item, enforced by the database (a second device edits it).
+    //  - Only signed-in users; the uid/media fields can never be changed or
+    //    spoofed; text 1..1000 chars; server timestamps only.
+    //  - Rate limit: every create/edit must be written in the same batch as
+    //    commentRate/{uid}, which only accepts one write per 15 seconds.
+    //  - Moderation: only admins change `status` (visible|hidden) or delete
+    //    other people's comments. Hidden comments are visible to admins and
+    //    to their author only.
+    // =====================================================================
+    function isPublishedDoc(path) {
+      let d = get(path).data;
+      return d.get('isPublished', false) == true || d.get('published', false) == true || d.get('status', '') == 'published';
+    }
+    function validCommentText(t) {
+      return t is string && t.size() <= 1000 && t.trim().size() > 0;
+    }
+    function rateStamped(uid) {
+      return getAfter(/databases/$(database)/documents/commentRate/$(uid)).data.lastAt == request.time;
+    }
+    function validNewComment(uid, mediaType, mediaId) {
+      let c = request.resource.data;
+      return c.keys().hasOnly(['uid', 'displayName', 'text', 'mediaType', 'mediaId', 'mediaTitle', 'status', 'createdAt', 'updatedAt'])
+        && c.keys().hasAll(['uid', 'displayName', 'text', 'mediaType', 'mediaId', 'status', 'createdAt', 'updatedAt'])
+        && c.uid == request.auth.uid && uid == request.auth.uid
+        && c.mediaType == mediaType && c.mediaId == mediaId
+        && c.displayName is string && c.displayName.size() > 0 && c.displayName.size() <= 60
+        && (!('mediaTitle' in c) || (c.mediaTitle is string && c.mediaTitle.size() <= 200))
+        && validCommentText(c.text)
+        && c.status == 'visible'
+        && c.createdAt == request.time && c.updatedAt == request.time;
+    }
+    function validOwnEdit(uid) {
+      let c = request.resource.data;
+      return resource.data.uid == request.auth.uid && uid == request.auth.uid
+        && c.diff(resource.data).affectedKeys().hasOnly(['text', 'displayName', 'updatedAt'])
+        && validCommentText(c.text)
+        && c.displayName is string && c.displayName.size() > 0 && c.displayName.size() <= 60
+        && c.updatedAt == request.time;
+    }
+    function validModeration() {
+      let c = request.resource.data;
+      return isAdmin()
+        && c.diff(resource.data).affectedKeys().hasOnly(['status', 'moderatedAt', 'moderatedBy'])
+        && c.status in ['visible', 'hidden']
+        && c.moderatedBy == request.auth.uid && c.moderatedAt == request.time;
+    }
+    function canReadComment(parentPath) {
+      return isAdmin() || (signedIn() && isPublishedDoc(parentPath)
+        && (resource.data.status == 'visible' || resource.data.uid == request.auth.uid));
+    }
+
+    match /testimonies/{mediaId}/comments/{uid} {
+      allow read: if canReadComment(/databases/$(database)/documents/testimonies/$(mediaId));
+      allow create: if signedIn() && validNewComment(uid, 'video', mediaId) && rateStamped(uid)
+        && isPublishedDoc(/databases/$(database)/documents/testimonies/$(mediaId));
+      allow update: if (signedIn() && validOwnEdit(uid) && rateStamped(uid)) || validModeration();
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    match /audioTestimonies/{mediaId}/comments/{uid} {
+      allow read: if canReadComment(/databases/$(database)/documents/audioTestimonies/$(mediaId));
+      allow create: if signedIn() && validNewComment(uid, 'audio', mediaId) && rateStamped(uid)
+        && isPublishedDoc(/databases/$(database)/documents/audioTestimonies/$(mediaId));
+      allow update: if (signedIn() && validOwnEdit(uid) && rateStamped(uid)) || validModeration();
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    // Admin dashboard: one collection-group query across every comments collection.
+    match /{path=**}/comments/{commentId} {
+      allow read: if isAdmin();
+    }
+
+    // Per-user comment rate limit stamp (see above). Only the user, only "now", at most every 15 s.
+    match /commentRate/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['lastAt']) && request.resource.data.lastAt == request.time;
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['lastAt']) && request.resource.data.lastAt == request.time
+        && request.time > resource.data.lastAt + duration.value(15, 's');
+      allow delete: if false;
+    }
+
   }
 }

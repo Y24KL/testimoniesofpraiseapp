@@ -6,6 +6,7 @@ import { VideoPlayer } from '../components/VideoPlayer';
 import { DownloadButton } from '../components/DownloadButton';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ErrorState } from '../components/ErrorState';
+import { CommentsSection } from '../components/CommentsSection';
 import { repo } from '../api/repository';
 import { useDownloads } from '../context/DownloadsContext';
 import type { Testimony } from '../types';
@@ -168,6 +169,7 @@ export function TestimonyDetailPage({ id, onBack }: Props) {
               onClick={handleShare}
             />
           </div>
+          <CommentsSection type="video" mediaId={item.id} mediaTitle={item.title} />
         </div>
       ) : null}
     </div>

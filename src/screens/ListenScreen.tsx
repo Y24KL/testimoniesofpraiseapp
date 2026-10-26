@@ -224,28 +224,35 @@ export function ListenScreen() {
           const playing = current && player.status === 'playing';
           const busy = current && player.status === 'loading';
           return (
-            <Pressable
-              style={[styles.row, current && styles.rowActive]}
-              onPress={() => (playing ? player.pause() : player.play(tr))}
-              accessibilityRole="button"
-              accessibilityLabel={`${playing ? 'Pause' : 'Play'} ${item.title}${item.speaker ? `, by ${item.speaker}` : ''}`}
-            >
-              <View style={[styles.rowPlay, current && styles.rowPlayActive]}>
+            <View style={[styles.row, current && styles.rowActive]}>
+              <Pressable
+                onPress={() => (playing ? player.pause() : player.play(tr))}
+                style={[styles.rowPlay, current && styles.rowPlayActive]}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel={`${playing ? 'Pause' : 'Play'} ${item.title}`}
+              >
                 {busy ? (
                   <ActivityIndicator size="small" color={colors.onAccent} />
                 ) : (
                   <Ionicons name={playing ? 'pause' : 'play'} size={18} color={current ? colors.onAccent : colors.accent} style={playing ? undefined : { marginLeft: 2 }} />
                 )}
-              </View>
-              <View style={{ flex: 1, gap: 3 }}>
+              </Pressable>
+              <Pressable
+                style={{ flex: 1, gap: 3 }}
+                onPress={() => nav.navigate('AudioTestimony', { id: item.id })}
+                accessibilityRole="button"
+                accessibilityLabel={`Open ${item.title}${item.speaker ? `, by ${item.speaker}` : ''}: details and comments`}
+              >
                 <Text style={styles.rowTitle} numberOfLines={2}>
                   {item.title}
                 </Text>
                 <Text style={styles.rowMeta} numberOfLines={1}>
                   {[item.speaker, formatDuration(item.duration), item.category].filter(Boolean).join('  ·  ')}
                 </Text>
-              </View>
-            </Pressable>
+              </Pressable>
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.textSubtle} />
+            </View>
           );
         }}
         ListEmptyComponent={

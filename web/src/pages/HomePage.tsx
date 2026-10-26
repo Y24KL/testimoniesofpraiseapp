@@ -262,17 +262,19 @@ export function HomePage({ onMenu, onOpenPromotion }: Props) {
               const current = player.track?.id === tr.id;
               const playing = current && player.status === 'playing';
               return (
-                <button key={a.id} type="button" className={`audio-row ${current ? 'active' : 'idle'}`} onClick={() => (playing ? player.pause() : player.play(tr))} aria-label={`${playing ? 'Pause' : 'Play'} ${a.title}`}>
-                  <span className="round-btn">{playing ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" style={{ marginLeft: 2 }} />}</span>
-                  <span style={{ flex: 1, minWidth: 0 }}>
+                <div key={a.id} className={`audio-row ${current ? 'active' : 'idle'}`}>
+                  <button type="button" className="round-btn" onClick={() => (playing ? player.pause() : player.play(tr))} aria-label={`${playing ? 'Pause' : 'Play'} ${a.title}`}>
+                    {playing ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" style={{ marginLeft: 2 }} />}
+                  </button>
+                  <button type="button" className="audio-row-body" onClick={() => navigate({ name: 'audio', id: a.id })} aria-label={`Open ${a.title}: details and comments`}>
                     <span className="media-title" style={{ fontSize: 14, WebkitLineClamp: 1 }}>
                       {a.title}
                     </span>
                     <span className="media-meta" style={{ display: 'block' }}>
                       {[a.speaker, formatDuration(a.duration)].filter(Boolean).join('  ·  ')}
                     </span>
-                  </span>
-                </button>
+                  </button>
+                </div>
               );
             })}
           </>

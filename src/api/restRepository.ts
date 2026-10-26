@@ -112,6 +112,9 @@ export const restRepository: ContentRepository = {
   async getAudioTestimonies() {
     return [];
   },
+  async getAudioTestimony() {
+    return null; // REST mode has no audio library
+  },
   async getRadioConfig() {
     return { isLive: false, streamUrl: '', currentProgramme: 'TOP Radio' };
   },

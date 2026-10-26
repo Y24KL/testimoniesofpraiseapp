@@ -156,17 +156,19 @@ export function ListenPage({ onMenu }: Props) {
             const playing = current && player.status === 'playing';
             const busy = current && player.status === 'loading';
             return (
-              <button key={item.id} type="button" className={`audio-row ${current ? 'active' : 'idle'}`} onClick={() => (playing ? player.pause() : player.play(tr))} aria-label={`${playing ? 'Pause' : 'Play'} ${item.title}`}>
-                <span className="round-btn">{busy ? <span className="spinner" /> : playing ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" style={{ marginLeft: 2 }} />}</span>
-                <span style={{ flex: 1, minWidth: 0 }}>
+              <div key={item.id} className={`audio-row ${current ? 'active' : 'idle'}`}>
+                <button type="button" className="round-btn" onClick={() => (playing ? player.pause() : player.play(tr))} aria-label={`${playing ? 'Pause' : 'Play'} ${item.title}`}>
+                  {busy ? <span className="spinner" /> : playing ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" style={{ marginLeft: 2 }} />}
+                </button>
+                <button type="button" className="audio-row-body" onClick={() => navigate({ name: 'audio', id: item.id })} aria-label={`Open ${item.title}: details and comments`}>
                   <span className="media-title" style={{ fontSize: 15 }}>
                     {item.title}
                   </span>
                   <span className="media-meta" style={{ display: 'block' }}>
                     {[item.speaker, formatDuration(item.duration), item.category].filter(Boolean).join('  ·  ')}
                   </span>
-                </span>
-              </button>
+                </button>
+              </div>
             );
           })
         )}

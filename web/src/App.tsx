@@ -30,6 +30,7 @@ const TestimoniesPage = named(() => import('./pages/TestimoniesPage'), 'Testimon
 const TestimonyDetailPage = named(() => import('./pages/TestimonyDetailPage'), 'TestimonyDetailPage');
 const LivePage = named(() => import('./pages/LivePage'), 'LivePage');
 const ListenPage = named(() => import('./pages/ListenPage'), 'ListenPage');
+const AudioTestimonyPage = named(() => import('./pages/AudioTestimonyPage'), 'AudioTestimonyPage');
 const DownloadsPage = named(() => import('./pages/DownloadsPage'), 'DownloadsPage');
 const ShareTestimonyPage = named(() => import('./pages/ShareTestimonyPage'), 'ShareTestimonyPage');
 const SponsorPage = named(() => import('./pages/SponsorPage'), 'SponsorPage');
@@ -143,6 +144,9 @@ function Shell({ route }: { route: Route }) {
     case 'testimony':
       page = <TestimonyDetailPage key={route.id} id={route.id} onBack={back} />;
       break;
+    case 'audio':
+      page = <AudioTestimonyPage key={route.id} id={route.id} onBack={() => goBack({ name: 'listen' })} />;
+      break;
     case 'share':
       page = <ShareTestimonyPage onBack={back} />;
       break;
@@ -196,7 +200,7 @@ function Shell({ route }: { route: Route }) {
   return (
     <div className="app-shell">
       <SideNav current={route.name} isLive={!!live?.isLive} />
-      <main className="app-main" key={route.name === 'testimony' || route.name === 'article' ? `${route.name}:${route.id}` : route.name}>
+      <main className="app-main" key={route.name === 'testimony' || route.name === 'audio' || route.name === 'article' ? `${route.name}:${route.id}` : route.name}>
         <OfflineBanner />
         <Suspense fallback={<PageFallback />}>{page}</Suspense>
       </main>

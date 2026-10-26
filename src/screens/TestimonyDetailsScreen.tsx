@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { repo } from '@/api';
+import { CommentsSection } from '@/components/CommentsSection';
 import { DownloadButton } from '@/components/DownloadButton';
 import { ErrorState } from '@/components/ErrorState';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -63,7 +64,8 @@ export function TestimonyDetailsScreen() {
       ) : !item ? (
         <View style={{ flex: 1, justifyContent: 'center' }}><LoadingSpinner label="LOADING PRAISE" /></View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {uri ? <VideoPlayer uri={uri} contentId={item.id} label={item.title} autoPlay /> : <ErrorState compact message={MESSAGES.video} />}
           <View style={{ gap: 6 }}>
             {item.category ? <Text style={styles.cat}>{item.category.toUpperCase()}</Text> : null}
@@ -75,7 +77,9 @@ export function TestimonyDetailsScreen() {
             <DownloadButton kind="testimony" data={item} />
             <PrimaryButton title="Share" icon="share-social-outline" variant="outline" onPress={() => void Share.share({ message: shareMessage(item.title) })} />
           </View>
+          <CommentsSection type="video" mediaId={item.id} mediaTitle={item.title} />
         </ScrollView>
+        </KeyboardAvoidingView>
       )}
     </Screen>
   );

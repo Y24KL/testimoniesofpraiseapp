@@ -126,5 +126,6 @@ export type Route =
   | { name: 'radio' }
   | { name: 'adotopoc' }
   | { name: 'media' }
+  | { name: 'comments' }
   | { name: 'data' };
 

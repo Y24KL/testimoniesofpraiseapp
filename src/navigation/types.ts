@@ -31,6 +31,7 @@ export type RootStackParamList = {
   Promotions: undefined;
   Articles: undefined;
   ArticleDetails: { id: string };
+  AudioTestimony: { id: string };
 };
 
 declare global {

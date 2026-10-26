@@ -26,6 +26,32 @@ import { Check, Field, Message } from '../components/Field';
 
 const STALE_MS = 60_000; // Missed heartbeats (>60s) treated as left
 
+type StreamCheck = { state: 'idle' | 'checking' | 'up' | 'down'; detail?: string };
+
+/**
+ * Reads the stream URL from the browser to tell the admin whether it is broadcasting right now.
+ * HLS: the playlist (and its first variant) must list media segments. Other URLs: any 2xx answer.
+ */
+async function checkStream(url: string): Promise<StreamCheck> {
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return { state: 'down', detail: `The stream answered HTTP ${res.status}.` };
+    if (!/\.m3u8(\?|$)/i.test(url)) return { state: 'up', detail: 'The stream URL is reachable.' };
+    let text = await res.text();
+    const variant = text.split(/\r?\n/).find((l) => l.trim() && !l.startsWith('#'));
+    if (!/#EXTINF/.test(text) && variant) {
+      const res2 = await fetch(new URL(variant.trim(), url).toString(), { cache: 'no-store' });
+      text = res2.ok ? await res2.text() : '';
+    }
+    const segments = (text.match(/#EXTINF/g) || []).length;
+    return segments > 0
+      ? { state: 'up', detail: `Broadcasting now (${segments} live segments). Listeners can play it while the radio is ON AIR.` }
+      : { state: 'down', detail: 'The playlist has no live segments: nothing is being broadcast on this URL right now.' };
+  } catch {
+    return { state: 'down', detail: 'Could not reach the stream URL from this browser (offline, blocked, or not a public stream).' };
+  }
+}
+
 export function Radio() {
   const [tab, setTab] = useState<'stream' | 'library'>('stream');
 
@@ -38,6 +64,7 @@ export function Radio() {
   const [sessionId, setSessionId] = useState('');
   const [radioLoaded, setRadioLoaded] = useState(false);
   const [radioBusy, setRadioBusy] = useState(false);
+  const [streamCheck, setStreamCheck] = useState<StreamCheck>({ state: 'idle' });
   const [activeListeners, setActiveListeners] = useState<number | null>(null);
 
   // Audio Preview in Admin
@@ -336,6 +363,29 @@ export function Radio() {
                 Go Live on Radio
               </button>
             )}
+          </div>
+
+          <Message kind={isLive ? 'ok' : 'warn'}>
+            {isLive
+              ? 'ON AIR: app and website users can press Play on TOP Radio, including when the main video broadcast is offline.'
+              : 'OFF AIR: TOP Radio is greyed out in the app and website, so listeners cannot play it. This is separate from the main Live broadcast. For a 24/7 stream, leave the radio ON AIR.'}
+          </Message>
+          <div className="row gap" style={{ alignItems: 'center', margin: '8px 0 16px' }}>
+            <button
+              type="button"
+              className="btn ghost"
+              disabled={!streamUrl.trim() || streamCheck.state === 'checking'}
+              onClick={async () => {
+                setStreamCheck({ state: 'checking' });
+                setStreamCheck(await checkStream(streamUrl.trim()));
+              }}
+            >
+              {streamCheck.state === 'checking' ? 'Checking…' : '📡 Check stream now'}
+            </button>
+            {streamCheck.state === 'up' || streamCheck.state === 'down' ? (
+              <span className={`pill ${streamCheck.state === 'up' ? 'ok' : 'warn'}`}>{streamCheck.state === 'up' ? 'Stream is up' : 'Stream is down'}</span>
+            ) : null}
+            {streamCheck.detail ? <span className="small muted">{streamCheck.detail}</span> : null}
           </div>
 
           <Field label="Live Audio Stream URL * (Icecast / Shoutcast MP3/AAC or HLS .m3u8 audio)">

@@ -359,6 +359,18 @@ export const repo = {
     return snap.docs.map((d) => normalizeAudioTestimony(d.id, d.data()));
   },
 
+  async getAudioTestimony(id: string): Promise<AudioTestimony | null> {
+    try {
+      const s = await getDoc(doc(db, 'audioTestimonies', id));
+      if (!s.exists()) return null;
+      const item = normalizeAudioTestimony(s.id, s.data());
+      return item.isPublished ? item : null;
+    } catch (e: any) {
+      if (e?.code === 'permission-denied') return null;
+      throw e;
+    }
+  },
+
   async getRadioConfig(): Promise<RadioConfig> {
     const snap = await getDoc(doc(db, 'settings', 'radio'));
     return normalizeRadio(snap.exists() ? snap.data() : null);

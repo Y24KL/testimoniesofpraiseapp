@@ -51,6 +51,8 @@ export interface ContentRepository {
   getArticle(id: string): Promise<Article | null>;
   publishArticle(input: CreateArticleInput): Promise<string>;
   getAudioTestimonies(limit?: number): Promise<AudioTestimony[]>;
+  /** One published audio testimony, or null when it is unpublished / removed. */
+  getAudioTestimony(id: string): Promise<AudioTestimony | null>;
   getRadioConfig(): Promise<RadioConfig>;
   subscribeRadio(cb: (cfg: RadioConfig) => void, onError?: (e: unknown) => void): () => void;
   getAdotopocConfig(): Promise<AdotopocConfig>;

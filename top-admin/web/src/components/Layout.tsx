@@ -13,6 +13,7 @@ const NAV: { name: Route['name']; label: string }[] = [
   { name: 'adotopoc', label: 'ADOTOPOC Config' },
   { name: 'media', label: 'Media & Storage' },
   { name: 'submissions', label: 'Submissions' },
+  { name: 'comments', label: 'Comments' },
   { name: 'announcements', label: 'Announcements' },
   { name: 'sponsorships', label: 'Sponsorships' },
   { name: 'data', label: 'Data' },

@@ -266,6 +266,18 @@ export const firestoreRepository: ContentRepository = {
     }
   },
 
+  async getAudioTestimony(id) {
+    try {
+      const snap = await getDoc(doc(db, CONFIG.collections.audioTestimonies, id));
+      if (!snap.exists()) return null;
+      const item = normalizeAudioTestimony(snap.id, snap.data());
+      return item.isPublished ? item : null;
+    } catch (e) {
+      if ((e as { code?: string })?.code === 'permission-denied') return null;
+      throw e;
+    }
+  },
+
   async getRadioConfig() {
     try {
       const snap = await getDoc(doc(db, CONFIG.collections.radioDoc));

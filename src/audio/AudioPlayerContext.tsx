@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useEvent, useEventListener } from 'expo';
-import { useVideoPlayer, type VideoSource } from 'expo-video';
+import { StyleSheet, View } from 'react-native';
+import { VideoView, useVideoPlayer, type VideoSource } from 'expo-video';
 import { useAuth } from '@/auth/AuthContext';
 import { CONFIG } from '@/constants/config';
 import { useRadioListener } from '@/hooks/useRadioListener';
@@ -15,6 +16,13 @@ import { isHls } from '@/utils/format';
  * `supportsBackgroundPlayback` enabled (app.config.ts) it keeps playing with the screen locked or
  * the app in the background, and `showNowPlayingNotification` gives Android notification /
  * lock-screen controls and the iOS Now Playing / Control Center controls.
+ *
+ * iOS caveat (the cause of "audio stops when I lock my iPhone"): AVPlayer pauses content that has a
+ * VIDEO track when the app is backgrounded, unless its background policy is "continuesIfPossible".
+ * expo-video only sets that policy for players attached to a VideoView, and TOP Radio's stream is an
+ * HLS video+audio stream. So while audio is loaded the player is attached to an invisible 1x1
+ * VideoView below; expo-video then keeps it playing in the background (Android is unaffected:
+ * ExoPlayer keeps decoding audio without a surface, inside expo-video's foreground media service).
  */
 
 export interface AudioTrack {
@@ -72,6 +80,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     p.showNowPlayingNotification = true;
     p.audioMixingMode = 'doNotMix';
     p.loop = false;
+    // Attaching the hidden VideoView must not keep the screen awake during audio.
+    p.keepScreenOnWhilePlaying = false;
   });
 
   const { status: playerStatus } = useEvent(player, 'statusChange', { status: player.status });
@@ -180,8 +190,22 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   useRadioListener(track?.live ? track.sessionId : undefined, status === 'playing');
 
   const value = useMemo(() => ({ track, status, error, play, toggle, pause, stop }), [track, status, error, play, toggle, pause, stop]);
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={value}>
+      {children}
+      {track ? (
+        <View style={styles.hidden} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <VideoView player={player} style={styles.hidden} nativeControls={false} allowsFullscreen={false} allowsPictureInPicture={false} />
+        </View>
+      ) : null}
+    </Ctx.Provider>
+  );
 }
+
+const styles = StyleSheet.create({
+  // Must stay mounted (and on screen) so expo-video registers it; invisible and untouchable.
+  hidden: { position: 'absolute', left: 0, bottom: 0, width: 1, height: 1, opacity: 0.01 },
+});
 
 export function useAudioPlayer(): AudioValue {
   const v = useContext(Ctx);

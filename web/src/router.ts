@@ -12,6 +12,7 @@ export type Route =
   | { name: 'listen' }
   | { name: 'downloads' }
   | { name: 'testimony'; id: string }
+  | { name: 'audio'; id: string }
   | { name: 'share' }
   | { name: 'sponsor' }
   | { name: 'notifications' }
@@ -54,8 +55,8 @@ const STATIC: Record<string, Route> = {
 export function parseHash(hash: string): Route {
   const path = decodeURIComponent(hash.replace(/^#\/?/, '').replace(/\/+$/, ''));
   if (path in STATIC) return STATIC[path];
-  const m = path.match(/^(testimony|article)\/([^/?#]+)$/);
-  if (m) return m[1] === 'testimony' ? { name: 'testimony', id: m[2] } : { name: 'article', id: m[2] };
+  const m = path.match(/^(testimony|audio|article)\/([^/?#]+)$/);
+  if (m) return m[1] === 'testimony' ? { name: 'testimony', id: m[2] } : m[1] === 'audio' ? { name: 'audio', id: m[2] } : { name: 'article', id: m[2] };
   return { name: 'home' };
 }
 
@@ -65,6 +66,8 @@ export function pathFor(route: Route): string {
       return '/';
     case 'testimony':
       return `/testimony/${encodeURIComponent(route.id)}`;
+    case 'audio':
+      return `/audio/${encodeURIComponent(route.id)}`;
     case 'article':
       return `/article/${encodeURIComponent(route.id)}`;
     case 'notificationSettings':

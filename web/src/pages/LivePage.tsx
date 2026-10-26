@@ -1,5 +1,5 @@
 import React from 'react';
-import { Radio, Bell } from 'lucide-react';
+import { Radio, Bell, Clock } from 'lucide-react';
 import { colors, radius } from '../theme';
 import { TopBar } from '../components/TopBar';
 import { LiveBadge } from '../components/LiveCard';
@@ -28,6 +28,25 @@ export function LivePage({ onNotifications, onProfile }: Props) {
   useLiveViewer(live?.sessionId, !!live?.isLive);
 
   const youtubeId = live?.streamUrl ? parseYouTubeId(live.streamUrl) : null;
+
+  // live > pre-live > offline. Only one branch renders, so the pre-live player is removed (stopped)
+  // the moment the real broadcast starts or the admin turns pre-live playback off.
+  const mode: 'loading' | 'live' | 'prelive' | 'offline' = !live ? 'loading' : live.isLive && live.streamUrl ? 'live' : live.preLive ? 'prelive' : 'offline';
+  const prevMode = React.useRef(mode);
+  const [switchNote, setSwitchNote] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (prevMode.current === 'prelive' && mode === 'live') setSwitchNote('We’re live! The broadcast has started, so we switched you to it.');
+    else if (prevMode.current === 'prelive' && mode === 'offline') setSwitchNote('Pre-live playback has ended. We’ll be live soon.');
+    else if (prevMode.current === 'live') setSwitchNote(null);
+    prevMode.current = mode;
+  }, [mode]);
+  const pre = live?.preLive;
+  const preYouTubeId = pre?.sourceType === 'youtube' ? parseYouTubeId(pre.url) : null;
+  const note = switchNote ? (
+    <p role="status" style={{ margin: 0, fontSize: 14, color: colors.accent, textAlign: 'center' }}>
+      {switchNote}
+    </p>
+  ) : null;
 
   return (
     <div
@@ -68,6 +87,7 @@ export function LivePage({ onNotifications, onProfile }: Props) {
               <VideoPlayer key={live.streamUrl} uri={live.streamUrl} live autoPlay label={live.title} />
             )}
 
+            {note}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <LiveBadge />
               <h2 style={{ fontSize: '20px', fontWeight: '700', color: colors.text, margin: 0 }}>
@@ -82,8 +102,30 @@ export function LivePage({ onNotifications, onProfile }: Props) {
 
             {live.sessionId && <LiveChat sessionId={live.sessionId} />}
           </>
+        ) : mode === 'prelive' && pre ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, borderRadius: radius.md, background: 'rgba(245,197,66,0.08)', border: '1px solid rgba(245,197,66,0.35)' }}>
+              <Clock size={22} color="#f5c542" />
+              <div>
+                <div style={{ fontWeight: 700, color: colors.text }}>We’re not live yet</div>
+                <div style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>Watch while you wait. The live broadcast takes over here automatically when it starts.</div>
+              </div>
+            </div>
+            {preYouTubeId ? (
+              <YouTubePlayer key={pre.url} videoId={preYouTubeId} label={pre.title} />
+            ) : (
+              <VideoPlayer key={pre.url} uri={pre.url} autoPlay={false} label={pre.title} />
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1.2, color: '#f5c542' }}>WHILE YOU WAIT</span>
+              <h2 style={{ fontSize: '20px', fontWeight: '700', color: colors.text, margin: 0 }}>{pre.title}</h2>
+              {pre.description ? <p style={{ fontSize: '14px', color: colors.textMuted, margin: 0, lineHeight: '1.4' }}>{pre.description}</p> : null}
+            </div>
+            {note}
+          </>
         ) : (
           <>
+            {note}
             <div
               style={{
                 aspectRatio: '16 / 9',

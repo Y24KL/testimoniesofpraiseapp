@@ -1,4 +1,5 @@
 import type {
+  PreLiveMedia,
   AdotopocConfig,
   AppNotification,
   Article,
@@ -107,14 +108,31 @@ export function normalizeLive(r: Raw | undefined | null): LiveConfig {
           : isHls(streamUrl)
             ? 'hls'
             : 'unknown';
+  const isLive = pick(r, ['isLive', 'live', 'is_live', 'active']) === true && !!streamUrl;
   return {
-    isLive: pick(r, ['isLive', 'live', 'is_live', 'active']) === true && !!streamUrl,
+    isLive,
     streamUrl,
     sourceType,
     sessionId: pick(r, ['sessionId', 'session_id']),
     title: pick(r, ['title']),
     thumbnail: pick(r, ['thumbnail', 'poster']),
     description: pick(r, ['description']),
+    preLive: normalizePreLive(r, isLive),
+  };
+}
+
+/** Pre-live media from settings/live (preLiveEnabled + preLiveUrl ...), or undefined when it must not play. */
+function normalizePreLive(r: Raw, isLive: boolean): PreLiveMedia | undefined {
+  if (isLive || pick(r, ['preLiveEnabled']) !== true) return undefined;
+  const url = String(pick(r, ['preLiveUrl']) ?? '').trim();
+  if (!/^https:\/\/\S+$/i.test(url)) return undefined;
+  const sourceType: PreLiveMedia['sourceType'] = isYouTubeUrl(url) ? 'youtube' : isHls(url) ? 'hls' : 'file';
+  return {
+    url,
+    sourceType,
+    title: String(pick(r, ['preLiveTitle']) || 'Watch while you wait'),
+    description: pick(r, ['preLiveDescription']) || undefined,
+    thumbnail: pick(r, ['preLiveThumbnail']) || undefined,
   };
 }
 

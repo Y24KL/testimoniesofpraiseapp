@@ -4,6 +4,7 @@
  *
  *   npm run build:android:local            -> uses eas.json "preview" env (default)
  *   npm run build:android:local -- production
+ *   npm run build:android:local -- production --aab   -> Play Store App Bundle (.aab) instead of an APK
  *
  * What it does, mirroring an EAS build:
  *  1. Loads the EXPO_PUBLIC_* / ORG_GRADLE_PROJECT_* values from eas.json for the chosen profile.
@@ -22,7 +23,9 @@ import { join, resolve } from 'node:path';
 import os from 'node:os';
 
 const root = resolve(import.meta.dirname, '..');
-const profile = process.argv[2] || 'preview';
+const args = process.argv.slice(2);
+const aab = args.includes('--aab');
+const profile = args.find((a) => !a.startsWith('--')) || 'preview';
 const isWin = process.platform === 'win32';
 const fail = (msg) => {
   console.error(`\n✖ ${msg}\n`);
@@ -114,8 +117,8 @@ if (!gradle.includes('TOP_KEYSTORE_PATH')) {
 }
 
 // ---- 3. build -----------------------------------------------------------------------
-step('Building the release APK with Gradle (first run downloads dependencies: 10-30 min)');
-const gradleArgs = ['assembleRelease', '--no-daemon', '-x', 'lint'];
+step(`Building the release ${aab ? 'App Bundle (AAB)' : 'APK'} with Gradle (first run downloads dependencies: 10-30 min)`);
+const gradleArgs = [aab ? 'bundleRelease' : 'assembleRelease', '--no-daemon', '-x', 'lint'];
 if (isWin) {
   // .bat files must go through cmd.exe; quote the full path because the project folder may contain spaces.
   const r = spawnSync('cmd.exe', ['/d', '/s', '/c', `""${join(androidDir, 'gradlew.bat')}" ${gradleArgs.join(' ')}"`], {
@@ -129,8 +132,10 @@ if (isWin) {
   run('./gradlew', gradleArgs, androidDir);
 }
 
-const apk = join(androidDir, 'app', 'build', 'outputs', 'apk', 'release', 'app-release.apk');
-if (!existsSync(apk)) fail('Gradle finished but app-release.apk was not found.');
+const apk = aab
+  ? join(androidDir, 'app', 'build', 'outputs', 'bundle', 'release', 'app-release.aab')
+  : join(androidDir, 'app', 'build', 'outputs', 'apk', 'release', 'app-release.apk');
+if (!existsSync(apk)) fail(`Gradle finished but ${apk} was not found.`);
 
 let sha = 'local';
 try {
@@ -140,14 +145,17 @@ try {
 }
 const version = JSON.parse(execSync('npx expo config --json --type public', { cwd: root, env }).toString()).version;
 mkdirSync(join(root, 'build-output'), { recursive: true });
-const out = join(root, 'build-output', `testimonies-of-praise-${version}-${profile}-${sha}.apk`);
+const out = join(root, 'build-output', `testimonies-of-praise-${version}-${profile}-${sha}.${aab ? 'aab' : 'apk'}`);
 copyFileSync(apk, out);
 
 // ---- 4. verify signature ---------------------------------------------------------------
 const apksigner = join(androidHome, 'build-tools', '36.0.0', 'lib', 'apksigner.jar');
-if (existsSync(apksigner)) {
+if (aab) {
+  const r = spawnSync(join(javaHome, 'bin', 'jarsigner'), ['-verify', out], { env, encoding: 'utf8' });
+  console.log(`\n  Signature: ${(r.stdout || r.stderr || '').trim().split('\n')[0] || 'could not read'}`);
+} else if (existsSync(apksigner)) {
   const r = spawnSync(join(javaHome, 'bin', 'java'), ['-jar', apksigner, 'verify', '--print-certs', out], { env, encoding: 'utf8' });
   const line = (r.stdout || '').split('\n').find((l) => /SHA-1/.test(l));
   console.log(`\n  Signer: ${line ? line.trim() : 'could not read'}`);
 }
-console.log(`\n✔ APK ready: ${out}\n`);
+console.log(`\n✔ ${aab ? 'AAB' : 'APK'} ready: ${out}\n`);

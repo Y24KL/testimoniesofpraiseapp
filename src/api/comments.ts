@@ -51,13 +51,27 @@ function toComment(id: string, d: Record<string, unknown>): TestimonyComment {
   };
 }
 
-const friendly = (e: unknown, action: string) => {
-  const code = (e as { code?: string })?.code ?? '';
+// Time of this device's last successful comment write: the rules allow one write per 15 s per account.
+let lastWriteAt = 0;
+const RATE_MS = 15_000;
+
+/**
+ * Turns a Firestore error into an honest message (and logs the real code). permission-denied on a
+ * READ, or on a write more than 15 s after the last one, means the server's rules refused it, which
+ * happens when the comment rules haven't been deployed to the Firebase project.
+ */
+const friendly = (e: unknown, action: string, write = false) => {
+  const code = (e as { code?: string })?.code ?? 'unknown';
+  console.warn(`[comments] ${action} failed: ${code}`, (e as Error)?.message);
   if (code === 'permission-denied') {
-    return new AppError('permission', `Couldn't ${action}. If you just posted, wait 15 seconds and try again.`);
+    if (write && Date.now() - lastWriteAt < RATE_MS) {
+      return new AppError('permission', `You just posted. Wait ${Math.ceil((RATE_MS - (Date.now() - lastWriteAt)) / 1000)} seconds and try again.`);
+    }
+    return new AppError('permission', `Couldn't ${action}: the server refused access (permission-denied). Comments may not be switched on yet. Please try again later.`);
   }
+  if (code === 'failed-precondition') return new AppError('unknown', `Couldn't ${action}: the server is still preparing comments (missing index). Please try again later.`);
   if (code === 'unavailable' || code === 'deadline-exceeded') return new AppError('network', `No connection: couldn't ${action}.`);
-  return new AppError('unknown', `Couldn't ${action}. Please try again.`);
+  return new AppError('unknown', `Couldn't ${action} (${code}). Please try again.`);
 };
 
 /** Live list of visible comments, newest first. Returns an unsubscribe function. */
@@ -128,10 +142,14 @@ export async function saveComment(input: {
     });
   }
   batch.set(doc(db, 'commentRate', input.uid), { lastAt: serverTimestamp() });
+  if (Date.now() - lastWriteAt < RATE_MS) {
+    throw new AppError('permission', `You just posted. Wait ${Math.ceil((RATE_MS - (Date.now() - lastWriteAt)) / 1000)} seconds and try again.`);
+  }
   try {
     await batch.commit();
+    lastWriteAt = Date.now();
   } catch (e) {
-    throw friendly(e, input.existing ? 'update your comment' : 'post your comment');
+    throw friendly(e, input.existing ? 'update your comment' : 'post your comment', true);
   }
 }
 

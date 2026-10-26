@@ -4,7 +4,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Testimonies of Praise',
   slug: 'testimonies-of-praise',
-  version: '1.0.3',
+  version: '1.0.4',
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'dark',
@@ -25,7 +25,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'com.testimoniesofpraise.app',
-    buildNumber: '5',
+    buildNumber: '6',
     googleServicesFile: process.env.GOOGLE_SERVICE_INFO_PLIST || './GoogleService-Info.plist',
     infoPlist: {
       // Scoped ATS: Allows HTTP for live media streams and web views without blanket exemption
@@ -33,6 +33,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         NSAllowsArbitraryLoadsInWebContent: true,
         NSAllowsArbitraryLoadsForMedia: true,
       },
+      // Lets the ADOTOPOC "Resource Center" button check for Chrome before falling back to Safari.
+      LSApplicationQueriesSchemes: ['googlechromes', 'googlechrome'],
     },
   },
   android: {
@@ -41,7 +43,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#0a0a0a',
     },
     package: 'com.testimoniesofpraise.app',
-    versionCode: 5,
+    versionCode: 6,
     googleServicesFile: process.env.GOOGLE_SERVICES_JSON || './google-services.json',
     // Required for expo-notifications foreground banners on Android 13+
     permissions: ['android.permission.POST_NOTIFICATIONS', 'android.permission.VIBRATE'],

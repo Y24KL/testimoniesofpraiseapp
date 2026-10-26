@@ -25,6 +25,19 @@ export interface LiveConfig {
   title?: string;
   thumbnail?: string;
   description?: string;
+  /**
+   * Pre-live playback: what to watch while the main broadcast is offline. Present only when the
+   * admin turned "Enable Pre-Live Playback" ON and saved a valid https link (never while isLive).
+   */
+  preLive?: PreLiveMedia;
+}
+
+export interface PreLiveMedia {
+  url: string;
+  sourceType: 'hls' | 'youtube' | 'file';
+  title: string;
+  description?: string;
+  thumbnail?: string;
 }
 
 export type NotificationType = 'testimony' | 'resource' | 'live' | 'announcement' | 'featured' | 'article' | 'promotion' | 'radio';

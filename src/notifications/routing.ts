@@ -31,7 +31,12 @@ export function openTarget({ type, contentId }: NotificationTarget): void {
     case 'resource':
       navigationRef.navigate('Adotopoc');
       break;
-    default:
+    case 'announcement':
+      // Announcements are read in the in-app list.
       navigationRef.navigate('Notifications');
+      break;
+    default:
+      // Unknown / missing target: a safe screen instead of a broken one.
+      navigationRef.navigate('Tabs', { screen: 'Home' });
   }
 }

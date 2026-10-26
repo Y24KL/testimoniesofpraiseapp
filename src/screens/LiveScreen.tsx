@@ -35,6 +35,19 @@ export function LiveScreen() {
     if (watching && audio.status === 'playing') audio.pause();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watching]);
+
+  // live > pre-live > offline. Only one branch renders, so the pre-live player is unmounted (stopped)
+  // the moment the real broadcast starts or the admin turns pre-live playback off.
+  const mode: 'loading' | 'live' | 'prelive' | 'offline' = !live ? 'loading' : live.isLive && live.streamUrl ? 'live' : live.preLive ? 'prelive' : 'offline';
+  const prevMode = React.useRef(mode);
+  const [switchNote, setSwitchNote] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (prevMode.current === 'prelive' && mode === 'live') setSwitchNote('We’re live! The broadcast has started, so we switched you to it.');
+    else if (prevMode.current === 'prelive' && mode === 'offline') setSwitchNote('Pre-live playback has ended. We’ll be live soon.');
+    else if (mode === 'prelive' || mode === 'offline') setSwitchNote((n) => (prevMode.current === 'live' ? null : n));
+    prevMode.current = mode;
+  }, [mode]);
+  const pre = live?.preLive;
   return (
     <Screen>
       <TopBar title="Watch Live" onNotifications={() => nav.navigate('Notifications')} onProfile={() => nav.navigate('Profile')} />
@@ -53,13 +66,39 @@ export function LiveScreen() {
           ) : (
             <VideoPlayer key={live.streamUrl} uri={live.streamUrl} live autoPlay label={live.title ?? 'Live stream'} />
           )}
+          {switchNote ? <Text style={styles.switchNote} accessibilityLiveRegion="polite">{switchNote}</Text> : null}
           <LiveBadge />
           <Text style={styles.title}>{live.title ?? 'Live now'}</Text>
           {live.description ? <Text style={styles.desc}>{live.description}</Text> : null}
           {live.sessionId ? <LiveChat sessionId={live.sessionId} /> : null}
         </ScrollView>
+      ) : mode === 'prelive' && pre ? (
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.waitBanner} accessibilityRole="summary">
+            <Ionicons name="time-outline" size={22} color={colors.accent} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.waitTitle}>We’re not live yet</Text>
+              <Text style={styles.waitText}>Watch while you wait. The live broadcast takes over here automatically when it starts.</Text>
+            </View>
+          </View>
+          {!isFocused ? (
+            <View style={styles.paused}>
+              <Ionicons name="pause-circle-outline" size={40} color={colors.textMuted} />
+              <Text style={styles.pausedText}>Paused — come back to this tab to keep watching</Text>
+            </View>
+          ) : pre.sourceType === 'youtube' && parseYouTubeId(pre.url) ? (
+            <YouTubePlayer key={pre.url} videoId={parseYouTubeId(pre.url)!} label={pre.title} />
+          ) : (
+            <VideoPlayer key={pre.url} uri={pre.url} autoPlay={false} label={pre.title} />
+          )}
+          <Text style={styles.waitCaps}>WHILE YOU WAIT</Text>
+          <Text style={styles.title}>{pre.title}</Text>
+          {pre.description ? <Text style={styles.desc}>{pre.description}</Text> : null}
+          {switchNote ? <Text style={styles.switchNote}>{switchNote}</Text> : null}
+        </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
+          {switchNote ? <Text style={styles.switchNote} accessibilityLiveRegion="polite">{switchNote}</Text> : null}
           <View style={styles.offlineBox}>
             {live.thumbnail ? <Image source={live.thumbnail} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={8} /> : null}
             <View style={styles.offlineOverlay}>
@@ -83,5 +122,10 @@ const styles = StyleSheet.create({
   offlineText: { ...t.caps, fontSize: 13, color: colors.text, textAlign: 'center' },
   note: { ...t.body, color: colors.textMuted, textAlign: 'center' },
   paused: { aspectRatio: 16 / 9, borderRadius: radius.md, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  waitBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: radius.md, backgroundColor: 'rgba(245,197,66,0.08)', borderWidth: 1, borderColor: 'rgba(245,197,66,0.35)' },
+  waitTitle: { ...t.h3, color: colors.text },
+  waitText: { ...t.small, color: colors.textMuted, marginTop: 2 },
+  waitCaps: { ...t.caps, color: colors.accent },
+  switchNote: { ...t.small, color: colors.accent, textAlign: 'center' },
   pausedText: { ...t.small, color: colors.textMuted, textAlign: 'center', paddingHorizontal: 24 },
 });

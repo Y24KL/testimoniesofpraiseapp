@@ -45,7 +45,7 @@ export function WelcomeScreen() {
               Testimonies{'\n'}of Praise
             </Text>
             <Text style={styles.tagline}>
-              “No one ever praises God and goes away empty, He always blesses you for praising Him.”
+              “Nobody ever praised God and went away empty, He always blesses you for praising Him.”
             </Text>
             <Text style={styles.attribution}>Rev. Chris Oyakhilome DSc. DSc. DD</Text>
             <View style={styles.chips}>

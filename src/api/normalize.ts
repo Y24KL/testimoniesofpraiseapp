@@ -1,4 +1,5 @@
 import type {
+  WrittenTestimony,
   PreLiveMedia,
   AdotopocConfig,
   AppNotification,
@@ -79,7 +80,7 @@ export function normalizeTestimony(id: string, r: Raw): Testimony {
   };
 }
 
-const NOTIF_TYPES: NotificationType[] = ['testimony', 'resource', 'live', 'announcement', 'featured'];
+const NOTIF_TYPES: NotificationType[] = ['testimony', 'resource', 'live', 'announcement', 'featured', 'article', 'promotion', 'radio', 'written'];
 
 export function normalizeNotification(id: string, r: Raw): AppNotification {
   const t = String(pick(r, ['type']) ?? 'announcement').toLowerCase() as NotificationType;
@@ -160,6 +161,32 @@ export function normalizeArticle(id: string, r: Raw): Article {
     category: pick(r, ['category']),
     author: pick(r, ['author', 'authorName']),
     isPublished: pick(r, ['isPublished', 'published']) !== false,
+    publishedAt: toIso(pick(r, ['publishedAt', 'published_at', 'createdAt'])),
+    createdAt: toIso(pick(r, ['createdAt', 'created_at'])),
+  };
+}
+
+
+/** First ~220 characters of the testimony, cut at a word boundary. */
+export function excerptOf(body: string, max = 220): string {
+  const flat = body.replace(/\s+/g, ' ').trim();
+  if (flat.length <= max) return flat;
+  const cut = flat.slice(0, max);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), max - 30)).trim()}…`;
+}
+
+export function normalizeWrittenTestimony(id: string, r: Raw): WrittenTestimony {
+  const body = String(pick(r, ['body', 'testimony', 'content']) ?? '').replace(/\r\n/g, '\n').trim();
+  return {
+    id,
+    title: String(pick(r, ['title']) ?? 'Testimony'),
+    body,
+    excerpt: String(pick(r, ['excerpt']) || excerptOf(body)),
+    authorName: pick(r, ['authorName', 'fullName', 'author']) || undefined,
+    churchZone: pick(r, ['churchZone', 'church']) || undefined,
+    authorPhotoUrl: pick(r, ['authorPhotoUrl', 'photoUrl']) || undefined,
+    category: pick(r, ['category']) || undefined,
+    isPublished: pick(r, ['isPublished', 'published']) === true,
     publishedAt: toIso(pick(r, ['publishedAt', 'published_at', 'createdAt'])),
     createdAt: toIso(pick(r, ['createdAt', 'created_at'])),
   };

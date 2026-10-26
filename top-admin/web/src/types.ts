@@ -27,6 +27,7 @@ export interface Submission {
   userEmail: string | null;
   status: 'pending' | 'approved' | 'rejected';
   linkedTestimonyId?: string;
+  linkedWrittenId?: string;
   createdAt?: Timestamp;
 }
 
@@ -127,5 +128,7 @@ export type Route =
   | { name: 'adotopoc' }
   | { name: 'media' }
   | { name: 'comments' }
+  | { name: 'written' }
+  | { name: 'writtenEditor'; id?: string; prefill?: import('./pages/WrittenTestimonyEditor').WrittenPrefill }
   | { name: 'data' };
 

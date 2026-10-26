@@ -80,8 +80,11 @@ export function Submissions({ go }: { go: (r: Route) => void }) {
           <div className="row">
             {s.linkedTestimonyId
               ? <button className="btn small" onClick={() => go({ name: 'editor', id: s.linkedTestimonyId })}>Open draft</button>
-              : <button className="btn small" onClick={() => void makeDraft(s)}>Create testimony draft</button>}
-            {s.status !== 'rejected' && !s.linkedTestimonyId ? <button className="btn small ghost" onClick={() => void setStatus(s, 'rejected')}>Reject</button> : null}
+              : <button className="btn small" onClick={() => void makeDraft(s)}>Create video testimony draft</button>}
+            {s.linkedWrittenId
+              ? <button className="btn small ghost" onClick={() => go({ name: 'writtenEditor', id: s.linkedWrittenId })}>Open written testimony</button>
+              : <button className="btn small ghost" onClick={() => go({ name: 'writtenEditor', prefill: { title: `Testimony from ${s.fullName}`, body: s.testimony, authorName: s.fullName, churchZone: s.churchZone, sourceSubmissionId: s.id } })}>Create written testimony</button>}
+            {s.status !== 'rejected' && !s.linkedTestimonyId && !s.linkedWrittenId ? <button className="btn small ghost" onClick={() => void setStatus(s, 'rejected')}>Reject</button> : null}
             {s.status === 'rejected' ? <button className="btn small ghost" onClick={() => void setStatus(s, 'pending')}>Move back to pending</button> : null}
             <button className="btn small danger" onClick={() => void remove(s)}>Delete</button>
           </div>

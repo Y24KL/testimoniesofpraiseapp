@@ -18,6 +18,10 @@ export function openTarget({ type, contentId }: NotificationTarget): void {
     case 'live':
       navigationRef.navigate('Tabs', { screen: 'Live' });
       break;
+    case 'written':
+      if (contentId) navigationRef.navigate('WrittenTestimony', { id: contentId });
+      else navigationRef.navigate('WrittenTestimonies');
+      break;
     case 'article':
       if (contentId) navigationRef.navigate('ArticleDetails', { id: contentId });
       else navigationRef.navigate('Articles');

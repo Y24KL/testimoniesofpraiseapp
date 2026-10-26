@@ -42,7 +42,7 @@ export interface PreLiveMedia {
   thumbnail?: string;
 }
 
-export type NotificationType = 'testimony' | 'resource' | 'live' | 'announcement' | 'featured' | 'article' | 'promotion' | 'radio';
+export type NotificationType = 'testimony' | 'resource' | 'live' | 'announcement' | 'featured' | 'article' | 'promotion' | 'radio' | 'written';
 
 export interface AppNotification {
   id: string;
@@ -154,7 +154,24 @@ export interface AdotopocConfig {
 }
 
 
-export type CommentMediaType = 'video' | 'audio';
+export type CommentMediaType = 'video' | 'audio' | 'written';
+
+/** A written (text) testimony from the library. Usually created by an admin from an approved submission. */
+export interface WrittenTestimony {
+  id: string;
+  title: string;
+  /** Full text; paragraphs are separated by blank lines / line breaks. */
+  body: string;
+  excerpt: string;
+  authorName?: string;
+  churchZone?: string;
+  authorPhotoUrl?: string;
+  category?: string;
+  isPublished: boolean;
+  publishedAt: string | null;
+  createdAt: string | null;
+}
+
 
 /** A comment on a video testimony or audio testimony (one per user per item; id = the user's uid). */
 export interface TestimonyComment {

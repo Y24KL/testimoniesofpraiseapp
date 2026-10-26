@@ -21,7 +21,7 @@ import type { CommentMediaType, TestimonyComment } from '../types';
  * testimonies/{id}/comments/{uid} and audioTestimonies/{id}/comments/{uid}; one comment per account per
  * item; every write batched with commentRate/{uid} (max one write per 15 s, enforced by the rules).
  */
-const parent = (type: CommentMediaType) => (type === 'video' ? 'testimonies' : 'audioTestimonies');
+const parent = (type: CommentMediaType) => (type === 'video' ? 'testimonies' : type === 'written' ? 'writtenTestimonies' : 'audioTestimonies');
 const commentsCol = (type: CommentMediaType, id: string) => collection(db, parent(type), id, 'comments');
 const commentRef = (type: CommentMediaType, id: string, uid: string) => doc(db, parent(type), id, 'comments', uid);
 
@@ -36,7 +36,7 @@ function toComment(id: string, d: Record<string, unknown>): TestimonyComment {
     uid: String(d.uid ?? id),
     displayName: commenterName(d.displayName as string),
     text: String(d.text ?? ''),
-    mediaType: d.mediaType === 'audio' ? 'audio' : 'video',
+    mediaType: d.mediaType === 'audio' || d.mediaType === 'written' ? d.mediaType : 'video',
     mediaId: String(d.mediaId ?? ''),
     status: d.status === 'hidden' ? 'hidden' : 'visible',
     createdAt: iso(d.createdAt),

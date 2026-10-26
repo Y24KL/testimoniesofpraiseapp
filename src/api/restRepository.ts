@@ -102,6 +102,13 @@ export const restRepository: ContentRepository = {
   async getArticles() {
     return [];
   },
+  // Written testimonies live in Firestore only.
+  async getWrittenTestimonies() {
+    return { items: [], cursor: undefined, hasMore: false };
+  },
+  async getWrittenTestimony() {
+    return null;
+  },
   async getArticle() {
     return null;
   },

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -17,7 +17,7 @@ import { audioTrack } from '@/screens/ListenScreen';
 import type { AudioTestimony } from '@/types';
 import { messageFor } from '@/utils/errors';
 import { formatDate, formatDuration } from '@/utils/format';
-import { shareMessage } from '@/utils/links';
+import { shareMediaUrl } from '@/utils/links';
 
 /** One audio testimony: play/pause through the app-wide player (keeps playing in the background), details and comments. */
 export function AudioTestimonyScreen() {
@@ -89,7 +89,7 @@ export function AudioTestimonyScreen() {
               <Text style={styles.meta}>{[item.speaker, formatDate(item.publishedAt ?? item.createdAt), formatDuration(item.duration)].filter(Boolean).join('  •  ')}</Text>
             </View>
             {item.description ? <Text style={styles.desc}>{item.description}</Text> : null}
-            <PrimaryButton title="Share" icon="share-social-outline" variant="outline" onPress={() => void Share.share({ message: shareMessage(item.title) })} />
+            <PrimaryButton title="Share" icon="share-social-outline" variant="outline" onPress={() => void shareMediaUrl(item.title, item.audioUrl, 'audio')} />
             <CommentsSection type="audio" mediaId={item.id} mediaTitle={item.title} />
           </ScrollView>
         </KeyboardAvoidingView>

@@ -28,6 +28,7 @@ export const CONFIG = {
     promotions: process.env.EXPO_PUBLIC_COL_PROMOTIONS ?? 'promotions',
     articles: process.env.EXPO_PUBLIC_COL_ARTICLES ?? 'articles',
     audioTestimonies: process.env.EXPO_PUBLIC_COL_AUDIO_TESTIMONIES ?? 'audioTestimonies',
+    writtenTestimonies: process.env.EXPO_PUBLIC_COL_WRITTEN_TESTIMONIES ?? 'writtenTestimonies',
     radioDoc: process.env.EXPO_PUBLIC_DOC_RADIO ?? 'settings/radio',
     adotopocDoc: process.env.EXPO_PUBLIC_DOC_ADOTOPOC ?? 'settings/adotopoc',
   },

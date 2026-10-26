@@ -45,13 +45,15 @@ const reset = async () => {
     await setDoc(doc(db, 'audioTestimonies/a1'), { title: 'Audio one', isPublished: true });
     await setDoc(doc(db, 'testimonies/legacy'), { title: 'Old field name', published: true });
     await setDoc(doc(db, 'audioTestimonies/a2'), { title: 'Status field', status: 'published' });
+    await setDoc(doc(db, 'writtenTestimonies/w1'), { title: 'Written one', body: 'Glory!', isPublished: true });
+    await setDoc(doc(db, 'writtenTestimonies/wdraft'), { title: 'Written draft', body: 'Soon', isPublished: false });
   });
 };
 // Lets the next write pass the 15-second rate limit without waiting.
 const allowNextWrite = (uid) =>
   env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), `commentRate/${uid}`), { lastAt: Timestamp.fromMillis(Date.now() - 60_000) }));
 
-const colFor = (type) => (type === 'video' ? 'testimonies' : 'audioTestimonies');
+const colFor = (type) => (type === 'video' ? 'testimonies' : type === 'written' ? 'writtenTestimonies' : 'audioTestimonies');
 const newComment = (uid, type, id, extra = {}) => ({
   uid, displayName: uid === 'alice' ? 'Alice' : 'Bob', text: 'Praise God!', mediaType: type, mediaId: id, mediaTitle: 'T',
   status: 'visible', createdAt: serverTimestamp(), updatedAt: serverTimestamp(), ...extra,
@@ -177,6 +179,44 @@ await test('existing rules unaffected: users still cannot write testimonies or r
   await assertFails(setDoc(doc(alice, 'testimonies/v1'), { title: 'x', isPublished: true }));
   await assertFails(getDocs(collection(alice, 'pushTokens')));
   await assertSucceeds(getDoc(doc(alice, 'testimonies/v1')));
+});
+
+await test('written testimonies: users read published ones only; only admins create/edit/delete', async () => {
+  await assertSucceeds(getDoc(doc(alice, 'writtenTestimonies/w1')));
+  await assertFails(getDoc(doc(alice, 'writtenTestimonies/wdraft')));
+  await assertFails(getDoc(doc(anon, 'writtenTestimonies/w1')));
+  await assertSucceeds(getDocs(query(collection(alice, 'writtenTestimonies'), where('isPublished', '==', true))));
+  await assertFails(getDocs(collection(alice, 'writtenTestimonies')));
+  await assertFails(setDoc(doc(alice, 'writtenTestimonies/x'), { title: 'Mine', body: 'b', isPublished: true }));
+  await assertFails(updateDoc(doc(alice, 'writtenTestimonies/w1'), { isPublished: false }));
+  await assertFails(deleteDoc(doc(alice, 'writtenTestimonies/w1')));
+  await assertSucceeds(getDoc(doc(admin, 'writtenTestimonies/wdraft')));
+  await assertSucceeds(setDoc(doc(admin, 'writtenTestimonies/new'), { title: 'New', body: 'Body', isPublished: false, authorName: 'Bro. A', churchZone: 'Lagos Zone 1' }));
+  await assertSucceeds(updateDoc(doc(admin, 'writtenTestimonies/new'), { isPublished: true }));
+  await assertFails(setDoc(doc(admin, 'writtenTestimonies/bad1'), { title: '', body: 'Body', isPublished: true }));
+  await assertFails(setDoc(doc(admin, 'writtenTestimonies/bad2'), { title: 'T', body: 'x'.repeat(20001), isPublished: true }));
+  await assertFails(setDoc(doc(admin, 'writtenTestimonies/bad3'), { title: 'T', body: 'B', isPublished: 'yes' }));
+  await assertSucceeds(deleteDoc(doc(admin, 'writtenTestimonies/new')));
+});
+await test('written testimony comments: one per user, correct type, published parent only', async () => {
+  await assertSucceeds(create(alice, 'alice', 'written', 'w1'));
+  await allowNextWrite('alice');
+  await assertFails(create(alice, 'alice', 'written', 'w1'));
+  await allowNextWrite('alice');
+  await assertFails(create(alice, 'alice', 'written', 'wdraft'));
+  await allowNextWrite('bob');
+  await assertFails(writeWithRate(bob, 'bob', 'writtenTestimonies/w1/comments/bob', newComment('bob', 'video', 'w1')));
+  await allowNextWrite('bob');
+  await assertFails(writeWithRate(bob, 'bob', 'writtenTestimonies/w1/comments/alice', newComment('alice', 'written', 'w1')));
+  await allowNextWrite('bob');
+  await assertSucceeds(create(bob, 'bob', 'written', 'w1'));
+  const list = await assertSucceeds(getDocs(query(collection(bob, 'writtenTestimonies/w1/comments'), where('status', '==', 'visible'), orderBy('createdAt', 'desc'))));
+  assert.equal(list.size, 2);
+  await assertFails(deleteDoc(doc(bob, 'writtenTestimonies/w1/comments/alice')));
+  await assertSucceeds(updateDoc(doc(admin, 'writtenTestimonies/w1/comments/alice'), { status: 'hidden', moderatedBy: 'admin1', moderatedAt: serverTimestamp() }));
+  await assertFails(getDoc(doc(bob, 'writtenTestimonies/w1/comments/alice')));
+  const written = await assertSucceeds(getDocs(query(collectionGroup(admin, 'comments'), where('mediaType', '==', 'written'))));
+  assert.equal(written.size, 2);
 });
 
 await env.cleanup();

@@ -19,6 +19,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type {
+  WrittenTestimony,
   PreLiveMedia,
   AdotopocConfig,
   AppNotification,
@@ -100,7 +101,7 @@ export function normalizeTestimony(id: string, r: Raw): Testimony {
   };
 }
 
-const NOTIF_TYPES: NotificationType[] = ['testimony', 'resource', 'live', 'announcement', 'featured'];
+const NOTIF_TYPES: NotificationType[] = ['testimony', 'resource', 'live', 'announcement', 'featured', 'article', 'promotion', 'radio', 'written'];
 
 export function normalizeNotification(id: string, r: Raw): AppNotification {
   const t = String(pick(r, ['type']) ?? 'announcement').toLowerCase() as NotificationType;
@@ -181,6 +182,32 @@ export function normalizeArticle(id: string, r: Raw): Article {
     category: pick(r, ['category']),
     author: pick(r, ['author', 'authorName']),
     isPublished: pick(r, ['isPublished', 'published']) !== false,
+    publishedAt: toIso(pick(r, ['publishedAt', 'published_at', 'createdAt'])),
+    createdAt: toIso(pick(r, ['createdAt', 'created_at'])),
+  };
+}
+
+
+/** First ~220 characters of the testimony, cut at a word boundary. */
+export function excerptOf(body: string, max = 220): string {
+  const flat = body.replace(/\s+/g, ' ').trim();
+  if (flat.length <= max) return flat;
+  const cut = flat.slice(0, max);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), max - 30)).trim()}…`;
+}
+
+export function normalizeWrittenTestimony(id: string, r: Raw): WrittenTestimony {
+  const body = String(pick(r, ['body', 'testimony', 'content']) ?? '').replace(/\r\n/g, '\n').trim();
+  return {
+    id,
+    title: String(pick(r, ['title']) ?? 'Testimony'),
+    body,
+    excerpt: String(pick(r, ['excerpt']) || excerptOf(body)),
+    authorName: pick(r, ['authorName', 'fullName', 'author']) || undefined,
+    churchZone: pick(r, ['churchZone', 'church']) || undefined,
+    authorPhotoUrl: pick(r, ['authorPhotoUrl', 'photoUrl']) || undefined,
+    category: pick(r, ['category']) || undefined,
+    isPublished: pick(r, ['isPublished', 'published']) === true,
     publishedAt: toIso(pick(r, ['publishedAt', 'published_at', 'createdAt'])),
     createdAt: toIso(pick(r, ['createdAt', 'created_at'])),
   };
@@ -382,6 +409,30 @@ export const repo = {
       const s = await getDoc(doc(db, 'audioTestimonies', id));
       if (!s.exists()) return null;
       const item = normalizeAudioTestimony(s.id, s.data());
+      return item.isPublished ? item : null;
+    } catch (e: any) {
+      if (e?.code === 'permission-denied') return null;
+      throw e;
+    }
+  },
+
+  async getWrittenTestimonies({ limit, cursor }: PageOptions): Promise<Page<WrittenTestimony>> {
+    const c: QueryConstraint[] = [where('isPublished', '==', true), orderBy('createdAt', 'desc')];
+    if (cursor) c.push(startAfter(cursor as QueryDocumentSnapshot));
+    c.push(qLimit(limit));
+    const snap = await getDocs(query(collection(db, 'writtenTestimonies'), ...c));
+    return {
+      items: snap.docs.map((d) => normalizeWrittenTestimony(d.id, d.data())),
+      cursor: snap.docs[snap.docs.length - 1],
+      hasMore: snap.docs.length === limit,
+    };
+  },
+
+  async getWrittenTestimony(id: string): Promise<WrittenTestimony | null> {
+    try {
+      const s = await getDoc(doc(db, 'writtenTestimonies', id));
+      if (!s.exists()) return null;
+      const item = normalizeWrittenTestimony(s.id, s.data());
       return item.isPublished ? item : null;
     } catch (e: any) {
       if (e?.code === 'permission-denied') return null;

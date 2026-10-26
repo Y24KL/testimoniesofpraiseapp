@@ -73,8 +73,13 @@ export function TestimonyDetailPage({ id, onBack }: Props) {
 
   const handleShare = async () => {
     if (!item) return;
-    const shareText = `Watch "${item.title}" on Testimonies of Praise!`;
-    const shareUrl = window.location.href;
+    // Share the video file itself: the public CDN URL saved when it was uploaded.
+    const shareUrl = (item.videoUrl ?? '').trim();
+    if (!/^https?:\/\/\S+$/i.test(shareUrl)) {
+      window.alert('This video doesn’t have a shareable link yet. Please try again later.');
+      return;
+    }
+    const shareText = `Watch "${item.title}" on Testimonies of Praise`;
 
     if (navigator.share) {
       try {

@@ -259,6 +259,33 @@ service cloud.firestore {
       allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
     }
 
+    // WRITTEN TESTIMONIES (text testimonies shown in the app's library). Admins write them, usually
+    // from an approved testimony submission; signed-in users read the published ones.
+    function validWrittenTestimony() {
+      let d = request.resource.data;
+      return d.title is string && d.title.size() > 0 && d.title.size() <= 200
+        && d.body is string && d.body.size() > 0 && d.body.size() <= 20000
+        && d.isPublished is bool
+        && (!('authorName' in d) || (d.authorName is string && d.authorName.size() <= 120))
+        && (!('churchZone' in d) || (d.churchZone is string && d.churchZone.size() <= 160))
+        && (!('category' in d) || (d.category is string && d.category.size() <= 60))
+        && (!('authorPhotoUrl' in d) || (d.authorPhotoUrl is string && d.authorPhotoUrl.size() <= 1000));
+    }
+
+    match /writtenTestimonies/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
+      allow create, update: if isAdmin() && validWrittenTestimony();
+      allow delete: if isAdmin();
+    }
+
+    match /writtenTestimonies/{mediaId}/comments/{uid} {
+      allow read: if canReadComment(/databases/$(database)/documents/writtenTestimonies/$(mediaId));
+      allow create: if signedIn() && validNewComment(uid, 'written', mediaId) && rateStamped(uid)
+        && isPublishedDoc(/databases/$(database)/documents/writtenTestimonies/$(mediaId));
+      allow update: if (signedIn() && validOwnEdit(uid) && rateStamped(uid)) || validModeration();
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
     // Admin dashboard: one collection-group query across every comments collection.
     match /{path=**}/comments/{commentId} {
       allow read: if isAdmin();

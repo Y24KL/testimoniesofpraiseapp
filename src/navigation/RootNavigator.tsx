@@ -21,6 +21,8 @@ import { PromotionsScreen } from '@/screens/PromotionsScreen';
 import { ArticlesScreen } from '@/screens/ArticlesScreen';
 import { ArticleDetailsScreen } from '@/screens/ArticleDetailsScreen';
 import { AudioTestimonyScreen } from '@/screens/AudioTestimonyScreen';
+import { WrittenTestimoniesScreen } from '@/screens/WrittenTestimoniesScreen';
+import { WrittenTestimonyScreen } from '@/screens/WrittenTestimonyScreen';
 import { TabNavigator } from './TabNavigator';
 import type { RootStackParamList } from './types';
 
@@ -87,6 +89,8 @@ export function RootNavigator() {
           <Stack.Screen name="Articles" component={ArticlesScreen} />
           <Stack.Screen name="ArticleDetails" component={ArticleDetailsScreen} />
           <Stack.Screen name="AudioTestimony" component={AudioTestimonyScreen} />
+          <Stack.Screen name="WrittenTestimonies" component={WrittenTestimoniesScreen} />
+          <Stack.Screen name="WrittenTestimony" component={WrittenTestimonyScreen} />
         </Stack.Group>
       )}
     </Stack.Navigator>

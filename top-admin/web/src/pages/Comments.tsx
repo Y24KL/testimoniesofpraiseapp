@@ -21,11 +21,11 @@ import type { Route } from '../types';
 import { Message } from '../components/Field';
 
 /**
- * Comments people post on video testimonies (testimonies/{id}/comments/{uid}) and audio testimonies
- * (audioTestimonies/{id}/comments/{uid}). Read with a collection-group query; the Firestore rules let
+ * Comments people post on video testimonies (testimonies/{id}/comments/{uid}), audio testimonies
+ * (audioTestimonies/{id}/comments/{uid}) and written testimonies (writtenTestimonies/{id}/comments/{uid}). Read with a collection-group query; the Firestore rules let
  * only admins run it. Hide/restore sets status + moderatedBy/moderatedAt; delete removes the comment.
  */
-type MediaType = 'video' | 'audio';
+type MediaType = 'video' | 'audio' | 'written';
 type StatusFilter = 'all' | 'visible' | 'hidden';
 interface Row {
   ref: DocumentReference;
@@ -49,7 +49,8 @@ function toRow(d: QueryDocumentSnapshot): Row {
   const x = d.data();
   // Path is {testimonies|audioTestimonies}/{mediaId}/comments/{uid}: the parent is the source of truth.
   const parent = d.ref.parent.parent;
-  const mediaType: MediaType = parent?.parent.id === 'audioTestimonies' ? 'audio' : 'video';
+  const col = parent?.parent.id;
+  const mediaType: MediaType = col === 'audioTestimonies' ? 'audio' : col === 'writtenTestimonies' ? 'written' : 'video';
   return {
     ref: d.ref,
     id: d.id,
@@ -152,13 +153,13 @@ export function Comments({ go }: { go: (r: Route) => void }) {
 
   const q = search.trim().toLowerCase();
   const shown = (rows ?? []).filter((r) => !q || [r.text, r.displayName, r.uid, r.mediaTitle, r.mediaId].some((v) => v.toLowerCase().includes(q)));
-  const siteLink = (r: Row) => (SITE ? `${SITE}/#/${r.mediaType === 'audio' ? 'audio' : 'testimony'}/${encodeURIComponent(r.mediaId)}` : '');
+  const siteLink = (r: Row) => (SITE ? `${SITE}/#/${r.mediaType === 'audio' ? 'audio' : r.mediaType === 'written' ? 'written' : 'testimony'}/${encodeURIComponent(r.mediaId)}` : '');
 
   return (
     <>
       <h1>Comments</h1>
       <p className="muted">
-        Comments on video and audio testimonies from the app and the website. Each account can leave one comment per testimony. Hiding removes a comment from public view (the author still sees it, marked as hidden); deleting removes it for good.
+        Comments on video, audio and written testimonies from the app and the website. Each account can leave one comment per testimony. Hiding removes a comment from public view (the author still sees it, marked as hidden); deleting removes it for good.
       </p>
 
       <div className="card">
@@ -173,6 +174,7 @@ export function Comments({ go }: { go: (r: Route) => void }) {
               <option value="all">All</option>
               <option value="video">Video testimonies</option>
               <option value="audio">Audio testimonies</option>
+              <option value="written">Written testimonies</option>
             </select>
           </label>
           <label className="f" style={{ marginBottom: 0, flex: '1 1 120px' }}>
@@ -232,7 +234,7 @@ export function Comments({ go }: { go: (r: Route) => void }) {
               </div>
               <div className="quote" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{r.text}</div>
               <div className="small muted" style={{ marginBottom: 10 }}>
-                On {r.mediaType === 'audio' ? 'audio' : 'video'} testimony: <b style={{ color: 'var(--text)' }}>{r.mediaTitle || '(untitled)'}</b> · ID <code>{r.mediaId}</code>
+                On {r.mediaType} testimony: <b style={{ color: 'var(--text)' }}>{r.mediaTitle || '(untitled)'}</b> · ID <code>{r.mediaId}</code>
               </div>
               <div className="row">
                 {r.status === 'visible' ? (

@@ -5,6 +5,7 @@ import { TopBar } from '../components/TopBar';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { repo } from '../api/repository';
+import { navigate } from '../router';
 import type { AppNotification } from '../types';
 
 interface Props {
@@ -48,6 +49,8 @@ export function NotificationsPage({ onBack, onSelectTestimony, onGoToLive }: Pro
       onSelectTestimony(item.contentId);
     } else if (item.type === 'live') {
       onGoToLive();
+    } else if (item.type === 'written') {
+      navigate(item.contentId ? { name: 'writtenTestimony', id: item.contentId } : { name: 'written' });
     }
   };
 

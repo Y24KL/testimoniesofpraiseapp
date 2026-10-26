@@ -41,10 +41,15 @@ export function AudioTestimonyPage({ id, onBack }: Props) {
 
   const share = async () => {
     if (!item) return;
-    const url = window.location.href;
+    // Share the audio file itself: the public URL saved when it was uploaded.
+    const url = (item.audioUrl ?? '').trim();
+    if (!/^https?:\/\/\S+$/i.test(url)) {
+      window.alert('This audio doesn’t have a shareable link yet. Please try again later.');
+      return;
+    }
     if (navigator.share) {
       try {
-        await navigator.share({ title: item.title, text: `Listen to "${item.title}" on Testimonies of Praise!`, url });
+        await navigator.share({ title: item.title, text: `Listen to "${item.title}" on Testimonies of Praise`, url });
         return;
       } catch {
         /* cancelled: fall back to copying */

@@ -20,6 +20,8 @@ import { Radio } from './pages/Radio';
 import { AdotopocConfig } from './pages/AdotopocConfig';
 import { MediaManager } from './pages/MediaManager';
 import { Comments } from './pages/Comments';
+import { WrittenTestimonies } from './pages/WrittenTestimonies';
+import { WrittenTestimonyEditor } from './pages/WrittenTestimonyEditor';
 
 type Gate = { state: 'loading' } | { state: 'out' } | { state: 'denied'; user: User } | { state: 'admin'; user: User };
 
@@ -77,6 +79,8 @@ export default function App() {
       {route.name === 'media' && <MediaManager />}
       {route.name === 'submissions' && <Submissions go={setRoute} />}
       {route.name === 'comments' && <Comments go={setRoute} />}
+      {route.name === 'written' && <WrittenTestimonies go={setRoute} />}
+      {route.name === 'writtenEditor' && <WrittenTestimonyEditor key={route.id ?? 'new'} id={route.id} prefill={route.prefill} go={setRoute} />}
       {route.name === 'announcements' && <Announcements />}
       {route.name === 'sponsorships' && <Sponsorships />}
       {route.name === 'data' && <DataSettings />}

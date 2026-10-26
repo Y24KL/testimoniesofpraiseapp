@@ -13,6 +13,8 @@ export type Route =
   | { name: 'downloads' }
   | { name: 'testimony'; id: string }
   | { name: 'audio'; id: string }
+  | { name: 'written' }
+  | { name: 'writtenTestimony'; id: string }
   | { name: 'share' }
   | { name: 'sponsor' }
   | { name: 'notifications' }
@@ -46,6 +48,7 @@ const STATIC: Record<string, Route> = {
   search: { name: 'search' },
   promotions: { name: 'promotions' },
   articles: { name: 'articles' },
+  written: { name: 'written' },
   adotopoc: { name: 'adotopoc' },
   signin: { name: 'signin' },
   signup: { name: 'signup' },
@@ -55,6 +58,8 @@ const STATIC: Record<string, Route> = {
 export function parseHash(hash: string): Route {
   const path = decodeURIComponent(hash.replace(/^#\/?/, '').replace(/\/+$/, ''));
   if (path in STATIC) return STATIC[path];
+  const w = path.match(/^written\/([^/?#]+)$/);
+  if (w) return { name: 'writtenTestimony', id: w[1] };
   const m = path.match(/^(testimony|audio|article)\/([^/?#]+)$/);
   if (m) return m[1] === 'testimony' ? { name: 'testimony', id: m[2] } : m[1] === 'audio' ? { name: 'audio', id: m[2] } : { name: 'article', id: m[2] };
   return { name: 'home' };
@@ -68,6 +73,8 @@ export function pathFor(route: Route): string {
       return `/testimony/${encodeURIComponent(route.id)}`;
     case 'audio':
       return `/audio/${encodeURIComponent(route.id)}`;
+    case 'writtenTestimony':
+      return `/written/${encodeURIComponent(route.id)}`;
     case 'article':
       return `/article/${encodeURIComponent(route.id)}`;
     case 'notificationSettings':

@@ -8,6 +8,7 @@ import type {
   Promotion,
   RadioConfig,
   Testimony,
+  WrittenTestimony,
 } from '@/types';
 
 export interface PageOptions {
@@ -56,4 +57,8 @@ export interface ContentRepository {
   getRadioConfig(): Promise<RadioConfig>;
   subscribeRadio(cb: (cfg: RadioConfig) => void, onError?: (e: unknown) => void): () => void;
   getAdotopocConfig(): Promise<AdotopocConfig>;
+  /** Published written testimonies, newest first (paged). */
+  getWrittenTestimonies(opts: PageOptions): Promise<Page<WrittenTestimony>>;
+  /** One published written testimony, or null when it is unpublished / removed. */
+  getWrittenTestimony(id: string): Promise<WrittenTestimony | null>;
 }

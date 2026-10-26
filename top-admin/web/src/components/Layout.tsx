@@ -6,6 +6,7 @@ import type { Route } from '../types';
 const NAV: { name: Route['name']; label: string }[] = [
   { name: 'dashboard', label: 'Dashboard' },
   { name: 'testimonies', label: 'Testimonies' },
+  { name: 'written', label: 'Written testimonies' },
   { name: 'live', label: 'Live stream' },
   { name: 'radio', label: 'TOP Radio' },
   { name: 'articles', label: 'Articles & Updates' },
@@ -20,7 +21,7 @@ const NAV: { name: Route['name']; label: string }[] = [
 ];
 
 export function Layout({ route, go, children }: { route: Route; go: (r: Route) => void; children: ReactNode }) {
-  const active = route.name === 'editor' ? 'testimonies' : route.name === 'articleEditor' ? 'articles' : route.name;
+  const active = route.name === 'editor' ? 'testimonies' : route.name === 'articleEditor' ? 'articles' : route.name === 'writtenEditor' ? 'written' : route.name;
   return (
     <div className="shell">
       <aside className="side">

@@ -31,6 +31,8 @@ const TestimonyDetailPage = named(() => import('./pages/TestimonyDetailPage'), '
 const LivePage = named(() => import('./pages/LivePage'), 'LivePage');
 const ListenPage = named(() => import('./pages/ListenPage'), 'ListenPage');
 const AudioTestimonyPage = named(() => import('./pages/AudioTestimonyPage'), 'AudioTestimonyPage');
+const WrittenTestimoniesPage = named(() => import('./pages/WrittenTestimoniesPage'), 'WrittenTestimoniesPage');
+const WrittenTestimonyPage = named(() => import('./pages/WrittenTestimonyPage'), 'WrittenTestimonyPage');
 const DownloadsPage = named(() => import('./pages/DownloadsPage'), 'DownloadsPage');
 const ShareTestimonyPage = named(() => import('./pages/ShareTestimonyPage'), 'ShareTestimonyPage');
 const SponsorPage = named(() => import('./pages/SponsorPage'), 'SponsorPage');
@@ -147,6 +149,12 @@ function Shell({ route }: { route: Route }) {
     case 'audio':
       page = <AudioTestimonyPage key={route.id} id={route.id} onBack={() => goBack({ name: 'listen' })} />;
       break;
+    case 'written':
+      page = <WrittenTestimoniesPage onBack={back} onOpen={(id: string) => navigate({ name: 'writtenTestimony', id })} />;
+      break;
+    case 'writtenTestimony':
+      page = <WrittenTestimonyPage key={route.id} id={route.id} onBack={() => goBack({ name: 'written' })} />;
+      break;
     case 'share':
       page = <ShareTestimonyPage onBack={back} />;
       break;
@@ -200,7 +208,7 @@ function Shell({ route }: { route: Route }) {
   return (
     <div className="app-shell">
       <SideNav current={route.name} isLive={!!live?.isLive} />
-      <main className="app-main" key={route.name === 'testimony' || route.name === 'audio' || route.name === 'article' ? `${route.name}:${route.id}` : route.name}>
+      <main className="app-main" key={route.name === 'testimony' || route.name === 'audio' || route.name === 'article' || route.name === 'writtenTestimony' ? `${route.name}:${route.id}` : route.name}>
         <OfflineBanner />
         <Suspense fallback={<PageFallback />}>{page}</Suspense>
       </main>
@@ -216,6 +224,7 @@ function Shell({ route }: { route: Route }) {
         onGoToRadio={go({ name: 'listen' })}
         onGoToAdotopoc={go({ name: 'adotopoc' })}
         onGoToArticles={go({ name: 'articles' })}
+        onGoToWritten={go({ name: 'written' })}
         onGoToPromotions={go({ name: 'promotions' })}
         onGoToLive={go({ name: 'live' })}
         onGoToTestimonies={go({ name: 'testimonies' })}

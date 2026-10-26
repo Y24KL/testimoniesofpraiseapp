@@ -18,13 +18,14 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { Skeleton } from '@/components/SkeletonCard';
 import { IconButton } from '@/components/TopBar';
 import { VideoCard } from '@/components/VideoCard';
+import { WrittenTestimonyCard } from '@/components/WrittenTestimonyCard';
 import { colors, gradients, radius, type as t } from '@/constants/theme';
 import { useDrawer } from '@/context/DrawerContext';
 import { useDownloads } from '@/downloads/DownloadsContext';
 import { useLive, useTestimonies } from '@/hooks/useContent';
 import { useVerificationOnForeground } from '@/hooks/useVerificationOnForeground';
 import { audioTrack, radioTrack } from '@/screens/ListenScreen';
-import type { Article, AudioTestimony, Promotion, RadioConfig, Testimony } from '@/types';
+import type { Article, AudioTestimony, Promotion, RadioConfig, Testimony, WrittenTestimony } from '@/types';
 import { messageFor } from '@/utils/errors';
 import { formatDate, formatDuration } from '@/utils/format';
 
@@ -111,12 +112,14 @@ export function HomeScreen() {
   const [radio, setRadio] = useState<RadioConfig | null>(null);
   const [audio, setAudio] = useState<AudioTestimony[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
+  const [written, setWritten] = useState<WrittenTestimony[]>([]);
 
   const loadExtras = useCallback(() => {
     // Secondary sections are best-effort: a failure hides the section instead of blocking Home.
     repo.getPromotions().then(setPromotions).catch(() => undefined);
     repo.getAudioTestimonies(3).then(setAudio).catch(() => undefined);
     repo.getArticles(5).then(setArticles).catch(() => undefined);
+    repo.getWrittenTestimonies({ limit: 2 }).then((p) => setWritten(p.items)).catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -250,6 +253,17 @@ export function HomeScreen() {
         ) : (
           <Text style={styles.empty}>{hero ? 'More testimonies are on the way.' : 'New testimonies will appear here as soon as they’re published.'}</Text>
         )}
+
+        {written.length > 0 ? (
+          <>
+            <SectionHeader title="Written testimonies" subtitle="Read what God has done" action="See all" onAction={() => nav.navigate('WrittenTestimonies')} />
+            <View style={{ marginHorizontal: 4 }}>
+              {written.map((w) => (
+                <WrittenTestimonyCard key={w.id} item={w} onPress={() => nav.navigate('WrittenTestimony', { id: w.id })} />
+              ))}
+            </View>
+          </>
+        ) : null}
 
         {audio.length > 0 ? (
           <>

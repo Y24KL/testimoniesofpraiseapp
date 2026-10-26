@@ -18,6 +18,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
       Articles: 'articles',
       ArticleDetails: 'article/:id',
       AudioTestimony: 'audio/:id',
+      WrittenTestimonies: 'written',
+      WrittenTestimony: 'written/:id',
     },
   },
 };

@@ -27,6 +27,7 @@ interface Props {
   onGoToRadio: () => void;
   onGoToAdotopoc: () => void;
   onGoToArticles: () => void;
+  onGoToWritten: () => void;
   onGoToPromotions: () => void;
   onGoToLive: () => void;
   onGoToTestimonies: () => void;
@@ -44,6 +45,7 @@ export function AppDrawer({
   onGoToRadio,
   onGoToAdotopoc,
   onGoToArticles,
+  onGoToWritten,
   onGoToPromotions,
   onGoToLive,
   onGoToTestimonies,
@@ -116,6 +118,14 @@ export function AppDrawer({
       ),
       iconBg: 'transparent',
       action: onGoToAdotopoc,
+    },
+    {
+      id: 'written',
+      title: 'Written Testimonies',
+      subtitle: 'Read Stories of Praise',
+      icon: <FileText size={18} color={colors.accent} />,
+      iconBg: 'rgba(245, 197, 66, 0.15)',
+      action: onGoToWritten,
     },
     {
       id: 'articles',

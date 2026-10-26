@@ -1,10 +1,11 @@
 import React from 'react';
-import { Bell, BookOpen, Globe, Heart, HandCoins, Megaphone, Search, Settings, User } from 'lucide-react';
+import { Bell, BookOpen, FileText, Globe, Heart, HandCoins, Megaphone, Search, Settings, User } from 'lucide-react';
 import { navigate, type Route } from '../router';
 import { TABS } from './BottomNavigation';
 
 const MORE: { route: Route; label: string; icon: React.FC<{ size?: number }> }[] = [
   { route: { name: 'search' }, label: 'Search', icon: Search },
+  { route: { name: 'written' }, label: 'Written testimonies', icon: FileText },
   { route: { name: 'articles' }, label: 'Articles', icon: BookOpen },
   { route: { name: 'adotopoc' }, label: 'ADOTOPOC', icon: Globe },
   { route: { name: 'promotions' }, label: 'Events', icon: Megaphone },

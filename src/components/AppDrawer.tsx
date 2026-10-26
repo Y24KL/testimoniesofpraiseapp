@@ -110,6 +110,15 @@ export function AppDrawer() {
       onPress: () => nav.navigate('Adotopoc'),
     },
     {
+      id: 'written',
+      title: 'Written Testimonies',
+      subtitle: 'Read Stories of Praise',
+      icon: 'document-text-outline',
+      iconColor: colors.accent,
+      iconBg: 'rgba(245, 197, 66, 0.15)',
+      onPress: () => nav.navigate('WrittenTestimonies'),
+    },
+    {
       id: 'articles',
       title: 'Articles & Insights',
       subtitle: 'Publications & Study',

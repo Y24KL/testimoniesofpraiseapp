@@ -30,6 +30,7 @@ import {
   normalizePromotion,
   normalizeRadio,
   normalizeTestimony,
+  normalizeWrittenTestimony,
 } from './normalize';
 import type { ContentRepository, PageOptions, CreateArticleInput } from './repository';
 
@@ -78,6 +79,8 @@ const tokenDocId = (t: string) => t.replace(/\//g, '_');
 export const firestoreRepository: ContentRepository = {
   getTestimonies: (o) => getPage(CONFIG.collections.testimonies, normalizeTestimony, o),
   getTestimony: (id) => getOne(CONFIG.collections.testimonies, id, normalizeTestimony),
+  getWrittenTestimonies: (o) => getPage(CONFIG.collections.writtenTestimonies, normalizeWrittenTestimony, { ...o, featuredOnly: false }),
+  getWrittenTestimony: (id) => getOne(CONFIG.collections.writtenTestimonies, id, normalizeWrittenTestimony),
 
   async getNotifications(max) {
     try {

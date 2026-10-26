@@ -28,7 +28,8 @@ import type { CommentMediaType, TestimonyComment } from '@/types';
  */
 export const commentsAvailable = CONFIG.backendMode === 'firestore';
 
-const parentCollection = (type: CommentMediaType) => (type === 'video' ? CONFIG.collections.testimonies : CONFIG.collections.audioTestimonies);
+const parentCollection = (type: CommentMediaType) =>
+  type === 'video' ? CONFIG.collections.testimonies : type === 'written' ? CONFIG.collections.writtenTestimonies : CONFIG.collections.audioTestimonies;
 const commentsCol = (type: CommentMediaType, mediaId: string) => collection(db, parentCollection(type), mediaId, 'comments');
 const commentRef = (type: CommentMediaType, mediaId: string, uid: string) => doc(db, parentCollection(type), mediaId, 'comments', uid);
 
@@ -43,7 +44,7 @@ function toComment(id: string, d: Record<string, unknown>): TestimonyComment {
     uid: String(d.uid ?? id),
     displayName: commenterName(d.displayName as string),
     text: String(d.text ?? ''),
-    mediaType: d.mediaType === 'audio' ? 'audio' : 'video',
+    mediaType: d.mediaType === 'audio' || d.mediaType === 'written' ? d.mediaType : 'video',
     mediaId: String(d.mediaId ?? ''),
     status: d.status === 'hidden' ? 'hidden' : 'visible',
     createdAt: iso(d.createdAt),

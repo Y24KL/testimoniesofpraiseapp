@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { repo } from '@/api';
 import { CommentsSection } from '@/components/CommentsSection';
@@ -16,7 +16,7 @@ import type { RootStackParamList } from '@/navigation/types';
 import type { Testimony } from '@/types';
 import { MESSAGES, messageFor, toAppError } from '@/utils/errors';
 import { formatDate, formatDuration } from '@/utils/format';
-import { shareMessage } from '@/utils/links';
+import { shareMediaUrl } from '@/utils/links';
 
 export function TestimonyDetailsScreen() {
   const nav = useNavigation();
@@ -75,7 +75,7 @@ export function TestimonyDetailsScreen() {
           {item.description ? <Text style={styles.desc}>{item.description}</Text> : null}
           <View style={{ gap: 12 }}>
             <DownloadButton kind="testimony" data={item} />
-            <PrimaryButton title="Share" icon="share-social-outline" variant="outline" onPress={() => void Share.share({ message: shareMessage(item.title) })} />
+            <PrimaryButton title="Share" icon="share-social-outline" variant="outline" onPress={() => void shareMediaUrl(item.title, item.videoUrl, 'video')} />
           </View>
           <CommentsSection type="video" mediaId={item.id} mediaTitle={item.title} />
         </ScrollView>

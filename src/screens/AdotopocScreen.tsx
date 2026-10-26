@@ -12,7 +12,7 @@ import { colors, gradients, radius, shadow, type as t } from '@/constants/theme'
 import type { AdotopocConfig } from '@/types';
 import { isWebUrl, openInExternalBrowser } from '@/utils/openExternal';
 
-const DEFAULT_VIDEO_URL = 'https://res.cloudinary.com/duw6xrnpn/video/upload/v1792135475/ADOTOP_LOGO_OUTRO_m1awjk.mp4';
+const DEFAULT_VIDEO_URL = 'https://topappstorage.b-cdn.net/video/ADOTOP_LOGO_OUTRO_m1awjk.mp4';
 const DEFAULT_PAGE_URL = 'https://testimoniesofpraiseweb.onrender.com/adotopoc';
 const LOGO = require('../../assets/LOG_xcvt3v.webp');
 

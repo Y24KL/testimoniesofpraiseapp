@@ -252,8 +252,31 @@ html { overscroll-behavior-y: none; }
 .onb-media, .onb-media > img, .onb-media > video, .onb-brand { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .onb-brand { background: radial-gradient(circle at 85% 0%, rgba(245, 197, 66, 0.18), transparent 45%), radial-gradient(circle at 0% 75%, rgba(122, 31, 162, 0.55), transparent 50%), linear-gradient(160deg, #5a0e82 0%, #2e0044 45%, #12001c 100%); }
 .onb-media > img, .onb-media > video { animation: fadeIn 0.6s ease both; }
-.onb-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18, 0, 28, 0.25) 0%, rgba(18, 0, 28, 0.72) 42%, rgba(18, 0, 28, 0.97) 100%); pointer-events: none; }
-.onb-copy, .onb-actions { text-shadow: 0 1px 12px rgba(18, 0, 28, 0.6); }
+/* Brand-tinted scrim: purple at the top (behind the logo), clear through the middle so the
+   montage shows, then deep purple under the text and buttons for readability. */
+.onb-scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(46, 0, 68, 0.72) 0%, rgba(46, 0, 68, 0.18) 16%, rgba(18, 0, 28, 0.08) 26%, rgba(18, 0, 28, 0.7) 42%, rgba(18, 0, 28, 0.92) 62%, #12001c 100%);
+}
+.onb-vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 80% at 50% 40%, transparent 55%, rgba(18, 0, 28, 0.55) 100%); }
+/* The montage fades in with a slow settle once it actually plays (no flash of a black frame). */
+.onb-media > video.onb-video { opacity: 0; transform: scale(1.06); transition: opacity 0.9s ease, transform 6s var(--ease); animation: none; }
+.onb-media > video.onb-video.is-ready { opacity: 1; transform: scale(1); }
+.onb-sound {
+  position: absolute;
+  z-index: 2;
+  top: calc(env(safe-area-inset-top) + 20px);
+  right: 20px;
+  background: rgba(18, 0, 28, 0.35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+}
+.onb-copy, .onb-actions { text-shadow: 0 2px 16px rgba(18, 0, 28, 0.75); }
 .onb-content {
   position: relative;
   z-index: 1;
@@ -270,17 +293,18 @@ html { overscroll-behavior-y: none; }
 .onb-copy { display: flex; flex-direction: column; gap: 10px; margin-top: auto; animation: rise 0.6s var(--ease) 0.1s both; }
 .onb-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 3px; color: var(--gold); }
 .onb-title { font-size: clamp(38px, 7vw, 60px); line-height: 1.04; font-weight: 800; letter-spacing: -0.5px; margin: 0; }
-.onb-quote { font-size: 15px; line-height: 1.55; color: var(--text-muted); margin: 6px 0 0; }
-.onb-attr { font-size: 13px; color: var(--text-subtle); font-style: italic; }
+.onb-quote { font-size: 15px; line-height: 1.55; color: rgba(255, 255, 255, 0.9); margin: 6px 0 0; }
+.onb-attr { font-size: 13px; color: rgba(255, 224, 138, 0.85); font-style: italic; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.chip { padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(245, 197, 66, 0.35); }
+.chip { padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; background: rgba(18, 0, 28, 0.35); border: 1px solid rgba(245, 197, 66, 0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .onb-actions { display: flex; flex-direction: column; gap: 12px; animation: rise 0.6s var(--ease) 0.2s both; }
 .onb-legal { font-size: 12px; color: var(--text-subtle); text-align: center; margin: 0; }
 .onb-signin { background: none; border: none; color: var(--text-muted); font-size: 15px; cursor: pointer; padding: 8px; }
 .onb-signin b { color: var(--gold); }
 @media (min-width: 900px) {
   .onb-content { padding-left: 64px; padding-right: 64px; max-width: 620px; }
-  .onb-scrim { background: linear-gradient(90deg, rgba(18, 0, 28, 0.97) 0%, rgba(18, 0, 28, 0.75) 40%, rgba(18, 0, 28, 0.15) 100%); }
+  /* Wide screens: text sits on the left, the montage plays clearly on the right. */
+  .onb-scrim { background: linear-gradient(90deg, rgba(18, 0, 28, 0.96) 0%, rgba(18, 0, 28, 0.78) 34%, rgba(46, 0, 68, 0.25) 62%, rgba(18, 0, 28, 0.05) 100%), linear-gradient(0deg, rgba(18, 0, 28, 0.6) 0%, transparent 30%); }
 }
 
 /* ---------- Home ---------- */

@@ -5,12 +5,14 @@ import { db } from '../api/firebase';
 import { isHls } from '../api/repository';
 import { ONBOARDING_MEDIA, resolveOnboardingMedia, type OnboardingMedia } from '../config/onboarding';
 
-const CACHE_KEY = 'top:onboarding-media:v1';
+// v2: older caches could hold "none" (no media) and would hide the default montage.
+const CACHE_KEY = 'top:onboarding-media:v2';
 
 function readCache(): OnboardingMedia | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
-    return raw ? (JSON.parse(raw) as OnboardingMedia) : null;
+    const m = raw ? (JSON.parse(raw) as OnboardingMedia) : null;
+    return m && m.type !== 'none' ? m : null;
   } catch {
     return null;
   }
@@ -26,13 +28,15 @@ export function useOnboardingMedia(): OnboardingMedia {
         if (!snap.exists()) return;
         const d = snap.data();
         const remote = resolveOnboardingMedia({ type: d.mediaType, url: d.mediaUrl, posterUrl: d.posterUrl, overlayOpacity: d.overlayOpacity });
+        if (remote.type === 'none') return; // an empty admin setting keeps the default montage
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify(remote));
         } catch {
           /* storage may be unavailable (private mode) */
         }
-        // Swap immediately only if nothing was showing, so the visual never changes mid-view.
-        if (alive) setMedia((cur) => (cur.type === 'none' ? remote : cur));
+        // An admin-chosen background replaces the default straight away; after that it never
+        // changes mid-view (later changes show on the next visit, from the cache).
+        if (alive) setMedia((cur) => (cur.url === ONBOARDING_MEDIA.url ? remote : cur));
       })
       .catch(() => undefined);
     return () => {
@@ -52,6 +56,18 @@ function Video({ media, onFail }: { media: OnboardingMedia; onFail: () => void }
   const ref = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(true);
   const [ready, setReady] = useState(false);
+
+  // Don't play (and download) the intro while the tab is in the background.
+  useEffect(() => {
+    const onVis = () => {
+      const v = ref.current;
+      if (!v) return;
+      if (document.hidden) v.pause();
+      else void v.play().catch(() => undefined);
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
 
   useEffect(() => {
     const v = ref.current;
@@ -95,14 +111,14 @@ function Video({ media, onFail }: { media: OnboardingMedia; onFail: () => void }
         aria-hidden="true"
         onPlaying={() => setReady(true)}
         onError={onFail}
-        style={{ opacity: ready ? 1 : media.posterUrl ? 1 : 0, transition: 'opacity 0.6s ease' }}
+        className={`onb-video${ready ? ' is-ready' : ''}`}
+        style={media.posterUrl ? { opacity: 1 } : undefined}
       />
       <button
         type="button"
-        className="icon-btn"
         onClick={() => setMuted((m) => !m)}
         aria-label={muted ? 'Unmute intro video' : 'Mute intro video'}
-        style={{ position: 'absolute', zIndex: 2, top: 'calc(env(safe-area-inset-top) + 20px)', right: 20, background: 'rgba(18,0,28,0.45)' }}
+        className="icon-btn onb-sound"
       >
         {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
       </button>
@@ -116,7 +132,8 @@ export function OnboardingBackdrop({ media }: { media: OnboardingMedia }) {
   const [optIn, setOptIn] = useState(false);
   useEffect(() => setFailed(false), [media.url]);
 
-  const hold = media.type === 'video' && !optIn && !!media.posterUrl && (prefersReducedMotion() || saveData());
+  // Data saver / slow connection / reduced motion: don't auto-download the video, offer a Play button.
+  const hold = media.type === 'video' && !optIn && (prefersReducedMotion() || saveData());
   const onFail = React.useCallback(() => setFailed(true), []);
 
   let content: React.ReactNode = null;
@@ -129,13 +146,13 @@ export function OnboardingBackdrop({ media }: { media: OnboardingMedia }) {
       <div className="onb-brand" />
       {content}
       {content ? <div className="onb-scrim" style={{ opacity: 0.45 + media.overlayOpacity * 0.55 }} /> : null}
+      {content ? <div className="onb-vignette" /> : null}
       {hold ? (
         <button
           type="button"
-          className="icon-btn"
           onClick={() => setOptIn(true)}
           aria-label="Play intro video"
-          style={{ position: 'absolute', zIndex: 2, top: 'calc(env(safe-area-inset-top) + 20px)', right: 20, background: 'rgba(18,0,28,0.45)' }}
+          className="icon-btn onb-sound"
         >
           <Play size={18} />
         </button>

@@ -9,7 +9,8 @@
  *
  * Or without a rebuild: Firestore document `settings/onboarding` { mediaType, mediaUrl, posterUrl,
  * overlayOpacity }, shared with the mobile app. See docs/ONBOARDING_MEDIA.md.
- * No URL configured = branded purple/gold background (no placeholder link on purpose).
+ * Nothing configured = the official Testimonies of Praise opening montage (Bunny CDN) below.
+ * A media URL that fails to load falls back to the branded purple/gold background.
  */
 export type OnboardingMediaType = 'image' | 'video' | 'none';
 
@@ -19,6 +20,9 @@ export interface OnboardingMedia {
   posterUrl?: string;
   overlayOpacity: number;
 }
+
+/** Official opening montage, used when neither the build nor settings/onboarding sets a URL. */
+export const DEFAULT_ONBOARDING_VIDEO = 'https://topappstorage.b-cdn.net/video/TESTIMONIES%20OF%20PRAISE%20FINAL%20OPENING%20MONTAGE.mp4';
 
 const VIDEO_EXT = /\.(mp4|m4v|mov|webm|m3u8)(\?|#|$)/i;
 
@@ -38,9 +42,10 @@ export function resolveOnboardingMedia(raw: {
   return { type, url, posterUrl, overlayOpacity };
 }
 
+const envUrl = (import.meta.env.VITE_ONBOARDING_MEDIA_URL as string | undefined)?.trim();
 export const ONBOARDING_MEDIA = resolveOnboardingMedia({
-  type: import.meta.env.VITE_ONBOARDING_MEDIA_TYPE as string | undefined,
-  url: import.meta.env.VITE_ONBOARDING_MEDIA_URL as string | undefined,
+  type: envUrl ? (import.meta.env.VITE_ONBOARDING_MEDIA_TYPE as string | undefined) : 'video',
+  url: envUrl || DEFAULT_ONBOARDING_VIDEO,
   posterUrl: import.meta.env.VITE_ONBOARDING_POSTER_URL as string | undefined,
   overlayOpacity: import.meta.env.VITE_ONBOARDING_OVERLAY as string | undefined,
 });

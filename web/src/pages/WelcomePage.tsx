@@ -47,7 +47,7 @@ export function WelcomePage({ onGetStarted, onSignIn }: Props) {
             <br />
             of Praise
           </h1>
-          <p className="onb-quote">“No one ever praises God and goes away empty, He always blesses you for praising Him.”</p>
+          <p className="onb-quote">“Nobody ever praised God and went away empty, He always blesses you for praising Him.”</p>
           <span className="onb-attr">Rev. Chris Oyakhilome DSc. DSc. DD</span>
           <div className="chips">
             {FEATURES.map((f) => (

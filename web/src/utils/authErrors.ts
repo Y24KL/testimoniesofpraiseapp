@@ -2,7 +2,12 @@
 export function googleErrorMessage(e: unknown): string | null {
   const code = (e as { code?: string })?.code ?? '';
   if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request' || code === 'auth/user-cancelled') return null;
-  if (code === 'auth/unauthorized-domain') return 'Google sign-in is not enabled for this web address yet. Please use email for now.';
+  if (code === 'auth/unauthorized-domain') {
+    // Firebase Console → Authentication → Settings → Authorized domains must list this host.
+    const host = typeof window !== 'undefined' ? window.location.hostname : 'this web address';
+    console.warn(`[auth] Google sign-in blocked: add "${host}" to Firebase Authentication → Settings → Authorized domains.`);
+    return `Google sign-in isn't switched on for ${host} yet. Please use email for now.`;
+  }
   if (code === 'auth/network-request-failed') return 'No connection. Check your internet and try again.';
   if (code === 'auth/account-exists-with-different-credential') return 'This email is already registered with a password. Sign in with email instead.';
   return 'Could not sign in with Google. Please try again or use email.';

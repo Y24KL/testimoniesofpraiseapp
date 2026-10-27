@@ -157,6 +157,7 @@ export function WrittenTestimoniesPage({ onBack, onOpen }: Props) {
               <button
                 key={w.id}
                 type="button"
+                className="written-card"
                 onClick={() => onOpen(w.id)}
                 aria-label={`Read ${w.title}${w.authorName ? ` by ${w.authorName}` : ''}`}
                 style={{ textAlign: 'left', cursor: 'pointer', color: 'inherit', font: 'inherit', display: 'flex', flexDirection: 'column', gap: 10, padding: 16, borderRadius: 20, background: 'var(--surface)', border: '1px solid rgba(245,197,66,0.22)' }}

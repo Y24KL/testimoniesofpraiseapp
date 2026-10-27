@@ -46,7 +46,7 @@
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
-html, body { -webkit-overflow-scrolling: touch; overscroll-behavior-y: none; }
+html { overscroll-behavior-y: none; }
 
 /* ---------- App shell ---------- */
 .app-shell { display: flex; min-height: 100dvh; width: 100%; background: var(--bg); }
@@ -416,6 +416,68 @@ html, body { -webkit-overflow-scrolling: touch; overscroll-behavior-y: none; }
 .err-box { display: flex; gap: 8px; align-items: flex-start; padding: 12px; border-radius: 12px; background: rgba(255, 107, 127, 0.1); border: 1px solid rgba(255, 107, 127, 0.35); font-size: 13px; color: var(--text); }
 .divider { display: flex; align-items: center; gap: 12px; color: var(--text-subtle); font-size: 12px; }
 .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border-soft); }
+
+/* ---------- Motion ----------
+   Small, GPU-friendly animations (opacity + transform only). All of it is switched off for people
+   who ask for reduced motion (block below). */
+@keyframes pageIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes popIn { 0% { opacity: 0; transform: scale(0.92); } 60% { opacity: 1; transform: scale(1.02); } 100% { opacity: 1; transform: none; } }
+@keyframes sweep { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes glow { 0%, 100% { filter: drop-shadow(0 0 0 rgba(245, 197, 66, 0)); } 50% { filter: drop-shadow(0 0 14px rgba(245, 197, 66, 0.45)); } }
+@keyframes goldShine { 0% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+/* Every page slides in gently when you navigate (pages remount per route). */
+.app-main > [data-page] { animation: pageIn 0.38s var(--ease) both; }
+
+/* Lists and grids appear one after another instead of all at once. */
+.media-card, .audio-row, .tile, .comment, .rail > *, .written-card { animation: rise 0.45s var(--ease) both; }
+:is(.media-card, .audio-row, .tile, .comment, .rail > *, .written-card):nth-child(2) { animation-delay: 0.04s; }
+:is(.media-card, .audio-row, .tile, .comment, .rail > *, .written-card):nth-child(3) { animation-delay: 0.08s; }
+:is(.media-card, .audio-row, .tile, .comment, .rail > *, .written-card):nth-child(4) { animation-delay: 0.12s; }
+:is(.media-card, .audio-row, .tile, .comment, .rail > *, .written-card):nth-child(5) { animation-delay: 0.16s; }
+:is(.media-card, .audio-row, .tile, .comment, .rail > *, .written-card):nth-child(6) { animation-delay: 0.2s; }
+:is(.media-card, .audio-row, .tile, .comment, .rail > *, .written-card):nth-child(n + 7) { animation-delay: 0.24s; }
+
+/* Cards lift on hover (mouse / trackpad only, so taps on phones don't leave them raised). */
+@media (hover: hover) {
+  .media-card, .audio-row, .written-card { transition: transform 0.2s var(--ease), box-shadow 0.2s ease, border-color 0.2s ease; }
+  .media-card:hover, .written-card:hover { transform: translateY(-3px); box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35); }
+  .audio-row:hover { transform: translateY(-2px); border-color: rgba(245, 197, 66, 0.4); }
+  .btn-gold:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(245, 197, 66, 0.32); }
+}
+.btn { transition: transform 0.12s var(--ease), filter 0.15s ease, background 0.15s ease, box-shadow 0.2s ease; }
+.btn:focus-visible, .icon-btn:focus-visible, .link-btn:focus-visible, .tile:focus-visible, .media-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+
+/* Loading placeholders get a moving sheen instead of blinking. */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-raised) 0%, rgba(122, 31, 162, 0.28) 50%, var(--surface-raised) 100%);
+  background-size: 200% 100%;
+  animation: sweep 1.4s ease-in-out infinite;
+}
+
+/* Sign-in / sign-up: the card's parts arrive in sequence and the logo glows softly once. */
+.auth-card > * { animation: rise 0.45s var(--ease) both; }
+.auth-card > :nth-child(2) { animation-delay: 0.05s; }
+.auth-card > :nth-child(3) { animation-delay: 0.1s; }
+.auth-card > :nth-child(4) { animation-delay: 0.15s; }
+.auth-card > :nth-child(n + 5) { animation-delay: 0.2s; }
+.auth-head img { animation: popIn 0.6s var(--ease) both, glow 2.4s ease-in-out 0.6s 1; }
+.err-box { animation: popIn 0.3s var(--ease) both; }
+
+/* Welcome screen: the gold eyebrow shimmers once as the page opens. */
+.onb-eyebrow {
+  background: linear-gradient(90deg, var(--gold) 0%, #fff4c7 50%, var(--gold) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: goldShine 1.6s ease 0.5s both;
+}
+
+/* Sections fade up as they scroll into view (browsers that support scroll-driven animations). */
+@supports (animation-timeline: view()) {
+  .section-head { animation: rise linear both; animation-timeline: view(); animation-range: entry 0% entry 60%; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }

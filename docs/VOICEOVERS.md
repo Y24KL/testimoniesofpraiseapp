@@ -62,4 +62,3 @@ Model: `eleven_multilingual_v2` (listed as available by ElevenLabs `/v1/models`)
 - **Replay from Settings/Help:** the tour can only start for a brand-new account.
 - **Cross-device tour state:** completion is stored on the device only. The remote record is a separate step.
 - **Dynamic speech (assistant responses):** no endpoint yet. It needs a server-side ElevenLabs call with limits.
-- **Background music:** not included. It needs a licence before any track is used.

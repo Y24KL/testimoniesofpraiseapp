@@ -8,14 +8,18 @@ import { Logo } from '@/components/Logo';
 import { useAuth } from '@/auth/AuthContext';
 import { colors, gradients, type as t } from '@/constants/theme';
 import { clearNewAccount } from '@/onboarding/welcome';
+import { useVoiceover } from '@/voiceover/VoiceoverProvider';
 
 /** Shown exactly once, right after a brand-new account is created (email sign-up or a first-time Google sign-in). */
 export function FirstTimeWelcomeScreen() {
   const { user, clearNewAccount: clearInMemory } = useAuth();
+  const { startTutorial } = useVoiceover();
 
+  // Only brand-new accounts reach this screen, so the welcome tour starts here and nowhere else.
   const done = () => {
     if (user) void clearNewAccount(user.uid);
     clearInMemory();
+    startTutorial();
   };
 
   return (

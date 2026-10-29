@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
+import { useFeatureVoiceover } from '@/voiceover/useFeatureVoiceover';
 import { repo } from '@/api';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -18,6 +19,7 @@ const ALL = 'All';
 
 /** Library of published written testimonies: search, category chips, pull-to-refresh, paging. */
 export function WrittenTestimoniesScreen() {
+  useFeatureVoiceover('feature.readTestimonies');
   const nav = useNavigation();
   const [items, setItems] = useState<WrittenTestimony[]>([]);
   const [cursor, setCursor] = useState<unknown>(undefined);

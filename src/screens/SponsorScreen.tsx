@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useFeatureVoiceover } from '@/voiceover/useFeatureVoiceover';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Clipboard from 'expo-clipboard';
@@ -40,6 +41,7 @@ function CopyRow({ label, value }: { label: string; value: string }) {
 }
 
 export function SponsorScreen() {
+  useFeatureVoiceover('feature.sponsor');
   const nav = useNavigation();
   const { user } = useAuth();
   const [amount, setAmount] = useState('');

@@ -17,6 +17,8 @@ import { AppDrawer } from '@/components/AppDrawer';
 import { DrawerProvider } from '@/context/DrawerContext';
 import { RootNavigator } from '@/navigation/RootNavigator';
 import { usePushLifecycle } from '@/notifications/usePushLifecycle';
+import { VoiceoverProvider } from '@/voiceover/VoiceoverProvider';
+import { TutorialOverlay } from '@/voiceover/TutorialOverlay';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -66,6 +68,7 @@ function Shell() {
       <DrawerProvider>
         <RootNavigator />
         <AppDrawer />
+        <TutorialOverlay />
       </DrawerProvider>
     </NavigationContainer>
   );
@@ -79,7 +82,9 @@ export default function App() {
         <AppFlagsProvider>
           <DownloadsProvider>
             <AudioPlayerProvider>
-              <Shell />
+              <VoiceoverProvider>
+                <Shell />
+              </VoiceoverProvider>
             </AudioPlayerProvider>
           </DownloadsProvider>
         </AppFlagsProvider>

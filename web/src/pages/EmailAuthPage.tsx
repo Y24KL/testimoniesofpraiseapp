@@ -4,6 +4,8 @@ import { colors, radius } from '../theme';
 import { Logo } from '../components/Logo';
 import { TextField } from '../components/TextField';
 import { GoogleIcon } from '../components/GoogleIcon';
+import { TitlePicker } from '../components/TitlePicker';
+import { validateProfile, type ProfileTitle, type ValidProfile } from '../profile/validation';
 import { useAuth } from '../context/AuthContext';
 import { emailAuthMessage, googleErrorMessage } from '../utils/authErrors';
 
@@ -25,6 +27,9 @@ const PASSWORD_RULES = [
 export function EmailAuthPage({ mode, onModeChange, onBack, onForgotPassword }: Props) {
   const { signInWithEmail, register, signInWithGoogle } = useAuth();
   const [fullName, setFullName] = useState('');
+  const [title, setTitle] = useState('');
+  const [zone, setZone] = useState('');
+  const [church, setChurch] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -35,6 +40,9 @@ export function EmailAuthPage({ mode, onModeChange, onBack, onForgotPassword }: 
 
   const signup = mode === 'signup';
   const mismatch = signup && confirm.length > 0 && password !== confirm;
+  // Inline profile errors appear after the first submit attempt.
+  const signupCheck = signup && submitted ? validateProfile({ title, fullName, zone, church }) : null;
+  const signupErrors = signupCheck && !signupCheck.ok ? signupCheck.errors : {};
 
   useEffect(() => {
     setError(null);
@@ -48,9 +56,13 @@ export function EmailAuthPage({ mode, onModeChange, onBack, onForgotPassword }: 
     setError(null);
 
     const emailTrim = email.trim();
+    let profile: ValidProfile | undefined;
     if (!emailTrim || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailTrim)) return setError('Please enter a valid email address.');
     if (signup) {
-      if (!fullName.trim()) return setError('Please enter your full name.');
+      // Checked before the account exists, so nothing incomplete is created.
+      const checked = validateProfile({ title, fullName, zone, church });
+      if (!checked.ok) return setError(Object.values(checked.errors)[0] ?? 'Check your details.');
+      profile = checked.value;
       if (!PASSWORD_RULES.every((r) => r.test(password))) return setError('Your password does not meet the requirements below.');
       if (password !== confirm) return setError('Passwords do not match.');
     } else if (!password) {
@@ -59,7 +71,7 @@ export function EmailAuthPage({ mode, onModeChange, onBack, onForgotPassword }: 
 
     setBusy(true);
     try {
-      if (signup) await register(fullName, emailTrim, password);
+      if (signup) await register(fullName, emailTrim, password, profile);
       else await signInWithEmail(emailTrim, password);
     } catch (err) {
       if (import.meta.env.DEV) console.error('Auth error:', err);
@@ -106,7 +118,10 @@ export function EmailAuthPage({ mode, onModeChange, onBack, onForgotPassword }: 
         </div>
 
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} noValidate>
-          {signup && <TextField label="Full name" value={fullName} onChange={setFullName} autoComplete="name" />}
+          {signup && <TextField label="Full name" value={fullName} onChange={setFullName} autoComplete="name" error={signupErrors.fullName} />}
+          {signup && <TitlePicker value={title} onChange={(t: ProfileTitle) => setTitle(t)} error={signupErrors.title} />}
+          {signup && <TextField label="Zone" value={zone} onChange={setZone} placeholder="e.g. Lagos Zone 1" error={signupErrors.zone} />}
+          {signup && <TextField label="Church" value={church} onChange={setChurch} placeholder="e.g. Christ Embassy Lagos" error={signupErrors.church} />}
           <TextField label="Email" type="email" value={email} onChange={setEmail} autoComplete="email" />
           <TextField label="Password" secure value={password} onChange={setPassword} autoComplete={signup ? 'new-password' : 'current-password'} />
 

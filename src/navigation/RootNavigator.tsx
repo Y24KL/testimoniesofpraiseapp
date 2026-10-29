@@ -8,6 +8,7 @@ import { ForgotPasswordScreen } from '@/screens/ForgotPasswordScreen';
 import { VerifyEmailScreen } from '@/screens/VerifyEmailScreen';
 import { NotificationPrimerScreen } from '@/screens/NotificationPrimerScreen';
 import { FirstTimeWelcomeScreen } from '@/screens/FirstTimeWelcomeScreen';
+import { ProfileCompletionScreen } from '@/screens/ProfileCompletionScreen';
 import { NotificationSettingsScreen } from '@/screens/NotificationSettingsScreen';
 import { NotificationsScreen } from '@/screens/NotificationsScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
@@ -29,7 +30,7 @@ import type { RootStackParamList } from './types';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
-  const { user, isSessionVerified, isNewAccount } = useAuth();
+  const { user, isSessionVerified, isNewAccount, needsProfile } = useAuth();
   const { primerSeen } = useAppFlags();
 
   const pendingWelcome = Boolean(user && isSessionVerified && isNewAccount);
@@ -52,6 +53,12 @@ export function RootNavigator() {
         <Stack.Screen
           name="VerifyEmail"
           component={VerifyEmailScreen}
+          options={{ animation: 'fade' }}
+        />
+      ) : needsProfile ? (
+        <Stack.Screen
+          name="ProfileCompletion"
+          component={ProfileCompletionScreen}
           options={{ animation: 'fade' }}
         />
       ) : pendingWelcome ? (

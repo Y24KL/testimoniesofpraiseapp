@@ -18,6 +18,7 @@ import { colors, gradients } from './theme';
 // code-split and fetched on first visit.
 import { HomePage } from './pages/HomePage';
 import { WelcomePage } from './pages/WelcomePage';
+import { ProfileCompletionPage } from './pages/ProfileCompletionPage';
 
 const named = <K extends string>(load: () => Promise<Record<K, React.ComponentType<any>>>, key: K) =>
   lazy(() => load().then((m) => ({ default: m[key] })));
@@ -239,7 +240,7 @@ function Shell({ route }: { route: Route }) {
 }
 
 function AppContent() {
-  const { user, initializing, isNewAccount } = useAuth();
+  const { user, initializing, isNewAccount, profileChecked, needsProfile } = useAuth();
   const route = useRoute();
   const [primerSeen, setPrimerSeen] = useState<boolean>(() => {
     try {
@@ -263,10 +264,12 @@ function AppContent() {
     navigate(target && !isAuthRoute(target) ? target : { name: 'home' }, { replace: true });
   }, [user, route]);
 
-  if (initializing) return <Splash />;
+  // Wait for the signed-in user's profile status too, so the app never flashes before the form.
+  if (initializing || !profileChecked) return <Splash />;
 
   let content: React.ReactNode;
   if (!user) content = <SignedOut route={route} />;
+  else if (needsProfile) content = <ProfileCompletionPage />;
   else if (isNewAccount) content = <FirstTimeWelcomePage onDone={() => {}} />;
   else if (!primerSeen) content = <NotificationPrimerPage onDone={() => setPrimerSeen(true)} />;
   else content = <Shell route={route} />;

@@ -5,6 +5,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
+import { TitlePicker } from '@/components/TitlePicker';
+import { validateProfile, type ValidProfile } from '@/profile/validation';
 import { Logo } from '@/components/Logo';
 import { TopBar } from '@/components/TopBar';
 import { useAuth } from '@/auth/AuthContext';
@@ -19,6 +21,9 @@ export function EmailAuthScreen() {
   const { signInWithEmail, register } = useAuth();
   const [mode, setMode] = useState<'signin' | 'signup'>(route.params?.mode ?? 'signin');
   const [fullName, setFullName] = useState('');
+  const [title, setTitle] = useState('');
+  const [zone, setZone] = useState('');
+  const [church, setChurch] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -27,14 +32,21 @@ export function EmailAuthScreen() {
   const [submitted, setSubmitted] = useState(false);
 
   const signup = mode === 'signup';
+  // Inline profile errors appear after the first attempt to submit.
+  const profileCheck = signup && submitted ? validateProfile({ title, fullName, zone, church }) : null;
+  const signupProfileErrors = profileCheck && !profileCheck.ok ? profileCheck.errors : {};
   const mismatch = signup && confirm.length > 0 && password !== confirm;
 
   const submit = async () => {
     setSubmitted(true);
     setError(null);
     if (!isValidEmail(email)) return setError('Please enter a valid email address.');
+    let profile: ValidProfile | undefined;
     if (signup) {
-      if (!fullName.trim()) return setError('Please enter your full name.');
+      // Checked before the account exists, so nothing incomplete is created.
+      const checked = validateProfile({ title, fullName, zone, church });
+      if (!checked.ok) return setError(Object.values(checked.errors)[0] ?? 'Check your details.');
+      profile = checked.value;
       if (!isStrongPassword(password)) return setError('Your password does not meet the requirements below.');
       if (password !== confirm) return setError('Passwords do not match.'); // account is NOT created
     } else if (!password) {
@@ -42,7 +54,7 @@ export function EmailAuthScreen() {
     }
     setBusy(true);
     try {
-      if (signup) await register(fullName, email, password);
+      if (signup) await register(fullName, email, password, profile);
       else await signInWithEmail(email, password);
       // Navigation happens automatically when the auth state changes.
     } catch (e) {
@@ -76,7 +88,10 @@ export function EmailAuthScreen() {
             ))}
           </View>
 
-          {signup ? <TextField label="Full name" value={fullName} onChangeText={setFullName} autoCapitalize="words" textContentType="name" autoComplete="name" /> : null}
+          {signup ? <TextField label="Full name" value={fullName} onChangeText={setFullName} autoCapitalize="words" textContentType="name" autoComplete="name" error={signupProfileErrors.fullName} /> : null}
+          {signup ? <TitlePicker value={title} onChange={setTitle} error={signupProfileErrors.title} /> : null}
+          {signup ? <TextField label="Zone" value={zone} onChangeText={setZone} autoCapitalize="words" placeholder="e.g. Lagos Zone 1" error={signupProfileErrors.zone} /> : null}
+          {signup ? <TextField label="Church" value={church} onChangeText={setChurch} autoCapitalize="words" placeholder="e.g. Christ Embassy Lagos" error={signupProfileErrors.church} /> : null}
           <TextField label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" textContentType="emailAddress" autoComplete="email" />
           <TextField label="Password" value={password} onChangeText={setPassword} secure autoCapitalize="none" textContentType={signup ? 'newPassword' : 'password'} autoComplete={signup ? 'new-password' : 'current-password'} />
 

@@ -48,6 +48,14 @@ Model: `eleven_multilingual_v2` (listed as available by ElevenLabs `/v1/models`)
 - Narration stops when the user signs out, when the app leaves the foreground, or when the tour is skipped or finished.
 - If audio is missing, the screen still works; the caption text is shown where available.
 
+## Background music (welcome tour)
+
+- Track: `assets/audio/tutorial-bed.mp3`, the team's own recording (ownership confirmed by the project owner).
+- It fades in when the tour starts, drops to a lower level while narration speaks (`TUTORIAL_MUSIC` in `src/voiceover/logic.ts`), and stops at once on Skip, Finish, Mute or sign-out.
+- It never plays while TOP Radio or a testimony is playing.
+- To replace it, put the new file at the same path (or change the `require` in `VoiceoverProvider.tsx`). Only use music you own or are licensed to use in the app.
+- The file is bundled into the app (about 5.6 MB), so a new native build is needed for it to appear in store builds.
+
 ## Not yet built
 
 - **Web:** the tour and narration are not implemented for the website yet.

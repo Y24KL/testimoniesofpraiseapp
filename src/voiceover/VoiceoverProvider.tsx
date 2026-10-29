@@ -6,7 +6,10 @@ import { useVideoPlayer, type VideoSource } from 'expo-video';
 import { useAuth } from '@/auth/AuthContext';
 import { useAudioPlayer } from '@/audio/AudioPlayerContext';
 import { VOICEOVERS, type VoiceoverId } from './manifest';
-import { captionFor, decidePlay } from './logic';
+import { captionFor, decidePlay, musicTarget } from './logic';
+
+// The user's own recording, played quietly under the welcome tour. Loaded only when the tour starts.
+const TUTORIAL_BED = require('../../assets/audio/tutorial-bed.mp3');
 import { TUTORIAL_STEPS } from './tutorial';
 
 const ENABLED_KEY = 'top:voiceover-enabled';
@@ -58,6 +61,15 @@ export function VoiceoverProvider({ children }: { children: React.ReactNode }) {
     p.staysActiveInBackground = false;
   });
   const { status } = useEvent(player, 'statusChange', { status: player.status });
+  // Background music: its own player, so it never shares a player with narration, radio or testimonies.
+  const music = useVideoPlayer(null as unknown as VideoSource, (p) => {
+    p.loop = true;
+    p.volume = 0;
+    p.audioMixingMode = 'mixWithOthers';
+  });
+  const musicStarted = useRef(false);
+  const musicLevel = useRef(0);
+  const fadeTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [enabled, setEnabledState] = useState(true);
   const [playing, setPlaying] = useState<VoiceoverId | null>(null);
@@ -164,6 +176,65 @@ export function VoiceoverProvider({ children }: { children: React.ReactNode }) {
     });
     return () => sub.remove();
   }, [stopNow]);
+
+  // Music follows the tour: it fades in when the tour starts, ducks under narration, and stops at once
+  // when the tour ends or voice guidance is muted. Nothing plays over TOP Radio or a testimony.
+  const clearFade = useCallback(() => {
+    if (fadeTimer.current) clearInterval(fadeTimer.current);
+    fadeTimer.current = null;
+  }, []);
+  const fadeMusic = useCallback(
+    (target: number, ms: number) => {
+      clearFade();
+      const from = musicLevel.current;
+      const steps = Math.max(1, Math.round(ms / 50));
+      let i = 0;
+      fadeTimer.current = setInterval(() => {
+        i += 1;
+        musicLevel.current = from + (target - from) * (i / steps);
+        try {
+          music.volume = musicLevel.current;
+        } catch {
+          /* player released */
+        }
+        if (i >= steps) clearFade();
+      }, 50);
+    },
+    [music, clearFade],
+  );
+  useEffect(() => {
+    const target = musicTarget({
+      tourActive: tutorial.active,
+      enabled,
+      narrating: playing !== null,
+      mainAudioBusy: mainBusyRef.current,
+    });
+    if (target > 0) {
+      if (!musicStarted.current) {
+        try {
+          music.replace(TUTORIAL_BED);
+          music.volume = 0;
+          music.play();
+        } catch {
+          return; // no music is better than a broken tour
+        }
+        musicStarted.current = true;
+      }
+      fadeMusic(target, target > musicLevel.current ? 1200 : 400);
+      return;
+    }
+    // Silence now: no fade for a stop, so Skip, Finish and Mute take effect immediately.
+    clearFade();
+    musicLevel.current = 0;
+    try {
+      music.volume = 0;
+      music.pause();
+    } catch {
+      /* player released */
+    }
+    musicStarted.current = false;
+  }, [tutorial.active, enabled, playing, main.status, music, fadeMusic, clearFade]);
+  useEffect(() => () => clearFade(), [clearFade]);
 
   // Tutorial controls. Each step's narration starts only from a deliberate Next/Back/Start action.
   const playStep = useCallback(

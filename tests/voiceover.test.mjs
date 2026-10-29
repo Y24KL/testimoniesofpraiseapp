@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const { VOICEOVERS, VOICEOVER_CONFIG } = await import('../src/voiceover/manifest.ts');
-const { playableUrl, captionFor, cacheKey, decidePlay } = await import('../src/voiceover/logic.ts');
+const { playableUrl, captionFor, cacheKey, decidePlay, musicTarget, TUTORIAL_MUSIC } = await import('../src/voiceover/logic.ts');
 const { TUTORIAL_STEPS } = await import('../src/voiceover/tutorial.ts');
 
 let n = 0;
@@ -57,5 +57,15 @@ n += 6;
 assert.deepEqual(decidePlay(entry({ id: 'tutorial.live' }), { ...idle, tutorialActive: true }).action, 'play');
 assert.equal(decidePlay(entry({ id: 'tutorial.live' }), { ...idle, tutorialActive: true, mainAudioBusy: true }).reason, 'main-audio-busy');
 n += 2;
+
+// Background music: only under an active, unmuted tour, quieter while narration speaks, never over radio.
+const tour = { tourActive: true, enabled: true, narrating: false, mainAudioBusy: false };
+assert.equal(musicTarget(tour), TUTORIAL_MUSIC.idle);
+assert.equal(musicTarget({ ...tour, narrating: true }), TUTORIAL_MUSIC.ducked);
+assert.ok(TUTORIAL_MUSIC.ducked < TUTORIAL_MUSIC.idle, 'music must duck under narration');
+assert.equal(musicTarget({ ...tour, tourActive: false }), 0, 'silent when the tour is closed');
+assert.equal(musicTarget({ ...tour, enabled: false }), 0, 'muted when voice guidance is off');
+assert.equal(musicTarget({ ...tour, mainAudioBusy: true }), 0, 'never over TOP Radio or a testimony');
+n += 6;
 
 console.log(`voiceover rules: ${n} assertions passed`);

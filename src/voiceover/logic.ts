@@ -44,3 +44,15 @@ export function decidePlay(
   return { action: 'play', url };
 }
 
+
+/**
+ * Background music under the welcome tour (the user's own recording, assets/audio/tutorial-bed.mp3).
+ * Levels are 0..1 player volume. It is quieter while narration speaks, so the words stay clear.
+ */
+export const TUTORIAL_MUSIC = { idle: 0.3, ducked: 0.08 } as const;
+
+/** The music level to aim for now. 0 means silent (tour closed, muted, or the radio/testimony is playing). */
+export function musicTarget(state: { tourActive: boolean; enabled: boolean; narrating: boolean; mainAudioBusy: boolean }): number {
+  if (!state.tourActive || !state.enabled || state.mainAudioBusy) return 0;
+  return state.narrating ? TUTORIAL_MUSIC.ducked : TUTORIAL_MUSIC.idle;
+}

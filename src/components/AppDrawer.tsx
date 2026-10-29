@@ -89,8 +89,17 @@ export function AppDrawer() {
 
   const menuItems: MenuItem[] = [
     {
+      id: 'live',
+      title: 'Click to watch Live',
+      subtitle: 'Livestream & Live Chat',
+      icon: 'videocam-outline',
+      iconColor: colors.live,
+      iconBg: 'rgba(255, 59, 78, 0.15)',
+      onPress: () => nav.navigate('Tabs', { screen: 'Live' }),
+    },
+    {
       id: 'radio',
-      title: 'TOP Radio',
+      title: 'T.O.P on Loveworld Radio',
       subtitle: '24/7 Live Audio Stream',
       icon: 'radio-outline',
       iconColor: colors.accent,
@@ -102,7 +111,7 @@ export function AppDrawer() {
     },
     {
       id: 'adotopoc',
-      title: 'ADOTOPOC',
+      title: 'ADOTOPOC Resource Center',
       subtitle: 'Resource Center & Media',
       customImage: require('../../assets/LOG_xcvt3v.webp'),
 
@@ -111,12 +120,30 @@ export function AppDrawer() {
     },
     {
       id: 'written',
-      title: 'Written Testimonies',
+      title: 'Read Testimonies',
       subtitle: 'Read Stories of Praise',
       icon: 'document-text-outline',
       iconColor: colors.accent,
       iconBg: 'rgba(245, 197, 66, 0.15)',
       onPress: () => nav.navigate('WrittenTestimonies'),
+    },
+    {
+      id: 'testimonies',
+      title: 'Watch powerful Testimonies',
+      subtitle: 'Praise Video Archive',
+      icon: 'play-circle-outline',
+      iconColor: colors.accent,
+      iconBg: 'rgba(245, 197, 66, 0.15)',
+      onPress: () => nav.navigate('Tabs', { screen: 'Testimonies' }),
+    },
+    {
+      id: 'sponsor',
+      title: 'Sponsor Testimonies of Praise show',
+      subtitle: 'Partner & support the ministry',
+      icon: 'heart-outline',
+      iconColor: colors.live,
+      iconBg: 'rgba(255, 59, 78, 0.15)',
+      onPress: () => nav.navigate('Sponsor'),
     },
     {
       id: 'articles',
@@ -137,24 +164,6 @@ export function AppDrawer() {
       onPress: () => nav.navigate('Promotions'),
     },
     {
-      id: 'live',
-      title: 'Watch Live',
-      subtitle: 'Livestream & Live Chat',
-      icon: 'videocam-outline',
-      iconColor: colors.live,
-      iconBg: 'rgba(255, 59, 78, 0.15)',
-      onPress: () => nav.navigate('Tabs', { screen: 'Live' }),
-    },
-    {
-      id: 'testimonies',
-      title: 'Testimonies',
-      subtitle: 'Praise Video Archive',
-      icon: 'play-circle-outline',
-      iconColor: colors.accent,
-      iconBg: 'rgba(245, 197, 66, 0.15)',
-      onPress: () => nav.navigate('Tabs', { screen: 'Testimonies' }),
-    },
-    {
       id: 'share',
       title: 'Share Testimony',
       subtitle: 'Send your praise report',
@@ -162,15 +171,6 @@ export function AppDrawer() {
       iconColor: colors.primaryLight,
       iconBg: 'rgba(186, 104, 200, 0.2)',
       onPress: () => nav.navigate('ShareTestimony'),
-    },
-    {
-      id: 'sponsor',
-      title: 'Sponsor TOP',
-      subtitle: 'Partner & support the ministry',
-      icon: 'heart-outline',
-      iconColor: colors.live,
-      iconBg: 'rgba(255, 59, 78, 0.15)',
-      onPress: () => nav.navigate('Sponsor'),
     },
     {
       id: 'downloads',
@@ -199,6 +199,7 @@ export function AppDrawer() {
       iconBg: 'rgba(255, 255, 255, 0.08)',
       onPress: () => nav.navigate('NotificationSettings'),
     },
+
   ];
 
   return (

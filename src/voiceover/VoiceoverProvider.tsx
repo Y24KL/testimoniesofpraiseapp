@@ -7,6 +7,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { useAudioPlayer } from '@/audio/AudioPlayerContext';
 import { VOICEOVERS, type VoiceoverId } from './manifest';
 import { captionFor, decidePlay, musicTarget } from './logic';
+import { BUNDLED_AUDIO } from './bundled';
 
 // The user's own recording, played quietly under the welcome tour. Loaded only when the tour starts.
 const TUTORIAL_BED = require('../../assets/audio/tutorial-bed.mp3');
@@ -126,9 +127,14 @@ export function VoiceoverProvider({ children }: { children: React.ReactNode }) {
         if (decision.reason === 'no-audio') setNotice({ id, text: captionFor(entry) });
         return;
       }
+      const asset = decision.source.kind === 'bundled' ? BUNDLED_AUDIO[id] : decision.source.url;
+      if (asset === undefined) {
+        setNotice({ id, text: captionFor(entry) });
+        return;
+      }
       setNotice(null);
       try {
-        player.replace(decision.url);
+        player.replace(asset);
         player.play();
         playingRef.current = id;
         setPlaying(id);

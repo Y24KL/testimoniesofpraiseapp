@@ -4,11 +4,15 @@
  */
 import type { VoiceoverEntry, VoiceoverId } from './manifest';
 
-/** Where the audio for an entry comes from, or null when there is no approved audio yet. */
-export function playableUrl(entry: VoiceoverEntry): string | null {
-  if (entry.status !== 'generated' || !entry.asset) return null;
+export type AudioSource = { kind: 'bundled' } | { kind: 'url'; url: string };
+
+/** Where the approved audio for an entry comes from, or null when there is none yet. */
+export function audioSource(entry: VoiceoverEntry): AudioSource | null {
+  if (entry.status !== 'generated') return null;
+  if (entry.bundled) return { kind: 'bundled' };
+  if (!entry.asset) return null;
   const url = entry.asset.url.trim();
-  return /^https:\/\/\S+\.(mp3|m4a|aac|wav)(\?\S*)?$/i.test(url) ? url : null;
+  return /^https:\/\/\S+\.(mp3|m4a|aac|wav)(\?\S*)?$/i.test(url) ? { kind: 'url', url } : null;
 }
 
 /** Caption text to show: the entry's own captions, else the approved script, else nothing. */
@@ -20,7 +24,7 @@ export function captionFor(entry: VoiceoverEntry): string | null {
 export const cacheKey = (entry: VoiceoverEntry) => `${entry.id}@v${entry.version}`;
 
 export type PlayDecision =
-  | { action: 'play'; url: string }
+  | { action: 'play'; source: AudioSource }
   | { action: 'skip'; reason: 'disabled' | 'duplicate' | 'tutorial-active' | 'main-audio-busy' | 'no-audio' };
 
 /**
@@ -39,9 +43,9 @@ export function decidePlay(
   if (state.currentlyPlaying === entry.id) return { action: 'skip', reason: 'duplicate' };
   if (state.tutorialActive && !entry.id.startsWith('tutorial.')) return { action: 'skip', reason: 'tutorial-active' };
   if (state.mainAudioBusy) return { action: 'skip', reason: 'main-audio-busy' };
-  const url = playableUrl(entry);
-  if (!url) return { action: 'skip', reason: 'no-audio' };
-  return { action: 'play', url };
+  const source = audioSource(entry);
+  if (!source) return { action: 'skip', reason: 'no-audio' };
+  return { action: 'play', source };
 }
 
 

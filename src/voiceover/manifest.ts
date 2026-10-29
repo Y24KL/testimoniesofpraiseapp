@@ -12,6 +12,7 @@
  * No placeholder text or audio is ever played as if it were final narration.
  */
 export type VoiceoverId =
+  | 'app.open'
   | 'tutorial.welcome'
   | 'tutorial.live'
   | 'tutorial.radio'
@@ -42,6 +43,8 @@ export interface VoiceoverEntry {
   voiceId?: string;
   /** Published audio location (CDN URL) once uploaded. */
   asset: { url: string } | null;
+  /** True when the approved audio is bundled into the app (see bundled.ts) instead of a CDN URL. */
+  bundled?: boolean;
 }
 
 export const VOICEOVER_CONFIG = {
@@ -63,6 +66,16 @@ const entry = (id: VoiceoverId): VoiceoverEntry => ({
 });
 
 export const VOICEOVERS: Record<VoiceoverId, VoiceoverEntry> = {
+  // Played once each time the app opens. The owner approved this exact wording.
+  'app.open': {
+    id: 'app.open',
+    version: 1,
+    status: 'generated',
+    script: 'Welcome to Testimonies of Praise.',
+    captions: 'Welcome to Testimonies of Praise',
+    asset: null,
+    bundled: true,
+  },
   'tutorial.welcome': entry('tutorial.welcome'),
   'tutorial.live': entry('tutorial.live'),
   'tutorial.radio': entry('tutorial.radio'),

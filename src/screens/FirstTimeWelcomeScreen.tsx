@@ -35,7 +35,7 @@ export function FirstTimeWelcomeScreen() {
           </View>
           <View style={styles.row}>
             <Ionicons name="heart-outline" size={20} color={colors.accent} />
-            <Text style={styles.rowText}>Share testimony with us from listening to the Loveworld Songs</Text>
+            <Text style={styles.rowText}>Share your testimony with us from listening to the Loveworld Songs</Text>
           </View>
         </View>
         <PrimaryButton title="Get started" onPress={done} />

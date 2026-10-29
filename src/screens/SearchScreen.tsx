@@ -11,6 +11,7 @@ import { TestimonyCard } from '@/components/TestimonyCard';
 import { TopBar } from '@/components/TopBar';
 import { colors, radius, type as t } from '@/constants/theme';
 import { cacheGet, cacheSet } from '@/storage/cache';
+import { AISearchPanel } from '@/components/AISearchPanel';
 import type { Testimony } from '@/types';
 
 const LIMIT = 100;
@@ -80,6 +81,7 @@ export function SearchScreen() {
             {!debounced ? <Text style={styles.hint}>Search by title, name, category or keyword.</Text> : null}
           </>
         )}
+        <AISearchPanel query={q} onSelectTestimony={(id) => nav.navigate('TestimonyDetails', { id })} />
       </ScrollView>
     </Screen>
   );

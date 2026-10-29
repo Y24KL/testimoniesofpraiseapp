@@ -11,6 +11,7 @@
  */
 
 import { AUTH_ROUTES, AuthError, verifyFirebaseToken } from './auth.js';
+import { AIEndpointError, createEmbeddings, deepSeekSearch, enforceAiRateLimit, semanticSearch } from './ai.js';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 const PREFS = new Set(['testimonies', 'live', 'announcements']);
@@ -172,6 +173,53 @@ async function handle(request, env) {
     } catch (e) {
       if (e instanceof AuthError) return json({ error: e.message, code: e.code }, e.status, { ...cors, 'Cache-Control': 'no-store' });
       throw e;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // AI SEARCH + EMBEDDINGS. Firebase ID tokens are required on native and web.
+  // /api/ai/index-content is admin-only; public app clients may only embed one query.
+  // ---------------------------------------------------------------------------
+  if (pathname.startsWith('/api/ai/')) {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405, cors);
+    if (origin && !isOriginAllowed) return json({ error: 'Origin not allowed.' }, 403, cors);
+
+    const authorization = request.headers.get('Authorization') || '';
+    try {
+      const caller = await verifyFirebaseToken(authorization, env.FIREBASE_PROJECT_ID);
+      const body = await request.json().catch(() => null);
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        return json({ error: 'A valid JSON object is required.' }, 400, { ...cors, 'Cache-Control': 'no-store' });
+      }
+
+      let result;
+      if (pathname === '/api/ai/search') {
+        await enforceAiRateLimit(env, caller.uid, 'search', 8);
+        result = await deepSeekSearch(env, body.query);
+      } else if (pathname === '/api/ai/semantic-search') {
+        await enforceAiRateLimit(env, caller.uid, 'semantic-search', 25);
+        result = await semanticSearch(env, authorization, body.query, body.limit);
+      } else if (pathname === '/api/ai/embed-query') {
+        await enforceAiRateLimit(env, caller.uid, 'embed-query', 30);
+        if (typeof body.text !== 'string' || !body.text.trim() || body.text.length > 1000) {
+          return json({ error: 'A query between 1 and 1,000 characters is required.' }, 400, { ...cors, 'Cache-Control': 'no-store' });
+        }
+        const embedded = await createEmbeddings(env, [body.text]);
+        result = { embedding: embedded.embeddings[0], dimensions: embedded.dimensions, model: embedded.model };
+      } else if (pathname === '/api/ai/index-content') {
+        if (!(await verifyAdmin(authorization, env))) return json({ error: 'Admins only.' }, 403, { ...cors, 'Cache-Control': 'no-store' });
+        await enforceAiRateLimit(env, caller.uid, 'index-content', 120);
+        const embedded = await createEmbeddings(env, body.texts);
+        result = { embeddings: embedded.embeddings, dimensions: embedded.dimensions, model: embedded.model };
+      } else {
+        return json({ error: 'Unknown AI endpoint.' }, 404, { ...cors, 'Cache-Control': 'no-store' });
+      }
+      return json(result, 200, { ...cors, 'Cache-Control': 'no-store' });
+    } catch (e) {
+      if (e instanceof AuthError) return json({ error: e.message, code: e.code }, e.status, { ...cors, 'Cache-Control': 'no-store' });
+      if (e instanceof AIEndpointError) return json({ error: e.message, code: e.code }, e.status, { ...cors, 'Cache-Control': 'no-store' });
+      console.error('[ai] request failed', e?.stack || e);
+      return json({ error: 'AI service temporarily unavailable.' }, 502, { ...cors, 'Cache-Control': 'no-store' });
     }
   }
 

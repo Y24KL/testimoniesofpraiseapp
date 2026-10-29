@@ -5,6 +5,7 @@ import { describe, notifyTestimonyPublished } from '../notify';
 import { fmtDate, fmtDuration, testimonyFromDoc } from '../lib';
 import type { Route, Testimony } from '../types';
 import { Message } from '../components/Field';
+import { reindexPublishedTestimonies, indexTestimony } from '../aiSearchIndex';
 
 export function Testimonies({ go }: { go: (r: Route) => void }) {
   const [items, setItems] = useState<Testimony[] | null>(null);
@@ -12,6 +13,22 @@ export function Testimonies({ go }: { go: (r: Route) => void }) {
   const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all');
   const [err, setErr] = useState('');
   const [note, setNote] = useState('');
+  const [indexingAi, setIndexingAi] = useState(false);
+  const [indexProgress, setIndexProgress] = useState('');
+
+  const rebuildAiIndex = async () => {
+    if (indexingAi) return;
+    setIndexingAi(true); setIndexProgress('Preparing the published testimony index…'); setErr(''); setNote('');
+    try {
+      const result = await reindexPublishedTestimonies((done, scanned) => setIndexProgress(`Indexed ${done} published testimonies (${scanned} records scanned)…`));
+      setNote(`AI search index refreshed for ${result.indexed} published testimonies.`);
+      setIndexProgress('');
+    } catch (e) {
+      setErr(`AI search index rebuild failed: ${(e as Error).message}`);
+    } finally {
+      setIndexingAi(false);
+    }
+  };
 
   useEffect(
     () =>
@@ -45,6 +62,13 @@ export function Testimonies({ go }: { go: (r: Route) => void }) {
         ...(t.isPublished ? {} : { publishedAt: serverTimestamp() }),
         updatedAt: serverTimestamp(),
       });
+      if (!t.isPublished) {
+        try {
+          await indexTestimony({ id: t.id, title: t.title, description: t.description, authorName: t.authorName, category: t.category, keywords: t.keywords });
+        } catch (indexError) {
+          console.warn('[AI search] testimony published but embedding was not refreshed; use Rebuild AI search index.', indexError);
+        }
+      }
       if (!t.isPublished && t.notifyOnPublish) {
         const r = await notifyTestimonyPublished(t.id);
         if (r.status !== 'skipped') setNote(`Published. ${describe(r)}`);
@@ -62,7 +86,8 @@ export function Testimonies({ go }: { go: (r: Route) => void }) {
 
   return (
     <>
-      <div className="row between"><h1>Testimonies</h1><button className="btn" onClick={() => go({ name: 'editor' })}>+ New testimony</button></div>
+      <div className="row between"><h1>Testimonies</h1><div className="row"><button className="btn ghost" disabled={indexingAi} onClick={() => void rebuildAiIndex()}>{indexingAi ? 'Indexing AI search…' : 'Rebuild AI search index'}</button><button className="btn" onClick={() => go({ name: 'editor' })}>+ New testimony</button></div></div>
+      {indexProgress ? <p className="muted">{indexProgress}</p> : null}
       <p className="muted">Publishing or unpublishing here updates the app straight away.</p>
       <div className="row" style={{ marginBottom: 12 }}>
         <input type="text" placeholder="Search title, name, category…" value={q} onChange={(e) => setQ(e.target.value)} style={{ maxWidth: 320 }} />

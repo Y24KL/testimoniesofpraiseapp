@@ -6,6 +6,7 @@ import { TestimonyCard } from '../components/TestimonyCard';
 import { EmptyState } from '../components/EmptyState';
 import { repo } from '../api/repository';
 import type { Testimony } from '../types';
+import { AISearchPanel } from '../components/AISearchPanel';
 
 interface Props {
   onBack: () => void;
@@ -143,6 +144,7 @@ export function SearchPage({ onBack, onSelectTestimony }: Props) {
           </div>
         )}
       </div>
+      <AISearchPanel query={queryText} onSelectTestimony={onSelectTestimony} />
     </div>
   );
 }

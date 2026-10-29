@@ -11,6 +11,7 @@ import { repo } from '@/api';
 import { colors, gradients, radius, shadow, type as t } from '@/constants/theme';
 import type { AdotopocConfig } from '@/types';
 import { isWebUrl, openInExternalBrowser } from '@/utils/openExternal';
+import { useFeatureVoiceover } from '@/voiceover/useFeatureVoiceover';
 
 const DEFAULT_VIDEO_URL = 'https://topappstorage.b-cdn.net/video/ADOTOP_LOGO_OUTRO_m1awjk.mp4';
 const DEFAULT_PAGE_URL = 'https://testimoniesofpraiseweb.onrender.com/adotopoc';
@@ -23,6 +24,7 @@ const LOGO = require('../../assets/LOG_xcvt3v.webp');
  * the phone's browser (Chrome when installed), never inside the app.
  */
 export function AdotopocScreen() {
+  useFeatureVoiceover('feature.adotopoc');
   const nav = useNavigation();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();

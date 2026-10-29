@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
@@ -17,6 +17,8 @@ import { AppDrawer } from '@/components/AppDrawer';
 import { DrawerProvider } from '@/context/DrawerContext';
 import { RootNavigator } from '@/navigation/RootNavigator';
 import { usePushLifecycle } from '@/notifications/usePushLifecycle';
+import { VoiceoverProvider, useVoiceover } from '@/voiceover/VoiceoverProvider';
+import { TutorialOverlay } from '@/voiceover/TutorialOverlay';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -51,6 +53,16 @@ function Shell() {
   const ready = !initializing && flagsReady && profileChecked;
   usePushLifecycle();
 
+  // The welcome line plays once each time the app opens (never again on re-renders).
+  const { play: playVoiceover } = useVoiceover();
+  const greeted = useRef(false);
+  useEffect(() => {
+    if (ready && !greeted.current) {
+      greeted.current = true;
+      playVoiceover('app.open');
+    }
+  }, [ready, playVoiceover]);
+
   useEffect(() => {
     // Hand over from the native splash to our animated loader immediately.
     void SplashScreen.hideAsync();
@@ -66,6 +78,7 @@ function Shell() {
       <DrawerProvider>
         <RootNavigator />
         <AppDrawer />
+        <TutorialOverlay />
       </DrawerProvider>
     </NavigationContainer>
   );
@@ -79,7 +92,9 @@ export default function App() {
         <AppFlagsProvider>
           <DownloadsProvider>
             <AudioPlayerProvider>
-              <Shell />
+              <VoiceoverProvider>
+                <Shell />
+              </VoiceoverProvider>
             </AudioPlayerProvider>
           </DownloadsProvider>
         </AppFlagsProvider>

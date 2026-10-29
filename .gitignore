@@ -26,3 +26,6 @@ build-output/
 # Google/Firebase service-account keys (private) - never commit
 *firebase-adminsdk*.json
 *service-account*.json
+
+# Draft voiceovers generated for review (not approved, not shipped)
+voiceover-drafts/

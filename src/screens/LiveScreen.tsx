@@ -17,8 +17,10 @@ import { useLiveViewer } from '@/hooks/useLiveViewer';
 import { MESSAGES } from '@/utils/errors';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { useAudioPlayer } from '@/audio/AudioPlayerContext';
+import { useFeatureVoiceover } from '@/voiceover/useFeatureVoiceover';
 
 export function LiveScreen() {
+  useFeatureVoiceover('feature.live');
   const nav = useNavigation();
   const { live, error } = useLive();
   // Bottom-tab screens stay mounted when you switch tabs (that's normally what you want — instant

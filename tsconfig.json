@@ -15,6 +15,7 @@
   ],
   "exclude": [
     "backend-reference",
+    "scripts",
     "top-admin",
     "web"
   ]

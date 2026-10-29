@@ -18,8 +18,11 @@
     "web:preview": "npm --prefix web run preview",
     "build:android:local": "node scripts/build-android-local.mjs",
     "test:rules": "npx --yes firebase-tools@latest emulators:exec --only firestore --project demo-top --config top-admin/firebase.json \"node tests/comments.rules.test.mjs && node tests/profile.rules.test.mjs\"",
+    "test:voiceover": "node --experimental-strip-types --no-warnings tests/voiceover.test.mjs",
     "test:profile-validation": "node --experimental-strip-types --no-warnings tests/profileValidation.test.mjs",
-    "test:comment-text": "node --experimental-strip-types --no-warnings tests/commentText.test.mjs"
+    "test:comment-text": "node --experimental-strip-types --no-warnings tests/commentText.test.mjs",
+    "voiceovers:plan": "node --experimental-strip-types --no-warnings scripts/generate-voiceovers.ts",
+    "voiceovers:generate": "node --experimental-strip-types --no-warnings scripts/generate-voiceovers.ts --generate"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

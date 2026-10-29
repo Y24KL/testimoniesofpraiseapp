@@ -3,6 +3,7 @@ import { ActivityIndicator, Animated, FlatList, Pressable, RefreshControl, Style
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import { useFeatureVoiceover } from '@/voiceover/useFeatureVoiceover';
 import { repo } from '@/api';
 import { useAudioPlayer, type AudioTrack } from '@/audio/AudioPlayerContext';
 import { EmptyState } from '@/components/EmptyState';
@@ -62,6 +63,7 @@ function Equalizer({ active }: { active: boolean }) {
 }
 
 export function ListenScreen() {
+  useFeatureVoiceover('feature.radio');
   const nav = useNavigation();
   const { live } = useLive();
   const player = useAudioPlayer();

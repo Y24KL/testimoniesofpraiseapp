@@ -2,6 +2,7 @@ import React from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
+import { useFeatureVoiceover } from '@/voiceover/useFeatureVoiceover';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Screen } from '@/components/Screen';
@@ -13,6 +14,7 @@ import { useTestimonies } from '@/hooks/useContent';
 import { messageFor } from '@/utils/errors';
 
 export function TestimoniesScreen() {
+  useFeatureVoiceover('feature.watchTestimonies');
   const nav = useNavigation();
   const q = useTestimonies();
   return (

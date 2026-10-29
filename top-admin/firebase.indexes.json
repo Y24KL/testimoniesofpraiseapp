@@ -228,6 +228,14 @@
         { "fieldPath": "isPublished", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "testimonies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isPublished", "order": "ASCENDING" },
+        { "fieldPath": "aiEmbedding", "vectorConfig": { "dimension": 1024, "flat": {} } }
+      ]
     }
   ],
   "fieldOverrides": [

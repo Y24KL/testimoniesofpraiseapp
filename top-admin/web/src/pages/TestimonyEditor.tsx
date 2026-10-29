@@ -13,6 +13,7 @@ import { describe, notifyTestimonyPublished } from '../notify';
 import { CATEGORIES, fmtDuration, isHls, isHttpUrl, parseDuration, readVideoDuration, testimonyFromDoc } from '../lib';
 import type { Route, Testimony } from '../types';
 import { Check, Field, Message } from '../components/Field';
+import { indexTestimony } from '../aiSearchIndex';
 
 interface Props {
   id?: string;
@@ -124,6 +125,16 @@ export function TestimonyEditor({ id, prefill, go }: Props) {
         },
         { merge: true },
       );
+      if (isPublished) {
+        try {
+          await indexTestimony({
+            id: docId, title: title.trim(), description: description.trim(), authorName: authorName.trim(),
+            category: category.trim(), keywords: keywords.split(',').map((k) => k.trim().toLowerCase()).filter(Boolean),
+          });
+        } catch (indexError) {
+          console.warn('[AI search] testimony saved but embedding could not be refreshed; use Rebuild AI search index.', indexError);
+        }
+      }
       dirty.current = false;
       if (newlyPublished && notifyOnPublish) {
         const r = await notifyTestimonyPublished(docId);

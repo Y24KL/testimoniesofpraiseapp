@@ -19,6 +19,9 @@ MAIL_FROM = "Testimonies of Praise <gtrusouth116@gmail.com>"
 # Add it via Cloudflare CLI before deploying:
 #   npx wrangler secret put BUNNY_STORAGE_ACCESS_KEY
 
+[ai]
+binding = "AI"
+
 # EMAIL VERIFICATION (6-digit codes) — see docs/EMAIL_VERIFICATION_WORKER.md
 # Storage for codes and trusted devices (created with: npx wrangler kv namespace create OTP_KV)
 [[kv_namespaces]]

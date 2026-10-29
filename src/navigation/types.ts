@@ -17,6 +17,7 @@ export type RootStackParamList = {
   // Onboarding
   NotificationPrimer: undefined;
   FirstTimeWelcome: undefined;
+  ProfileCompletion: undefined;
   // Main
   Tabs: NavigatorScreenParams<TabParamList> | undefined;
   TestimonyDetails: { id: string };

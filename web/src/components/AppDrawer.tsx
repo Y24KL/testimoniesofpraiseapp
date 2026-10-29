@@ -91,8 +91,16 @@ export function AppDrawer({
 
   const menuItems = [
     {
+      id: 'live',
+      title: 'Click to watch Live',
+      subtitle: 'Livestream & Live Chat',
+      icon: <Video size={18} color={colors.live} />,
+      iconBg: 'rgba(255, 59, 78, 0.15)',
+      action: onGoToLive,
+    },
+    {
       id: 'radio',
-      title: 'TOP Radio',
+      title: 'T.O.P on Loveworld Radio',
       subtitle: '24/7 Live Audio Stream',
       icon: <Radio size={18} color={colors.accent} />,
       iconBg: 'rgba(245, 197, 66, 0.15)',
@@ -103,7 +111,7 @@ export function AppDrawer({
     },
     {
       id: 'adotopoc',
-      title: 'ADOTOPOC',
+      title: 'ADOTOPOC Resource Center',
       subtitle: 'Resource Center & Media',
       icon: (
         <img
@@ -121,11 +129,27 @@ export function AppDrawer({
     },
     {
       id: 'written',
-      title: 'Written Testimonies',
+      title: 'Read Testimonies',
       subtitle: 'Read Stories of Praise',
       icon: <FileText size={18} color={colors.accent} />,
       iconBg: 'rgba(245, 197, 66, 0.15)',
       action: onGoToWritten,
+    },
+    {
+      id: 'testimonies',
+      title: 'Watch powerful Testimonies',
+      subtitle: 'Video Praise Archive',
+      icon: <PlayCircle size={18} color={colors.accent} />,
+      iconBg: 'rgba(245, 197, 66, 0.15)',
+      action: onGoToTestimonies,
+    },
+    {
+      id: 'sponsor',
+      title: 'Sponsor Testimonies of Praise show',
+      subtitle: 'Partner & support the ministry',
+      icon: <Heart size={18} color={colors.live} />,
+      iconBg: 'rgba(255, 59, 78, 0.15)',
+      action: onSponsor,
     },
     {
       id: 'articles',
@@ -144,36 +168,12 @@ export function AppDrawer({
       action: onGoToPromotions,
     },
     {
-      id: 'live',
-      title: 'Watch Live',
-      subtitle: 'Livestream & Live Chat',
-      icon: <Video size={18} color={colors.live} />,
-      iconBg: 'rgba(255, 59, 78, 0.15)',
-      action: onGoToLive,
-    },
-    {
-      id: 'testimonies',
-      title: 'Testimonies',
-      subtitle: 'Video Praise Archive',
-      icon: <PlayCircle size={18} color={colors.accent} />,
-      iconBg: 'rgba(245, 197, 66, 0.15)',
-      action: onGoToTestimonies,
-    },
-    {
       id: 'share',
       title: 'Share Testimony',
       subtitle: 'Submit your praise report',
       icon: <FileText size={18} color={colors.primaryLight} />,
       iconBg: 'rgba(186, 104, 200, 0.2)',
       action: onShareTestimony,
-    },
-    {
-      id: 'sponsor',
-      title: 'Sponsor TOP',
-      subtitle: 'Partner & support the ministry',
-      icon: <Heart size={18} color={colors.live} />,
-      iconBg: 'rgba(255, 59, 78, 0.15)',
-      action: onSponsor,
     },
     {
       id: 'downloads',
@@ -199,6 +199,7 @@ export function AppDrawer({
       iconBg: 'rgba(255, 255, 255, 0.08)',
       action: onNotificationSettings,
     },
+
   ];
 
   return (

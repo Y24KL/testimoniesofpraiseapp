@@ -46,9 +46,9 @@ const theme = {
 };
 
 function Shell() {
-  const { initializing, user } = useAuth();
+  const { initializing, user, profileChecked } = useAuth();
   const { flagsReady } = useAppFlags();
-  const ready = !initializing && flagsReady;
+  const ready = !initializing && flagsReady && profileChecked;
   usePushLifecycle();
 
   useEffect(() => {

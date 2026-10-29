@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
@@ -15,6 +15,8 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/api/firebase';
 import { isNewAccountPending, markNewAccount } from '@/onboarding/welcome';
+import { createPendingProfile, profileGateEnabled, readProfileStatus, saveCompleteProfile, type ProfileStatus } from '@/profile/profileService';
+import { validateProfile, type ProfileInput, type ValidProfile } from '@/profile/validation';
 import {
   checkDeviceSessionTrust,
   deleteAccountOnServer,
@@ -33,7 +35,13 @@ interface AuthValue {
   /** Why the automatic first code could not be sent (shown on the verify screen), else null */
   codeSendError: string | null;
   signInWithEmail(email: string, password: string): Promise<void>;
-  register(fullName: string, email: string, password: string): Promise<void>;
+  /** `profile` is collected before the account is created; without it the account waits for the profile form. */
+  register(fullName: string, email: string, password: string, profile?: ValidProfile): Promise<void>;
+  /** False until the signed-in user's profile status is known (the app waits before routing). */
+  profileChecked: boolean;
+  /** True while a newly registered account still has to complete the profile form. */
+  needsProfile: boolean;
+  completeProfile(input: ProfileInput): Promise<void>;
   signInWithGoogleIdToken(idToken: string, accessToken?: string): Promise<void>;
   verifyOtp(code: string): Promise<void>;
   resendOtp(): Promise<void>;
@@ -60,6 +68,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
   const [isNewAccount, setIsNewAccount] = useState(false);
   const [codeSendError, setCodeSendError] = useState<string | null>(null);
+  // Remote profile status for the current user (null = not read yet). Reads are sequence-numbered so a
+  // slow, older read can never overwrite a newer one (e.g. the read from the auth listener vs. sign-up).
+  const [profileStatus, setProfileStatus] = useState<ProfileStatus | 'unknown' | null>(null);
+  const profileSeq = useRef(0);
+
+  const applyProfileStatus = useCallback(async (uid: string) => {
+    const seq = ++profileSeq.current;
+    let status: ProfileStatus | 'unknown' = 'complete';
+    if (profileGateEnabled) {
+      try {
+        status = await readProfileStatus(uid);
+      } catch {
+        status = 'unknown';
+      }
+    }
+    if (seq === profileSeq.current) setProfileStatus(status);
+  }, []);
 
   // Sends the first code after sign-in. Never throws: the user is already signed in and lands on
   // the verify screen, which shows the error and offers "Resend code" straight away.
@@ -90,6 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsSessionVerified(false);
         }
 
+        await applyProfileStatus(u.uid);
         try {
           setIsNewAccount(await isNewAccountPending(u.uid));
         } catch {
@@ -99,12 +125,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsSessionVerified(false);
         setVerificationEmail(null);
         setIsNewAccount(false);
+        setProfileStatus(null);
       }
       setInitializing(false);
     });
 
     return () => unsubscribe();
-  }, [sendFirstCode]);
+  }, [sendFirstCode, applyProfileStatus]);
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
@@ -126,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await sendFirstCode();
   }, [sendFirstCode]);
 
-  const register = useCallback(async (fullName: string, email: string, password: string) => {
+  const register = useCallback(async (fullName: string, email: string, password: string, profile?: ValidProfile) => {
     const cleanEmail = email.trim();
     // 1. Create account with Firebase Auth
     const cred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
@@ -138,9 +165,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setVerificationEmail(cleanEmail);
     setIsSessionVerified(false);
 
-    // 2. Dispatch 6-digit OTP code to registered email
+    // 2. Save the profile collected on the sign-up form, or leave it pending for the profile form.
+    //    If the write fails the local pending flag keeps the form on screen, so nothing is lost.
+    if (profileGateEnabled) {
+      try {
+        if (profile) await saveCompleteProfile(cred.user.uid, profile);
+        else await createPendingProfile(cred.user.uid);
+      } catch {
+        /* handled by the local pending flag */
+      }
+      await applyProfileStatus(cred.user.uid);
+    }
+
+    // 3. Dispatch 6-digit OTP code to registered email
     await sendFirstCode();
-  }, [sendFirstCode]);
+  }, [sendFirstCode, applyProfileStatus]);
+
+  const completeProfile = useCallback(async (input: ProfileInput) => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) throw new Error('Your session has ended. Sign in again to continue.');
+    const checked = validateProfile(input);
+    if (!checked.ok) throw new Error(Object.values(checked.errors)[0] ?? 'Check your details and try again.');
+    await saveCompleteProfile(uid, checked.value);
+    await applyProfileStatus(uid);
+  }, [applyProfileStatus]);
 
   const signInWithGoogleIdToken = useCallback(async (idToken: string, accessToken?: string) => {
     const cred = await signInWithCredential(auth, GoogleAuthProvider.credential(idToken, accessToken));
@@ -150,7 +198,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (getAdditionalUserInfo(cred)?.isNewUser) {
       void markNewAccount(cred.user.uid);
       setIsNewAccount(true);
+      // New Google account: the profile form must be completed before the app opens. Recorded remotely
+      // so it still appears after a reinstall or on another device.
+      if (profileGateEnabled) {
+        try {
+          await createPendingProfile(cred.user.uid);
+        } catch {
+          /* handled by the local pending flag */
+        }
+      }
     }
+    if (profileGateEnabled) await applyProfileStatus(cred.user.uid);
 
     // Google email returning verified does NOT bypass app-level OTP verification
     try {
@@ -210,6 +268,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     setIsSessionVerified(false);
+    setProfileStatus(null);
     setVerificationEmail(null);
     await fbSignOut(auth);
   }, []);
@@ -229,6 +288,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const needsEmailVerification = Boolean(user && !isSessionVerified);
 
+  // The profile form applies only to accounts that are new (remote 'pending', or a new-account flag on
+  // this device while the remote status is missing or unreachable). Existing accounts never see it.
+  const profileChecked = !user || profileStatus !== null;
+  const needsProfile =
+    profileGateEnabled &&
+    !!user &&
+    (profileStatus === 'pending' || ((profileStatus === 'none' || profileStatus === 'unknown') && isNewAccount));
   const value = useMemo(
     () => ({
       user,
@@ -238,6 +304,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       codeSendError,
       signInWithEmail,
       register,
+      profileChecked,
+      needsProfile,
+      completeProfile,
       signInWithGoogleIdToken,
       verifyOtp,
       resendOtp,
@@ -259,6 +328,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       codeSendError,
       signInWithEmail,
       register,
+      profileChecked,
+      needsProfile,
+      completeProfile,
       signInWithGoogleIdToken,
       verifyOtp,
       resendOtp,

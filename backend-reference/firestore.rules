@@ -104,6 +104,45 @@ service cloud.firestore {
     }
 
     // Per-user Notification State
+    // =====================================================================
+    // USER PROFILES: users/{uid}, one document per account (keyed by the Firebase UID).
+    // The owner can create it once and complete a pending profile once; nobody can change another
+    // user's profile, delete it, or write any other field. Admins can read for support.
+    // =====================================================================
+    function profileTitleOk(t) {
+      return t in ['Mr', 'Mrs', 'Ms', 'Bro', 'Sis', 'Deacon', 'Deaconess', 'Pastor', 'Evangelist'];
+    }
+    function validProfileValues(d) {
+      return profileTitleOk(d.title)
+        && d.fullName is string && d.fullName.size() >= 2 && d.fullName.size() <= 120
+        && d.zone is string && d.zone.size() > 0 && d.zone.size() <= 120
+        && d.church is string && d.church.size() > 0 && d.church.size() <= 160;
+    }
+    match /users/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+
+      // Either waiting for the profile form (e.g. first Google sign-in), or saved complete at sign-up.
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['profileStatus', 'createdAt', 'title', 'fullName', 'zone', 'church', 'profileCompletedAt', 'updatedAt'])
+        && request.resource.data.createdAt == request.time
+        && ((request.resource.data.profileStatus == 'pending' && !('title' in request.resource.data))
+          || (request.resource.data.profileStatus == 'complete'
+              && validProfileValues(request.resource.data)
+              && request.resource.data.profileCompletedAt == request.time));
+
+      // Completing a pending profile, once, with validated values.
+      allow update: if signedIn() && request.auth.uid == uid
+        && resource.data.profileStatus == 'pending'
+        && request.resource.data.profileStatus == 'complete'
+        && request.resource.data.keys().hasOnly(['profileStatus', 'createdAt', 'title', 'fullName', 'zone', 'church', 'profileCompletedAt', 'updatedAt'])
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.profileCompletedAt == request.time
+        && validProfileValues(request.resource.data);
+
+      allow delete: if false;
+    }
+
     match /users/{uid}/notifications/{id} {
       allow read: if signedIn() && request.auth.uid == uid;
       allow create, delete: if isAdmin();

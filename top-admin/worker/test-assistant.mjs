@@ -20,6 +20,8 @@ assert.equal(validateToolCall('search_testimonies', 'not json').ok, false);
 assert.deepEqual(validateToolCall('open_screen', '{"screen":"sponsor"}'), { ok: true, name: 'open_screen', args: { screen: 'sponsor' } });
 assert.equal(validateToolCall('open_screen', '{"screen":"admin"}').reason, 'unknown_screen', 'admin screens are never offered');
 assert.equal(validateToolCall('delete_everything', '{}').reason, 'unknown_tool');
+assert.deepEqual(validateToolCall('search_web', '{"query":" latest news "}'), { ok: true, name: 'search_web', args: { query: 'latest news' } });
+assert.equal(validateToolCall('search_web', '{"query":""}').ok, false);
 for (const s of ['live', 'radio', 'adotopoc', 'written', 'testimonies', 'sponsor', 'downloads']) assert.ok(ASSISTANT_SCREENS.includes(s));
 console.log('  ✔ tool call validation');
 

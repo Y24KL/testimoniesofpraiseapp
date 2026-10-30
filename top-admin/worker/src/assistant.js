@@ -1,21 +1,23 @@
 /**
- * T.O.P AI Assistant: DeepSeek chat with two allow-listed tools. The model never touches the database
- * directly. Search runs with the signed-in user's own Firebase token (so Firestore rules still apply),
- * and screen navigation is returned to the app as a value the app checks against its own list.
+ * T.O.P AI Assistant: DeepSeek chat with three allow-listed tools. The model never touches the database
+ * directly. Testimony search runs with the signed-in user's own Firebase token (so Firestore rules still
+ * apply), web search reuses the existing DeepSeek search, and screen navigation is returned to the app as a
+ * value the app checks against its own list.
  */
-import { AIEndpointError, enforceAiRateLimit, semanticSearch } from './ai.js';
+import { AIEndpointError, deepSeekSearch, enforceAiRateLimit, semanticSearch } from './ai.js';
 
 const DEEPSEEK_BASE_URL = 'https://api.deepseek.com';
 const MAX_MESSAGES = 12;
 const MAX_MESSAGE_CHARS = 1000;
-const MAX_TOOL_ROUNDS = 3;
+const MAX_TOOL_ROUNDS = 4;
+const MAX_WEB_SEARCHES = 2;
 const MAX_REPLY_CHARS = 2000;
 
 /** Screens the assistant may point people to. The app repeats this list and refuses anything else. */
 export const ASSISTANT_SCREENS = ['live', 'radio', 'adotopoc', 'written', 'testimonies', 'sponsor', 'downloads'];
 
 const SYSTEM_PROMPT = `You are the T.O.P AI Assistant for the Testimonies of Praise app and website.
-Help people use the app and find testimonies. Be warm, brief and accurate.
+Help people use the app, find testimonies, and answer general questions. Be warm, brief and accurate.
 
 What the app offers (use these exact names when you refer to them):
 - "Click to watch Live": our live broadcasts, with live chat when we are on air.
@@ -27,8 +29,10 @@ What the app offers (use these exact names when you refer to them):
 - Downloads: testimonies saved for offline viewing.
 
 Rules:
-- Use the search_testimonies tool to find testimonies, and mention only testimonies it returned.
+- For testimonies in the app, use search_testimonies and mention only testimonies it returned.
+- For general or current questions, use search_web. Report what the web sources say and name the source titles. Never claim a source says something it does not, and never make up links.
 - Use open_screen only when the person asks to go somewhere; name the screen in your reply.
+- If a tool fails or returns nothing, say so plainly. Do not guess.
 - If you do not know something, say so. Never invent prices, bank details, phone numbers, links, dates or statistics.
 - Never ask for or repeat passwords, codes or personal details.
 - Keep answers short: a few sentences.`;
@@ -38,10 +42,22 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'search_testimonies',
-      description: 'Search published testimonies by meaning. Returns titles and short descriptions.',
+      description: 'Search published testimonies in the app by meaning. Returns titles and short descriptions.',
       parameters: {
         type: 'object',
         properties: { query: { type: 'string', description: 'What the person is looking for, in a few words.' } },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'search_web',
+      description: 'Search the public web for general or current information. Returns titles, links and short snippets.',
+      parameters: {
+        type: 'object',
+        properties: { query: { type: 'string', description: 'The question to look up, in a few words.' } },
         required: ['query'],
       },
     },
@@ -88,7 +104,7 @@ export function validateToolCall(name, rawArguments) {
   } catch {
     return { ok: false, reason: 'invalid_arguments' };
   }
-  if (name === 'search_testimonies') {
+  if (name === 'search_testimonies' || name === 'search_web') {
     if (typeof args?.query !== 'string' || !args.query.trim() || args.query.length > 200) return { ok: false, reason: 'invalid_arguments' };
     return { ok: true, name, args: { query: args.query.trim() } };
   }
@@ -99,7 +115,13 @@ export function validateToolCall(name, rawArguments) {
   return { ok: false, reason: 'unknown_tool' };
 }
 
-/** Runs one chat turn. Returns { reply, navigate, testimonies }. */
+/**
+ * Runs one chat turn. Returns:
+ *   reply       the answer text
+ *   testimonies app testimonies found (internal)
+ *   sources     web sources found (external, shown separately and labelled in the app)
+ *   navigate    a screen name from ASSISTANT_SCREENS, or null
+ */
 export async function runAssistant(env, authorization, uid, rawMessages) {
   const messages = validateMessages(rawMessages);
   await enforceAiRateLimit(env, uid, 'assistant', 20);
@@ -110,6 +132,8 @@ export async function runAssistant(env, authorization, uid, rawMessages) {
   const conversation = [{ role: 'system', content: SYSTEM_PROMPT }, ...messages];
   let navigate = null;
   let testimonies = [];
+  let sources = [];
+  let webSearches = 0;
 
   for (let round = 0; round <= MAX_TOOL_ROUNDS; round += 1) {
     const completion = await chatCompletion(env, conversation, round < MAX_TOOL_ROUNDS);
@@ -120,7 +144,7 @@ export async function runAssistant(env, authorization, uid, rawMessages) {
     if (calls.length === 0) {
       const reply = typeof message.content === 'string' ? message.content.trim().slice(0, MAX_REPLY_CHARS) : '';
       if (!reply) throw new AIEndpointError(502, 'empty_answer', 'The assistant did not return an answer. Please try again.');
-      return { reply, navigate, testimonies };
+      return { reply, navigate, testimonies, sources };
     }
 
     conversation.push({ role: 'assistant', content: message.content || '', tool_calls: calls });
@@ -133,6 +157,20 @@ export async function runAssistant(env, authorization, uid, rawMessages) {
         const found = await semanticSearch(env, authorization, checked.args.query, 5);
         testimonies = found.results.slice(0, 5).map((t) => ({ id: t.id, title: t.title, description: String(t.description || '').slice(0, 300) }));
         result = { testimonies };
+      } else if (checked.name === 'search_web') {
+        if (webSearches >= MAX_WEB_SEARCHES) {
+          result = { error: 'search_limit_reached' };
+        } else {
+          webSearches += 1;
+          try {
+            const found = await deepSeekSearch(env, checked.args.query);
+            sources = found.sources.slice(0, 5).map((s) => ({ title: s.title, url: s.url, snippet: String(s.snippet || '').slice(0, 300) }));
+            result = { sources: sources.map(({ title, url, snippet }) => ({ title, url, snippet })) };
+          } catch {
+            // The web search is optional: report the failure, never invent sources.
+            result = { error: 'web_search_unavailable' };
+          }
+        }
       } else {
         navigate = checked.args.screen;
         result = { opened: checked.args.screen };
@@ -155,7 +193,7 @@ async function chatCompletion(env, conversation, allowTools) {
         messages: conversation,
         tools: allowTools ? TOOLS : undefined,
         temperature: 0.3,
-        max_tokens: 600,
+        max_tokens: 700,
       }),
       signal: controller.signal,
     });

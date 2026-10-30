@@ -448,7 +448,6 @@ html { overscroll-behavior-y: none; }
 @keyframes popIn { 0% { opacity: 0; transform: scale(0.92); } 60% { opacity: 1; transform: scale(1.02); } 100% { opacity: 1; transform: none; } }
 @keyframes sweep { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 @keyframes glow { 0%, 100% { filter: drop-shadow(0 0 0 rgba(245, 197, 66, 0)); } 50% { filter: drop-shadow(0 0 14px rgba(245, 197, 66, 0.45)); } }
-@keyframes goldShine { 0% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
 /* Every page slides in gently when you navigate (pages remount per route). */
 .app-main > [data-page] { animation: pageIn 0.38s var(--ease) both; }
@@ -489,14 +488,7 @@ html { overscroll-behavior-y: none; }
 .err-box { animation: popIn 0.3s var(--ease) both; }
 
 /* Welcome screen: the gold eyebrow shimmers once as the page opens. */
-.onb-eyebrow {
-  background: linear-gradient(90deg, var(--gold) 0%, #fff4c7 50%, var(--gold) 100%);
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: goldShine 1.6s ease 0.5s both;
-}
+.onb-eyebrow { color: var(--gold); animation: fadeIn 1s ease 0.5s both; }
 
 /* Sections fade up as they scroll into view (browsers that support scroll-driven animations). */
 @supports (animation-timeline: view()) {

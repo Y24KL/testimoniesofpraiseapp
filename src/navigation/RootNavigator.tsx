@@ -13,6 +13,7 @@ import { NotificationSettingsScreen } from '@/screens/NotificationSettingsScreen
 import { NotificationsScreen } from '@/screens/NotificationsScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { SearchScreen } from '@/screens/SearchScreen';
+import { AssistantScreen } from '@/screens/AssistantScreen';
 import { ShareTestimonyScreen } from '@/screens/ShareTestimonyScreen';
 import { SponsorScreen } from '@/screens/SponsorScreen';
 import { TestimonyDetailsScreen } from '@/screens/TestimonyDetailsScreen';
@@ -91,6 +92,7 @@ export function RootNavigator() {
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
           <Stack.Screen name="Search" component={SearchScreen} options={{ animation: 'fade' }} />
+          <Stack.Screen name="Assistant" component={AssistantScreen} />
           <Stack.Screen name="Adotopoc" component={AdotopocScreen} />
           <Stack.Screen name="Promotions" component={PromotionsScreen} />
           <Stack.Screen name="Articles" component={ArticlesScreen} />

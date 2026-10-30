@@ -27,6 +27,7 @@ export type RootStackParamList = {
   Profile: undefined;
   NotificationSettings: undefined;
   Search: undefined;
+  Assistant: undefined;
   // Upgrade Features
   Adotopoc: undefined;
   Promotions: undefined;

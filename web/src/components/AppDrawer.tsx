@@ -15,6 +15,7 @@ import {
   Settings,
   LogOut,
   ChevronRight,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Logo } from './Logo';
@@ -28,6 +29,7 @@ interface Props {
   onGoToAdotopoc: () => void;
   onGoToArticles: () => void;
   onGoToWritten: () => void;
+  onGoToAssistant: () => void;
   onGoToPromotions: () => void;
   onGoToLive: () => void;
   onGoToTestimonies: () => void;
@@ -46,6 +48,7 @@ export function AppDrawer({
   onGoToAdotopoc,
   onGoToArticles,
   onGoToWritten,
+  onGoToAssistant,
   onGoToPromotions,
   onGoToLive,
   onGoToTestimonies,
@@ -150,6 +153,14 @@ export function AppDrawer({
       icon: <Heart size={18} color={colors.live} />,
       iconBg: 'rgba(255, 59, 78, 0.15)',
       action: onSponsor,
+    },
+    {
+      id: 'assistant',
+      title: 'T.O.P AI Assistant',
+      subtitle: 'Ask questions and find testimonies',
+      icon: <Sparkles size={18} color={colors.primaryLight} />,
+      iconBg: 'rgba(186, 104, 200, 0.2)',
+      action: onGoToAssistant,
     },
     {
       id: 'articles',

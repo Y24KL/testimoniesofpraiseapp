@@ -33,6 +33,7 @@ const LivePage = named(() => import('./pages/LivePage'), 'LivePage');
 const ListenPage = named(() => import('./pages/ListenPage'), 'ListenPage');
 const AudioTestimonyPage = named(() => import('./pages/AudioTestimonyPage'), 'AudioTestimonyPage');
 const WrittenTestimoniesPage = named(() => import('./pages/WrittenTestimoniesPage'), 'WrittenTestimoniesPage');
+const AssistantPage = named(() => import('./pages/AssistantPage'), 'AssistantPage');
 const WrittenTestimonyPage = named(() => import('./pages/WrittenTestimonyPage'), 'WrittenTestimonyPage');
 const DownloadsPage = named(() => import('./pages/DownloadsPage'), 'DownloadsPage');
 const ShareTestimonyPage = named(() => import('./pages/ShareTestimonyPage'), 'ShareTestimonyPage');
@@ -150,6 +151,9 @@ function Shell({ route }: { route: Route }) {
     case 'audio':
       page = <AudioTestimonyPage key={route.id} id={route.id} onBack={() => goBack({ name: 'listen' })} />;
       break;
+    case 'assistant':
+      page = <AssistantPage onBack={back} />;
+      break;
     case 'written':
       page = <WrittenTestimoniesPage onBack={back} onOpen={(id: string) => navigate({ name: 'writtenTestimony', id })} />;
       break;
@@ -226,6 +230,7 @@ function Shell({ route }: { route: Route }) {
         onGoToAdotopoc={go({ name: 'adotopoc' })}
         onGoToArticles={go({ name: 'articles' })}
         onGoToWritten={go({ name: 'written' })}
+        onGoToAssistant={go({ name: 'assistant' })}
         onGoToPromotions={go({ name: 'promotions' })}
         onGoToLive={go({ name: 'live' })}
         onGoToTestimonies={go({ name: 'testimonies' })}

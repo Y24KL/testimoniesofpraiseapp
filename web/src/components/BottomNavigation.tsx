@@ -1,14 +1,15 @@
 import React from 'react';
-import { CloudDownload, Headphones, Home, PlayCircle, Video } from 'lucide-react';
+import { CloudDownload, Headphones, Home, PlayCircle, Sparkles, Video } from 'lucide-react';
 import { navigate, type Route } from '../router';
 
-export type TabName = 'home' | 'testimonies' | 'live' | 'listen' | 'downloads';
+export type TabName = 'home' | 'testimonies' | 'live' | 'listen' | 'assistant' | 'downloads';
 
 export const TABS: { id: TabName; label: string; icon: React.FC<{ size?: number }> }[] = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'testimonies', label: 'Testimonies', icon: PlayCircle },
   { id: 'live', label: 'Live', icon: Video },
   { id: 'listen', label: 'Listen', icon: Headphones },
+  { id: 'assistant', label: 'Assistant', icon: Sparkles },
   { id: 'downloads', label: 'Saved', icon: CloudDownload },
 ];
 

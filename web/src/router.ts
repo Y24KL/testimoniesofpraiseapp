@@ -31,7 +31,7 @@ export type Route =
   | { name: 'signup' }
   | { name: 'forgot' };
 
-export const TAB_ROUTES = new Set<Route['name']>(['home', 'testimonies', 'live', 'listen', 'downloads']);
+export const TAB_ROUTES = new Set<Route['name']>(['home', 'testimonies', 'live', 'listen', 'assistant', 'downloads']);
 
 const STATIC: Record<string, Route> = {
   '': { name: 'home' },

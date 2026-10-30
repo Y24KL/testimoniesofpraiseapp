@@ -12,6 +12,7 @@ const ICONS: Record<string, [IconName, IconName]> = {
   Testimonies: ['play-circle-outline', 'play-circle'],
   Live: ['videocam-outline', 'videocam'],
   Listen: ['headset-outline', 'headset'],
+  Assistant: ['sparkles-outline', 'sparkles'],
   Downloads: ['cloud-download-outline', 'cloud-download'],
 };
 

@@ -5,6 +5,7 @@ export type TabParamList = {
   Testimonies: undefined;
   Live: undefined;
   Listen: undefined;
+  Assistant: undefined;
   Downloads: undefined;
 };
 

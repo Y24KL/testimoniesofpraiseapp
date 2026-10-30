@@ -233,6 +233,8 @@ export async function semanticSearch(env, authorization, question, limit = 8) {
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok) {
+      // Log Firestore's status and its error message only (no query or user content), to find the cause.
+      console.error('[semantic] Firestore HTTP', response.status, String(payload?.error?.message || payload?.error?.status || '').slice(0, 300));
       if (response.status === 401 || response.status === 403) {
         throw new AIEndpointError(403, 'firestore_search_denied', 'You do not have permission to search this content. Please sign in and verify your account.');
       }

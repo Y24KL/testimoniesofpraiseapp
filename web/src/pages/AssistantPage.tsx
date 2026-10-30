@@ -531,7 +531,7 @@ export function AssistantPage({ onBack }: { onBack: () => void }) {
                 void send();
               }
             }}
-            style={{ flex: 1, resize: 'none', minHeight: 44, borderRadius: radius.md, border: `1px solid ${colors.border}`, background: colors.surface, color: colors.text, padding: '10px 12px', font: 'inherit' }}
+            style={{ flex: 1, resize: 'none', minHeight: 44, maxHeight: 140, borderRadius: radius.md, border: `1px solid ${colors.border}`, background: colors.surface, color: colors.text, padding: '10px 12px', fontFamily: 'inherit', fontSize: 16, lineHeight: 1.4 }}
           />
           <button
             type="submit"

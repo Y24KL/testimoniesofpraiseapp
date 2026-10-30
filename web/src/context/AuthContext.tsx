@@ -6,8 +6,6 @@ import {
   getAdditionalUserInfo,
   getRedirectResult,
   onAuthStateChanged,
-  reload,
-  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -17,6 +15,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { auth } from '../api/firebase';
+import { checkDeviceSessionTrust, requestEmailVerification, verifyEmailCode, AuthServiceError } from '../api/authService';
 import { createPendingProfile, profileGateEnabled, readProfileStatus, saveCompleteProfile, type ProfileStatus } from '../profile/profileService';
 import { validateProfile, type ProfileInput, type ValidProfile } from '../profile/validation';
 
@@ -32,11 +31,18 @@ interface AuthValue {
   deleteAccount(): Promise<void>;
   isNewAccount: boolean;
   clearNewAccount(): void;
-  refreshEmailVerified(): Promise<void>;
-  resendVerificationEmail(): Promise<void>;
-  needsEmailVerification: boolean;
   updatePhoto(photoURL: string | null): Promise<void>;
-  /** False until the signed-in user's profile status is known. */
+  /** True once the browser has verified this account with the 6-digit code (or is already trusted). */
+  sessionVerified: boolean;
+  /** Masked address the 6-digit code was sent to, e.g. j***@gmail.com. */
+  verificationEmail: string | null;
+  /** Problem sending the code, shown on the code screen. */
+  codeError: string | null;
+  /** Checks the 6-digit code. Throws with a message the person can read. */
+  verifyCode(code: string): Promise<void>;
+  /** Emails a new 6-digit code to the account. */
+  resendCode(): Promise<void>;
+  /** False until the signed-in user's profile status and code check are known. */
   profileChecked: boolean;
   /** True while a newly registered account still has to complete the profile form. */
   needsProfile: boolean;
@@ -49,6 +55,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [initializing, setInitializing] = useState(true);
   const [isNewAccount, setIsNewAccount] = useState(false);
+  // null = not checked yet for the current user.
+  const [sessionVerified, setSessionVerified] = useState<boolean | null>(null);
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
+  const [codeError, setCodeError] = useState<string | null>(null);
   // Remote profile status for the current user (null = not read yet). Sequence-numbered so an older,
   // slower read can't overwrite a newer one (the auth listener vs. sign-up or the profile form).
   const [profileStatus, setProfileStatus] = useState<ProfileStatus | 'unknown' | null>(null);
@@ -66,6 +76,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     if (seq === profileSeq.current) setProfileStatus(status);
   }, []);
+
+  // Sends the 6-digit code to the account's own email. Never throws: the code screen shows the error.
+  const sendFirstCode = useCallback(async () => {
+    try {
+      const res = await requestEmailVerification();
+      setVerificationEmail(res.maskedEmail);
+      setCodeError(null);
+    } catch (e) {
+      setCodeError(e instanceof AuthServiceError ? e.message : 'We couldn’t send your code. Tap “Resend code”.');
+    }
+  }, []);
+
+  // A browser that already verified this account skips the code. Otherwise a fresh code is sent.
+  const checkSession = useCallback(async () => {
+    const trust = await checkDeviceSessionTrust();
+    const verified = trust.trusted && trust.emailVerified;
+    setSessionVerified(verified);
+    if (!verified) await sendFirstCode();
+  }, [sendFirstCode]);
 
   // Completes a Google sign-in that fell back to the redirect flow (popup blocked) and keeps the
   // "new account" flag that the popup path sets. Errors are only logged: the Welcome page offers email.
@@ -87,14 +116,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (u) {
         const isNew = localStorage.getItem(`top:new-account:${u.uid}`) === 'true';
         setIsNewAccount(isNew);
+        await checkSession();
         await applyProfileStatus(u.uid);
       } else {
         setIsNewAccount(false);
         setProfileStatus(null);
+        setSessionVerified(null);
+        setVerificationEmail(null);
+        setCodeError(null);
       }
       setInitializing(false);
     });
-  }, [applyProfileStatus]);
+  }, [applyProfileStatus, checkSession]);
 
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email.trim(), password);
@@ -103,7 +136,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = useCallback(async (fullName: string, email: string, password: string, profile?: ValidProfile) => {
     const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
     await updateProfile(cred.user, { displayName: fullName.trim() });
-    await sendEmailVerification(cred.user).catch(() => {});
     localStorage.setItem(`top:new-account:${cred.user.uid}`, 'true');
     setIsNewAccount(true);
     setUser({ ...cred.user } as User);
@@ -120,12 +152,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [applyProfileStatus]);
 
+  const verifyCode = useCallback(async (code: string) => {
+    const result = await verifyEmailCode(code);
+    if (!result.ok) throw new Error('That code did not work. Check it and try again.');
+    setCodeError(null);
+    setSessionVerified(true);
+  }, []);
+
+  const resendCode = useCallback(async () => {
+    await sendFirstCode();
+  }, [sendFirstCode]);
+
   const completeProfile = useCallback(async (input: ProfileInput) => {
     const uid = auth.currentUser?.uid;
     if (!uid) throw new Error('Your session has ended. Sign in again to continue.');
     const checked = validateProfile(input);
     if (!checked.ok) throw new Error(Object.values(checked.errors)[0] ?? 'Check your details and try again.');
     await saveCompleteProfile(uid, checked.value);
+    // Show the name the person typed everywhere (profile, comments, greeting), not the Google account name.
+    if (auth.currentUser) await updateProfile(auth.currentUser, { displayName: checked.value.fullName });
     await applyProfileStatus(uid);
   }, [applyProfileStatus]);
 
@@ -173,18 +218,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsNewAccount(false);
   }, []);
 
-  const refreshEmailVerified = useCallback(async () => {
-    if (!auth.currentUser) return;
-    await reload(auth.currentUser);
-    setUser({ ...auth.currentUser } as User);
-  }, []);
-
-  const resendVerificationEmail = useCallback(async () => {
-    if (auth.currentUser) {
-      await sendEmailVerification(auth.currentUser);
-    }
-  }, []);
-
   const updatePhoto = useCallback(async (photoURL: string | null) => {
     if (!auth.currentUser) return;
     await updateProfile(auth.currentUser, { photoURL });
@@ -193,17 +226,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Existing accounts never see the form: only a remote 'pending' profile, or a new-account flag on this
   // browser while the remote status is missing or unreachable, requires it.
-  const profileChecked = !user || profileStatus !== null;
+  const profileChecked = !user || (profileStatus !== null && sessionVerified !== null);
   const needsProfile =
     profileGateEnabled &&
     !!user &&
     (profileStatus === 'pending' || ((profileStatus === 'none' || profileStatus === 'unknown') && isNewAccount));
-
-  const needsEmailVerification = Boolean(
-    user &&
-    !user.emailVerified &&
-    user.providerData.some((p) => p.providerId === 'password')
-  );
 
   return (
     <AuthContext.Provider
@@ -218,10 +245,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         deleteAccount,
         isNewAccount,
         clearNewAccount,
-        refreshEmailVerified,
-        resendVerificationEmail,
-        needsEmailVerification,
         updatePhoto,
+        sessionVerified: sessionVerified === true,
+        verificationEmail,
+        codeError,
+        verifyCode,
+        resendCode,
         profileChecked,
         needsProfile,
         completeProfile,

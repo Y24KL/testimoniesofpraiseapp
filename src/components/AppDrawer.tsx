@@ -191,6 +191,15 @@ export function AppDrawer() {
       onPress: () => nav.navigate('Notifications'),
     },
     {
+      id: 'assistant',
+      title: 'T.O.P AI Assistant',
+      subtitle: 'Ask questions and find testimonies',
+      icon: 'sparkles-outline',
+      iconColor: colors.primaryLight,
+      iconBg: 'rgba(186, 104, 200, 0.2)',
+      onPress: () => nav.navigate('Assistant'),
+    },
+    {
       id: 'settings',
       title: 'Preferences',
       subtitle: 'Notification & App Settings',

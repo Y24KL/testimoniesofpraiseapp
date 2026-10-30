@@ -25,6 +25,7 @@ export type Route =
   | { name: 'articles' }
   | { name: 'article'; id: string }
   | { name: 'adotopoc' }
+  | { name: 'assistant' }
   // signed-out only
   | { name: 'signin' }
   | { name: 'signup' }
@@ -50,6 +51,7 @@ const STATIC: Record<string, Route> = {
   articles: { name: 'articles' },
   written: { name: 'written' },
   adotopoc: { name: 'adotopoc' },
+  assistant: { name: 'assistant' },
   signin: { name: 'signin' },
   signup: { name: 'signup' },
   forgot: { name: 'forgot' },

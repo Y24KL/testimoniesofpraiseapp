@@ -393,17 +393,11 @@ export function AssistantPage({ onBack }: { onBack: () => void }) {
               <div key={t.id} style={{ display: 'flex', flexDirection: 'column', alignItems: t.role === 'user' ? 'flex-end' : 'flex-start', gap: 4 }}>
                 <div
                   className="ast-bubble"
-                  style={{
-                    maxWidth: '88%',
-                    padding: 12,
-                    borderRadius: radius.md,
-                    background: t.role === 'user' ? colors.accent : colors.surface,
-                    border: t.role === 'user' ? 'none' : `1px solid ${colors.borderSoft}`,
-                    color: t.role === 'user' ? colors.onAccent : colors.text,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 8,
-                  }}
+                  style={
+                    t.role === 'user'
+                      ? { maxWidth: '82%', padding: '10px 16px', borderRadius: '20px 20px 6px 20px', background: colors.accent, color: colors.onAccent, display: 'flex', flexDirection: 'column', gap: 8 }
+                      : { width: '100%', maxWidth: 680, padding: '4px 2px', color: colors.text, display: 'flex', flexDirection: 'column', gap: 10 }
+                  }
                 >
                   <span style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{t.content}</span>
 
@@ -515,7 +509,7 @@ export function AssistantPage({ onBack }: { onBack: () => void }) {
             e.preventDefault();
             void send();
           }}
-          style={{ display: 'flex', gap: 8, padding: 12, background: colors.bg, borderTop: `1px solid ${colors.borderSoft}`, maxWidth: 760, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}
+          style={{ display: 'flex', alignItems: 'flex-end', gap: 6, padding: '6px 6px 6px 16px', borderRadius: 26, border: `1px solid ${colors.border}`, background: colors.surface, maxWidth: 760, width: 'calc(100% - 24px)', margin: '0 auto calc(12px + var(--player-h, 0px))', boxSizing: 'border-box' }}
         >
           <textarea
             ref={inputRef}
@@ -532,13 +526,13 @@ export function AssistantPage({ onBack }: { onBack: () => void }) {
                 void send();
               }
             }}
-            style={{ flex: 1, resize: 'none', minHeight: 44, maxHeight: 140, borderRadius: radius.md, border: `1px solid ${colors.border}`, background: colors.surface, color: colors.text, padding: '10px 12px', fontFamily: 'inherit', fontSize: 16, lineHeight: 1.4 }}
+            style={{ flex: 1, resize: 'none', minHeight: 40, maxHeight: 140, border: 'none', outline: 'none', background: 'transparent', color: colors.text, padding: '10px 0', fontFamily: 'inherit', fontSize: 16, lineHeight: 1.4 }}
           />
           <button
             type="submit"
             disabled={busy || !input.trim()}
             aria-label="Send"
-            style={{ width: 44, height: 44, borderRadius: 22, border: 'none', background: colors.accent, color: colors.onAccent, cursor: 'pointer', opacity: busy || !input.trim() ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 20, border: 'none', background: colors.accent, color: colors.onAccent, cursor: 'pointer', opacity: busy || !input.trim() ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             {busy ? <Square size={16} /> : <Send size={18} />}
           </button>

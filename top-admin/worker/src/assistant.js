@@ -198,8 +198,18 @@ async function chatCompletion(env, conversation, allowTools) {
       signal: controller.signal,
     });
     if (!response.ok) {
-      // Provider details are not returned to the app.
-      throw new AIEndpointError(502, 'provider_error', 'The assistant could not complete this request.');
+      // Only the status code is logged (never the request or the reply). The app gets a clear reason.
+      console.error('[assistant] DeepSeek chat returned HTTP', response.status);
+      if (response.status === 402) {
+        throw new AIEndpointError(503, 'provider_balance', 'The assistant is out of AI credit. Please tell the administrator.');
+      }
+      if (response.status === 401 || response.status === 403) {
+        throw new AIEndpointError(502, 'provider_auth_error', 'The assistant key needs checking. Please tell the administrator.');
+      }
+      if (response.status === 429) {
+        throw new AIEndpointError(429, 'provider_rate_limit', 'The assistant is busy. Please wait a moment and try again.');
+      }
+      throw new AIEndpointError(502, 'provider_error', `The assistant could not complete this request (code ${response.status}).`);
     }
     return await response.json();
   } catch (error) {

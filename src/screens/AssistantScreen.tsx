@@ -26,6 +26,7 @@ export function AssistantScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const listRef = useRef<FlatList<Turn>>(null);
   const lastQuestion = useRef<string | null>(null);
 
   const send = async (text?: string) => {
@@ -91,6 +92,9 @@ export function AssistantScreen() {
       />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <FlatList
+          ref={listRef}
+          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+          keyboardDismissMode="on-drag"
           data={data}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}

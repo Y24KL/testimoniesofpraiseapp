@@ -15,6 +15,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/auth/AuthContext';
+import { useVoiceover } from '@/voiceover/VoiceoverProvider';
 import { colors, radius, type as t } from '@/constants/theme';
 import { useDrawer } from '@/context/DrawerContext';
 import { Logo } from './Logo';
@@ -40,6 +41,7 @@ export function AppDrawer() {
   const { isOpen, closeDrawer } = useDrawer();
   const { user, signOut } = useAuth();
   const nav = useNavigation<any>();
+  const { restartTutorial } = useVoiceover();
   const insets = useSafeAreaInsets();
 
   const anim = useRef(new Animated.Value(0)).current;
@@ -88,6 +90,18 @@ export function AppDrawer() {
   });
 
   const menuItems: MenuItem[] = [
+    {
+      id: 'tour',
+      title: 'Take a tour',
+      subtitle: 'A guided walk through the app',
+      icon: 'compass-outline',
+      iconColor: colors.accent,
+      iconBg: 'rgba(245, 197, 66, 0.15)',
+      onPress: () => {
+        nav.navigate('Tabs', { screen: 'Home' });
+        restartTutorial();
+      },
+    },
     {
       id: 'live',
       title: 'Click to watch Live',

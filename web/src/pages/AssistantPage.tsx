@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRight, Check, ChevronRight, Copy, HelpCircle, History, KeyRound, Library, LogIn, Mail, MessageCircle, MessagesSquare, PanelLeft, Pencil, Plus, Search, Send, Square, Trash2, UserCircle, Video, type LucideIcon } from 'lucide-react';
+import { ArrowRight, Check, ChevronRight, Copy, HelpCircle, History, KeyRound, Library, LogIn, Mail, MessageCircle, MessagesSquare, Pencil, Plus, RotateCw, Search, Send, Square, Trash2, UserCircle, Video, type LucideIcon } from 'lucide-react';
 import { askAssistant, AssistantError, type AssistantMessage, type AssistantReply } from '../api/assistant';
 import { groupByDate, loadConversations, previewOf, saveConversations, titleFrom, type Conversation, type StoredTurn } from '../api/chatHistory';
 import { useAuth } from '../context/AuthContext';
@@ -334,6 +334,7 @@ export function AssistantPage({ onBack }: { onBack: () => void }) {
           title="T.O.P AI Assistant"
           onBack={onBack}
           actions={[
+            { icon: RotateCw, label: 'Refresh page', onClick: () => window.location.reload() },
             { icon: History, label: collapsed ? 'Show chat history' : 'Chat history', onClick: toggleHistory },
             ...(active ? [{ icon: Trash2, label: 'Delete this chat', onClick: () => deleteChat(active) }] : []),
           ]}

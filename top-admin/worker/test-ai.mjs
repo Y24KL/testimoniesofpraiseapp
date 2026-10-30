@@ -77,7 +77,8 @@ globalThis.fetch = originalFetch;
       AI: { async run(_model, { text }) { return { shape: [text.length, 1024], data: text.map(() => Array(1024).fill(0.1)) }; } },
     }, 'Bearer FirebaseTestToken', 'find testimonies about healing');
     assert.equal(requestedQuery.findNearest.vectorField.fieldPath, 'aiEmbedding');
-    assert.equal(requestedQuery.findNearest.queryVector.arrayValue.values.length, 1024);
+    assert.equal(requestedQuery.findNearest.queryVector.mapValue.fields.__type__.stringValue, '__vector__');
+    assert.equal(requestedQuery.findNearest.queryVector.mapValue.fields.value.arrayValue.values.length, 1024);
     assert.equal(requestedQuery.where.fieldFilter.value.booleanValue, true);
     assert.equal(semantic.results.length, 1);
     assert.equal(semantic.results[0].id, 'testimony-1');

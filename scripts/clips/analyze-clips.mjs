@@ -16,7 +16,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const CLIP_VERSION = 1;
-const MODEL = 'gemini-2.5-flash';
+const MODEL = 'gemini-3.8-flash';
 const EMBED_MODEL = 'models/gemini-embedding-001';
 const EMBED_DIMENSIONS = 1024;
 const GEMINI = 'https://generativelanguage.googleapis.com';

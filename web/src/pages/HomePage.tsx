@@ -20,7 +20,6 @@ import {
 import { repo } from '../api/repository';
 import { useAudioPlayer } from '../audio/AudioPlayerContext';
 import { audioTrack, radioTrack } from '../audio/tracks';
-import { EmailVerifyBanner } from '../components/EmailVerifyBanner';
 import { ErrorState } from '../components/ErrorState';
 import { Logo } from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
@@ -149,8 +148,6 @@ export function HomePage({ onMenu, onOpenPromotion }: Props) {
           </button>
         </div>
       </header>
-
-      <EmailVerifyBanner />
 
       <div className="page-pad page-width">
         {live?.isLive ? (

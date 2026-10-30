@@ -19,6 +19,7 @@ import { colors, gradients } from './theme';
 import { HomePage } from './pages/HomePage';
 import { WelcomePage } from './pages/WelcomePage';
 import { ProfileCompletionPage } from './pages/ProfileCompletionPage';
+import { VerifyCodePage } from './pages/VerifyCodePage';
 import { TourOverlay, TourProvider, useTour } from './tour/tour';
 
 const named = <K extends string>(load: () => Promise<Record<K, React.ComponentType<any>>>, key: K) =>
@@ -246,7 +247,7 @@ function Shell({ route }: { route: Route }) {
 }
 
 function AppContent() {
-  const { user, initializing, isNewAccount, profileChecked, needsProfile } = useAuth();
+  const { user, initializing, isNewAccount, profileChecked, needsProfile, sessionVerified } = useAuth();
   const tour = useTour();
   const route = useRoute();
   const [primerSeen, setPrimerSeen] = useState<boolean>(() => {
@@ -276,6 +277,7 @@ function AppContent() {
 
   let content: React.ReactNode;
   if (!user) content = <SignedOut route={route} />;
+  else if (!sessionVerified) content = <VerifyCodePage />;
   else if (needsProfile) content = <ProfileCompletionPage />;
   else if (isNewAccount) content = <FirstTimeWelcomePage onDone={() => tour.start()} />;
   else if (!primerSeen) content = <NotificationPrimerPage onDone={() => setPrimerSeen(true)} />;

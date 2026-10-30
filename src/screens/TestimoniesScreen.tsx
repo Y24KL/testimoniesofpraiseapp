@@ -34,7 +34,7 @@ export function TestimoniesScreen() {
             <Pressable onPress={() => nav.navigate('WrittenTestimonies')} style={styles.written} accessibilityRole="button" accessibilityLabel="Open written testimonies">
               <Ionicons name="document-text-outline" size={22} color={colors.accent} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.writtenTitle}>Written testimonies</Text>
+                <Text style={styles.writtenTitle}>Read testimonies</Text>
                 <Text style={styles.writtenSub}>Read stories of God’s faithfulness</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.accent} />

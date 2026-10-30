@@ -39,7 +39,8 @@ export interface AssistantReply {
 /** The screens the assistant may open on the website. Anything else is ignored. */
 export const ASSISTANT_ROUTES = ['live', 'radio', 'adotopoc', 'written', 'testimonies', 'sponsor', 'downloads'] as const;
 
-const BASE = ((import.meta.env.VITE_AI_API_URL as string | undefined) ?? '').replace(/\/+$/, '');
+/** The public Worker address (no secret); used when VITE_AI_API_URL is not set at build time. */
+const BASE = ((import.meta.env.VITE_AI_API_URL as string | undefined) || 'https://top-push-relay.gtrusouth116.workers.dev').replace(/\/+$/, '');
 
 export class AssistantError extends Error {}
 

@@ -69,4 +69,6 @@ export const STORAGE_KEYS = {
   cachePrefix: 'top:cache:v1:',
   playbackPrefix: 'top:playback:v1:',
   articlesRead: 'top:articles:read:v1',
+  // Per-account assistant chats on this device: `${assistantChatsPrefix}${uid}`.
+  assistantChatsPrefix: 'top:assistant-chats:v1:',
 };

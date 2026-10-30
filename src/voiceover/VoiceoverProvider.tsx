@@ -11,6 +11,7 @@ import { BUNDLED_AUDIO } from './bundled';
 
 // The user's own recording, played quietly under the welcome tour. Loaded only when the tour starts.
 const TUTORIAL_BED = require('../../assets/audio/tutorial-bed.mp3');
+import { navigationRef } from '@/navigation/ref';
 import { TUTORIAL_STEPS } from './tutorial';
 import { readTourStatus, saveTourStatus, type TourStatus } from './tourStatus';
 
@@ -42,6 +43,8 @@ interface VoiceoverValue {
   replay(): void;
   tutorial: TutorialState;
   startTutorial(): void;
+  /** Starts the tour from the menu, even if it was finished or skipped before. */
+  restartTutorial(): void;
   nextStep(): void;
   previousStep(): void;
   skipTutorial(): void;
@@ -265,6 +268,13 @@ export function VoiceoverProvider({ children }: { children: React.ReactNode }) {
     })();
   }, [uid, playStep]);
 
+  const restartTutorial = useCallback(() => {
+    if (!uid) return;
+    setTutorial({ active: true, index: 0 });
+    tutorialRef.current = { active: true, index: 0 };
+    playStep(0);
+  }, [uid, playStep]);
+
   const goTo = useCallback(
     (index: number) => {
       const next = Math.max(0, Math.min(TUTORIAL_STEPS.length - 1, index));
@@ -281,6 +291,8 @@ export function VoiceoverProvider({ children }: { children: React.ReactNode }) {
       stopNow();
       setTutorial({ active: false, index: 0 });
       tutorialRef.current = { active: false, index: 0 };
+      // Finishing or skipping always lands on Home, so the person is never left on a tour screen.
+      if (navigationRef.isReady()) navigationRef.navigate('Tabs', { screen: 'Home' });
       if (!uid) return;
       // Saved on this device at once; saved to the account when the network allows, and retried next time.
       AsyncStorage.setItem(tutorialDoneKey(uid), status).catch(() => undefined);
@@ -300,12 +312,13 @@ export function VoiceoverProvider({ children }: { children: React.ReactNode }) {
       replay,
       tutorial,
       startTutorial,
+      restartTutorial,
       nextStep: () => goTo(tutorialRef.current.index + 1),
       previousStep: () => goTo(tutorialRef.current.index - 1),
       skipTutorial: () => endTutorial('skipped'),
       finishTutorial: () => endTutorial('completed'),
     }),
-    [enabled, setEnabled, playing, notice, play, stop, replay, tutorial, startTutorial, goTo, endTutorial],
+    [enabled, setEnabled, playing, notice, play, stop, replay, tutorial, startTutorial, restartTutorial, goTo, endTutorial],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

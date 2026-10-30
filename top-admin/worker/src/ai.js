@@ -215,7 +215,8 @@ export async function semanticSearch(env, authorization, question, limit = 8) {
     select: { fields: fieldPaths.map((fieldPath) => ({ fieldPath })) },
     findNearest: {
       vectorField: { fieldPath: 'aiEmbedding' },
-      queryVector: { arrayValue: { values: embedding.map((number) => ({ doubleValue: number })) } },
+      // Firestore REST encodes a vector value as a map with __type__ "__vector__".
+      queryVector: { mapValue: { fields: { __type__: { stringValue: '__vector__' }, value: { arrayValue: { values: embedding.map((number) => ({ doubleValue: number })) } } } } },
       distanceMeasure: 'COSINE',
       limit: Math.max(1, Math.min(12, Number.isInteger(limit) ? limit : 8)),
     },
@@ -231,10 +232,16 @@ export async function semanticSearch(env, authorization, question, limit = 8) {
       body: JSON.stringify({ structuredQuery }),
       signal: controller.signal,
     });
-    const payload = await response.json().catch(() => null);
+    const raw = await response.text();
+    let payload = null;
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      payload = null;
+    }
     if (!response.ok) {
-      // Log Firestore's status and its error message only (no query or user content), to find the cause.
-      console.error('[semantic] Firestore HTTP', response.status, String(payload?.error?.message || payload?.error?.status || '').slice(0, 300));
+      // Log Firestore's raw error reply (status text only, no query or user content), to find the cause.
+      console.error('[semantic] Firestore HTTP', response.status, raw.slice(0, 300));
       if (response.status === 401 || response.status === 403) {
         throw new AIEndpointError(403, 'firestore_search_denied', 'You do not have permission to search this content. Please sign in and verify your account.');
       }

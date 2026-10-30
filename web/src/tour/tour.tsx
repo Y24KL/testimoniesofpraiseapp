@@ -6,19 +6,23 @@ import { navigate, type Route } from '../router';
 import { colors, radius } from '../theme';
 
 /**
- * Welcome tour for the website: seven stops, each opening the real page it describes. The captions are the
- * same on-screen descriptions as the app. Background music is the team's own track, quiet, and only plays
- * after the user has pressed a button (browsers block autoplay otherwise). The tour's status is saved on the
- * account, so it is never shown again on any device once completed or skipped.
+ * Welcome tour for the website: ten stops, the same as the app tour, each opening the real page it describes.
+ * Each stop plays its approved narration (generated with ElevenLabs, see docs/VOICEOVERS.md). Background music
+ * is the team's own track, quiet, and only plays after the user has pressed a button (browsers block autoplay
+ * otherwise). The tour's status is saved on the account, so it is never shown again on any device once completed
+ * or skipped. Finishing or skipping returns to Home.
  */
-const STEPS: { title: string; caption: string; route: Route }[] = [
-  { title: 'Home', caption: 'Home brings together live broadcasts, testimonies, audio and resources in one place.', route: { name: 'home' } },
-  { title: 'Click to watch Live', caption: 'Watch Live opens our broadcasts. When we are on air, the stream appears there with live chat.', route: { name: 'live' } },
-  { title: 'T.O.P on Loveworld Radio', caption: 'T.O.P on Loveworld Radio plays our 24/7 audio stream from the Listen page.', route: { name: 'listen' } },
-  { title: 'ADOTOPOC Resource Center', caption: 'The ADOTOPOC Resource Center has resources for hosting outreaches and crusades.', route: { name: 'adotopoc' } },
-  { title: 'Read Testimonies', caption: 'Read Testimonies opens written testimonies you can read in full and comment on.', route: { name: 'written' } },
-  { title: 'Watch powerful Testimonies', caption: 'Watch powerful Testimonies opens the video testimony archive.', route: { name: 'testimonies' } },
-  { title: 'Sponsor Testimonies of Praise show', caption: 'Sponsor the show opens the sponsorship information for Testimonies of Praise.', route: { name: 'sponsor' } },
+const STEPS: { title: string; caption: string; route: Route; audio: string }[] = [
+  { title: 'Welcome', caption: 'Testimonies of Praise shares testimonies, live broadcasts and resources.', route: { name: 'home' }, audio: 'tutorial.intro.v2.mp3' },
+  { title: 'Home', caption: 'Home shows featured content, the latest testimonies and announcements.', route: { name: 'home' }, audio: 'tutorial.home.v1.mp3' },
+  { title: 'Testimonies', caption: 'Browse, search, watch, listen to and read testimonies. You can share them too.', route: { name: 'testimonies' }, audio: 'tutorial.testimonies.v2.mp3' },
+  { title: 'Live', caption: 'Watch our live broadcasts here. You can turn on notifications for them.', route: { name: 'live' }, audio: 'tutorial.live.v1.mp3' },
+  { title: 'Resource Center', caption: 'Materials for hosting outreaches and crusades, from the ADOTOPOC Resource Center.', route: { name: 'adotopoc' }, audio: 'tutorial.resources.v1.mp3' },
+  { title: 'Downloads', caption: 'Testimonies you saved for offline viewing are kept here.', route: { name: 'downloads' }, audio: 'tutorial.downloads.v1.mp3' },
+  { title: 'Search', caption: 'Search for testimonies and other content, then open any result.', route: { name: 'search' }, audio: 'tutorial.search.v1.mp3' },
+  { title: 'Notifications', caption: 'Updates on new testimonies, announcements and live broadcasts appear here.', route: { name: 'notifications' }, audio: 'tutorial.notifications.v1.mp3' },
+  { title: 'Your account', caption: 'Your profile and account options. Keep your sign-in details to yourself.', route: { name: 'profile' }, audio: 'tutorial.account.v1.mp3' },
+  { title: 'Home', caption: 'That is the tour. Enjoy the experience. You can replay it from the menu.', route: { name: 'home' }, audio: 'tutorial.ending.v1.mp3' },
 ];
 
 const MUSIC_LEVEL = 0.3;
@@ -43,6 +47,15 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const [index, setIndex] = useState(0);
   const [muted, setMuted] = useState(false);
   const music = useRef<HTMLAudioElement | null>(null);
+  const voice = useRef<HTMLAudioElement | null>(null);
+
+  const stopVoice = useCallback(() => {
+    if (voice.current) {
+      voice.current.pause();
+      voice.current.src = '';
+      voice.current = null;
+    }
+  }, []);
 
   const stopMusic = useCallback(() => {
     if (music.current) {
@@ -50,9 +63,10 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       music.current.src = '';
       music.current = null;
     }
-  }, []);
+    stopVoice();
+  }, [stopVoice]);
 
-  // Stop music when the tour closes, the user signs out, or the page is hidden.
+  // Stop music and narration when the tour closes, the user signs out, or the page is hidden.
   useEffect(() => {
     const onHide = () => {
       if (document.hidden) stopMusic();
@@ -71,10 +85,23 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, stopMusic]);
 
-  const openStep = useCallback((i: number) => {
-    setIndex(i);
-    navigate(STEPS[i].route);
-  }, []);
+  const openStep = useCallback(
+    (i: number) => {
+      setIndex(i);
+      stopVoice();
+      // Called from a button press, so the browser allows this play().
+      try {
+        const audio = new Audio(`/audio/narration/${STEPS[i].audio}`);
+        audio.volume = muted ? 0 : 1;
+        voice.current = audio;
+        void audio.play().catch(() => undefined);
+      } catch {
+        /* no narration is fine: the caption is still shown */
+      }
+      navigate(STEPS[i].route);
+    },
+    [muted, stopVoice],
+  );
 
   const start = useCallback(() => {
     if (!user) return;
@@ -97,6 +124,8 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       stopMusic();
       setActive(false);
       setIndex(0);
+      // Finishing or skipping always lands on Home.
+      navigate({ name: 'home' });
       if (!user) return;
       // Saved to the account; a failed save is retried the next time the tour would have been offered.
       try {
@@ -112,6 +141,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     setMuted((m) => {
       const next = !m;
       if (music.current) music.current.volume = next ? 0 : MUSIC_LEVEL;
+      if (voice.current) voice.current.volume = next ? 0 : 1;
       return next;
     });
   }, []);
@@ -161,7 +191,7 @@ export function TourOverlay() {
         <p style={{ margin: 0, color: colors.textMuted, lineHeight: 1.5 }}>{step.caption}</p>
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" onClick={tour.toggleMute} aria-pressed={tour.muted} style={{ flex: 1, minHeight: 44, borderRadius: 999, border: `1px solid ${colors.border}`, background: 'none', color: colors.accent, fontWeight: 700, cursor: 'pointer' }}>
-            {tour.muted ? 'Unmute music' : 'Mute music'}
+            {tour.muted ? 'Unmute sound' : 'Mute sound'}
           </button>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>

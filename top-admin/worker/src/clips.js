@@ -50,7 +50,8 @@ export async function searchClips(env, authorization, uid, question, limit = 6) 
     where: { fieldFilter: { field: { fieldPath: 'isPublished' }, op: 'EQUAL', value: { booleanValue: true } } },
     findNearest: {
       vectorField: { fieldPath: 'embedding' },
-      queryVector: { arrayValue: { values: vector.map((n) => ({ doubleValue: n })) } },
+      // Firestore REST encodes a vector value as a map with __type__ "__vector__".
+      queryVector: { mapValue: { fields: { __type__: { stringValue: '__vector__' }, value: { arrayValue: { values: vector.map((n) => ({ doubleValue: n })) } } } } },
       distanceMeasure: 'COSINE',
       limit: Math.max(1, Math.min(10, Number.isInteger(limit) ? limit : 6)),
     },

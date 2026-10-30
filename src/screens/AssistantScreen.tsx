@@ -43,6 +43,9 @@ const FOLLOW_UPS: { label: string; prompt: string }[] = [
   { label: 'I need more help', prompt: 'I need more help with this.' },
 ];
 
+/** Opens on KingsChat if the app is installed, otherwise in the browser. */
+const SUPPORT_URL = 'https://kingschat.online/user/topappsupport';
+
 const timeLabel = (at: number) => new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 function withConversation(list: Conversation[], id: string, title: string, turns: StoredTurn[], now: number): Conversation[] {
@@ -226,6 +229,14 @@ export function AssistantScreen() {
     else void send(prompt);
   };
 
+  const openSupport = async () => {
+    try {
+      await Linking.openURL(SUPPORT_URL);
+    } catch {
+      Alert.alert('Could not open KingsChat', `Visit ${SUPPORT_URL} in your browser.`);
+    }
+  };
+
   const runAccount = (item: AccountItem) => {
     if ('prompt' in item) void send(item.prompt);
     else nav.navigate(item.screen, item.params);
@@ -268,6 +279,10 @@ export function AssistantScreen() {
           <Text style={styles.support}>
             Still having trouble? Contact the Testimonies of Praise support team for further assistance.
           </Text>
+          <Pressable onPress={() => void openSupport()} style={styles.supportButton} accessibilityRole="link" accessibilityLabel="Contact TOP support on KingsChat">
+            <Ionicons name="chatbubbles-outline" size={18} color={colors.onAccent} />
+            <Text style={styles.supportButtonText}>Contact @topappsupport on KingsChat</Text>
+          </Pressable>
         </View>
       ) : null}
     </View>
@@ -531,6 +546,8 @@ const styles = StyleSheet.create({
   accountRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
   accountText: { ...t.small, color: colors.text, flex: 1 },
   support: { ...t.caption, color: colors.textMuted, marginTop: 4 },
+  supportButton: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 8, marginTop: 6, paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.md, backgroundColor: colors.accent },
+  supportButtonText: { ...t.small, color: colors.onAccent, fontWeight: '700' },
   row: { gap: 4, maxWidth: '100%' },
   rowMe: { alignItems: 'flex-end' },
   bubble: { maxWidth: '88%', padding: 12, borderRadius: radius.md, gap: 4 },

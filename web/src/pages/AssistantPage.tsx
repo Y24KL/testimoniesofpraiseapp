@@ -75,6 +75,51 @@ function withConversation(list: Conversation[], id: string, title: string, turns
   return [updated, ...list.filter((c) => c.id !== id)].sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
+/** Bold text: **like this**. Quotes inside the bold are dropped, since they add noise. */
+function renderInline(text: string): React.ReactNode[] {
+  return text
+    .replace(/\*{3,}/g, '**')
+    .split(/(\*\*[^*]+\*\*)/g)
+    .map((part, i) =>
+      part.startsWith('**') && part.endsWith('**') && part.length > 4 ? (
+        <strong key={i}>{part.slice(2, -2).replace(/^["“”]|["“”]$/g, '')}</strong>
+      ) : (
+        <React.Fragment key={i}>{part}</React.Fragment>
+      ),
+    );
+}
+
+/** Shows an assistant reply with paragraphs, bold text and bullet lists. Text is escaped by React. */
+function FormattedReply({ text }: { text: string }) {
+  const blocks: React.ReactNode[] = [];
+  let items: string[] = [];
+  const flush = () => {
+    if (items.length === 0) return;
+    blocks.push(
+      <ul key={`ul${blocks.length}`} style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {items.map((item, i) => (
+          <li key={i}>{renderInline(item)}</li>
+        ))}
+      </ul>,
+    );
+    items = [];
+  };
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    const bullet = line.match(/^[-*•]\s+(.*)$/);
+    if (bullet) {
+      items.push(bullet[1]);
+    } else if (line === '') {
+      flush();
+    } else {
+      flush();
+      blocks.push(<p key={`p${blocks.length}`} style={{ margin: 0 }}>{renderInline(line)}</p>);
+    }
+  }
+  flush();
+  return <div style={{ display: 'flex', flexDirection: 'column', gap: 10, lineHeight: 1.55 }}>{blocks}</div>;
+}
+
 const label: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: colors.textSubtle, margin: 0 };
 const card: React.CSSProperties = { display: 'block', padding: 10, borderRadius: radius.sm, border: `1px solid ${colors.border}`, background: colors.bg, color: colors.text, textDecoration: 'none' };
 const iconButton: React.CSSProperties = { background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', padding: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' };
@@ -399,7 +444,7 @@ export function AssistantPage({ onBack }: { onBack: () => void }) {
                       : { width: '100%', maxWidth: 680, padding: '4px 2px', color: colors.text, display: 'flex', flexDirection: 'column', gap: 10 }
                   }
                 >
-                  <span style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{t.content}</span>
+                  {t.role === 'user' ? <span style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{t.content}</span> : <FormattedReply text={t.content} />}
 
                   {t.testimonies && t.testimonies.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

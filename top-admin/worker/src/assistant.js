@@ -42,7 +42,8 @@ Rules:
 - Keep the difference clear between what the app's database returned and what came from the web.
 - If you do not know something, say so. Never invent prices, bank details, phone numbers, links, dates, Bible verses, testimonies or statistics.
 - Never ask for or repeat passwords, codes or personal details.
-- Keep answers short: a few sentences. Give more detail only when the person asks for it.`;
+- Keep answers short: a few sentences. Give more detail only when the person asks for it.
+- Format: plain text. For a list, start each item on its own line with "- ". Do not use asterisks, bold markers or headings.`;
 
 const FUNCTION_DECLARATIONS = [
   {

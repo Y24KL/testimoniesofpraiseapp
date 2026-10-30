@@ -6,4 +6,15 @@ import type { VoiceoverId } from './manifest';
  */
 export const BUNDLED_AUDIO: Partial<Record<VoiceoverId, number>> = {
   'app.open': require('../../assets/voiceovers/app.open.v1.mp3'),
+  'tutorial.intro': require('../../assets/voiceovers/tutorial.intro.v2.mp3'),
+  'tutorial.home': require('../../assets/voiceovers/tutorial.home.v1.mp3'),
+  'tutorial.testimonies': require('../../assets/voiceovers/tutorial.testimonies.v2.mp3'),
+  'tutorial.live': require('../../assets/voiceovers/tutorial.live.v1.mp3'),
+  'tutorial.resources': require('../../assets/voiceovers/tutorial.resources.v1.mp3'),
+  'tutorial.downloads': require('../../assets/voiceovers/tutorial.downloads.v1.mp3'),
+  'tutorial.search': require('../../assets/voiceovers/tutorial.search.v1.mp3'),
+  'tutorial.notifications': require('../../assets/voiceovers/tutorial.notifications.v1.mp3'),
+  'tutorial.account': require('../../assets/voiceovers/tutorial.account.v1.mp3'),
+  'tutorial.ending': require('../../assets/voiceovers/tutorial.ending.v1.mp3'),
+  'assistant.response': require('../../assets/voiceovers/assistant.response.v1.mp3'),
 };

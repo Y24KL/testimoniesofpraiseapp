@@ -63,10 +63,11 @@ export const VOICEOVER_CONFIG = {
 const scripted = (id: VoiceoverId, script: string): VoiceoverEntry => ({
   id,
   version: 1,
-  status: 'approved',
+  status: 'generated',
   script,
   captions: null,
   asset: null,
+  bundled: true,
 });
 
 const entry = (id: VoiceoverId): VoiceoverEntry => ({
@@ -89,17 +90,11 @@ export const VOICEOVERS: Record<VoiceoverId, VoiceoverEntry> = {
     asset: null,
     bundled: true,
   },
-  'tutorial.intro': scripted('tutorial.intro', `Welcome to Testimonies of Praise!
+  'tutorial.intro': { ...scripted('tutorial.intro', `Testimonies of Praise is an LMM TV production in collaboration with Loveworld XP, dedicated to showcasing the life-changing impact of the songs by the Loveworld Singers.
 
-We are delighted to have you here.
+Through powerful, real-life testimonies, the programme reveals how these inspired songs have brought healing, hope, restoration, miracles, and transformation to countless lives around the world. In the past year alone, more than 500 life-changing testimonies have been shared, demonstrating the undeniable power of God's Word expressed through music.
 
-Testimonies of Praise is a platform created to share the goodness of God through powerful testimonies, inspiring experiences, praise, live broadcasts and valuable resources.
-
-Whether you are here to watch testimonies, discover inspiring stories, enjoy live broadcasts or explore our resources, everything you need is right here.
-
-Let us take you on a complete tour so you can discover everything the application has to offer.
-
-Let's get started!`),
+Beyond inspiring testimonies, Testimonies of Praise also serves as a platform for promoting the Ministry of Music's products, services, and initiatives, while providing updates on major events and programmes across the Loveworld Nation.`), version: 2 },
   'tutorial.home': scripted('tutorial.home', `Welcome to your Home dashboard!
 
 This is your starting point whenever you open Testimonies of Praise.
@@ -111,19 +106,7 @@ Take a moment to familiarize yourself with the dashboard and the navigation menu
 Everything is designed to help you stay connected and discover more of what Testimonies of Praise has to offer.
 
 Now, let's explore the testimonies!`),
-  'tutorial.testimonies': scripted('tutorial.testimonies', `Welcome to the Testimonies section!
-
-This is where you can discover powerful experiences and stories of God's goodness shared by people.
-
-Browse the available testimonies and open any story that catches your attention.
-
-Depending on the content available, you can watch video testimonies, listen to audio testimonies or read written accounts.
-
-You can also use the available sharing and interaction features to share testimonies with friends and family.
-
-Every testimony is an opportunity to be encouraged and reminded of God's goodness.
-
-Next, let's see how you can join our live broadcasts!`),
+  'tutorial.testimonies': { ...scripted('tutorial.testimonies', `Discover inspiring testimonies that share stories of faith, answered prayers, transformation, and God's goodness by listening to the Loveworld Singers.`), version: 2 },
   'tutorial.live': scripted('tutorial.live', `Welcome to the Live section!
 
 This is where you can connect with Testimonies of Praise during live broadcasts.
@@ -201,5 +184,8 @@ Welcome to Testimonies of Praise!`),
   'feature.readTestimonies': entry('feature.readTestimonies'),
   'feature.watchTestimonies': entry('feature.watchTestimonies'),
   'feature.sponsor': entry('feature.sponsor'),
-  'assistant.response': entry('assistant.response'),
+  'assistant.response': scripted(
+    'assistant.response',
+    "Hello, I'm the T.O.P AI Assistant. I can help you find a testimony by what it is about, point you to a moment inside a video, show you around the app, and answer your general questions. Just ask, and I'll do my best to help.",
+  ),
 };

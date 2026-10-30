@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, Keyboard, KeyboardAvoidingView, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { ASSISTANT_TARGETS, AssistantError, askAssistant, type AssistantMessage, type AssistantReply } from '@/ai/assistant';
@@ -28,6 +28,12 @@ export function AssistantScreen() {
   const abortRef = useRef<AbortController | null>(null);
   const listRef = useRef<FlatList<Turn>>(null);
   const lastQuestion = useRef<string | null>(null);
+
+  // Keep the newest message in view when the keyboard opens (Android edge-to-edge does not resize the window).
+  useEffect(() => {
+    const sub = Keyboard.addListener('keyboardDidShow', () => listRef.current?.scrollToEnd({ animated: true }));
+    return () => sub.remove();
+  }, []);
 
   const send = async (text?: string) => {
     const question = (text ?? input).trim();
@@ -90,7 +96,7 @@ export function AssistantScreen() {
           ) : undefined
         }
       />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <FlatList
           ref={listRef}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}

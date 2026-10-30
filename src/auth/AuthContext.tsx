@@ -187,6 +187,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const checked = validateProfile(input);
     if (!checked.ok) throw new Error(Object.values(checked.errors)[0] ?? 'Check your details and try again.');
     await saveCompleteProfile(uid, checked.value);
+    // Show the name the person typed everywhere (profile, comments, greeting), not the Google account name.
+    if (auth.currentUser) await updateProfile(auth.currentUser, { displayName: checked.value.fullName });
     await applyProfileStatus(uid);
   }, [applyProfileStatus]);
 

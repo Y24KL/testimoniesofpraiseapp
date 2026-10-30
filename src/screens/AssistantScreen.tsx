@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Keyboard, KeyboardAvoidingView, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { ASSISTANT_TARGETS, AssistantError, askAssistant, type AssistantMessage, type AssistantReply } from '@/ai/assistant';
 import { Screen } from '@/components/Screen';
@@ -29,11 +30,22 @@ export function AssistantScreen() {
   const listRef = useRef<FlatList<Turn>>(null);
   const lastQuestion = useRef<string | null>(null);
 
-  // Keep the newest message in view when the keyboard opens (Android edge-to-edge does not resize the window).
+  // Android does not resize the window for the keyboard here, so lift the composer by the keyboard height
+  // (minus the tab bar, which the keyboard covers anyway). iOS uses KeyboardAvoidingView instead.
+  const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
+  const [keyboardLift, setKeyboardLift] = useState(0);
   useEffect(() => {
-    const sub = Keyboard.addListener('keyboardDidShow', () => listRef.current?.scrollToEnd({ animated: true }));
-    return () => sub.remove();
-  }, []);
+    if (Platform.OS !== 'android') return;
+    const show = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardLift(Math.max(0, e.endCoordinates.height - tabBarHeight));
+      listRef.current?.scrollToEnd({ animated: true });
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardLift(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, [tabBarHeight]);
 
   const send = async (text?: string) => {
     const question = (text ?? input).trim();
@@ -96,7 +108,7 @@ export function AssistantScreen() {
           ) : undefined
         }
       />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <FlatList
           ref={listRef}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
@@ -183,7 +195,7 @@ export function AssistantScreen() {
           </View>
         ) : null}
 
-        <View style={styles.composer}>
+        <View style={[styles.composer, { marginBottom: keyboardLift }]}>
           <TextInput
             value={input}
             onChangeText={setInput}

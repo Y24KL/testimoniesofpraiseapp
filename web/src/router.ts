@@ -11,7 +11,7 @@ export type Route =
   | { name: 'live' }
   | { name: 'listen' }
   | { name: 'downloads' }
-  | { name: 'testimony'; id: string }
+  | { name: 'testimony'; id: string; startAt?: number }
   | { name: 'audio'; id: string }
   | { name: 'written' }
   | { name: 'writtenTestimony'; id: string }
@@ -58,12 +58,18 @@ const STATIC: Record<string, Route> = {
 };
 
 export function parseHash(hash: string): Route {
-  const path = decodeURIComponent(hash.replace(/^#\/?/, '').replace(/\/+$/, ''));
+  const full = decodeURIComponent(hash.replace(/^#\/?/, '').replace(/\/+$/, ''));
+  // Links can carry a start time, e.g. #/testimony/abc?t=83 (a moment found by search).
+  const [path, query = ''] = full.split('?');
   if (path in STATIC) return STATIC[path];
   const w = path.match(/^written\/([^/?#]+)$/);
   if (w) return { name: 'writtenTestimony', id: w[1] };
   const m = path.match(/^(testimony|audio|article)\/([^/?#]+)$/);
-  if (m) return m[1] === 'testimony' ? { name: 'testimony', id: m[2] } : m[1] === 'audio' ? { name: 'audio', id: m[2] } : { name: 'article', id: m[2] };
+  if (m) {
+    if (m[1] !== 'testimony') return m[1] === 'audio' ? { name: 'audio', id: m[2] } : { name: 'article', id: m[2] };
+    const t = Number(new URLSearchParams(query).get('t'));
+    return Number.isFinite(t) && t > 0 ? { name: 'testimony', id: m[2], startAt: t } : { name: 'testimony', id: m[2] };
+  }
   return { name: 'home' };
 }
 
@@ -72,7 +78,7 @@ export function pathFor(route: Route): string {
     case 'home':
       return '/';
     case 'testimony':
-      return `/testimony/${encodeURIComponent(route.id)}`;
+      return `/testimony/${encodeURIComponent(route.id)}${route.startAt ? `?t=${Math.floor(route.startAt)}` : ''}`;
     case 'audio':
       return `/audio/${encodeURIComponent(route.id)}`;
     case 'writtenTestimony':

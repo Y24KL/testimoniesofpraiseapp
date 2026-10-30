@@ -12,6 +12,7 @@ import { BUNDLED_AUDIO } from './bundled';
 // The user's own recording, played quietly under the welcome tour. Loaded only when the tour starts.
 const TUTORIAL_BED = require('../../assets/audio/tutorial-bed.mp3');
 import { TUTORIAL_STEPS } from './tutorial';
+import { readTourStatus, saveTourStatus, type TourStatus } from './tourStatus';
 
 const ENABLED_KEY = 'top:voiceover-enabled';
 const tutorialDoneKey = (uid: string) => `top:tutorial-finished:${uid}`;
@@ -253,10 +254,15 @@ export function VoiceoverProvider({ children }: { children: React.ReactNode }) {
 
   const startTutorial = useCallback(() => {
     if (!uid) return;
-    // A finished tour is not restarted automatically; only the explicit replay or a new account starts it.
-    setTutorial({ active: true, index: 0 });
-    tutorialRef.current = { active: true, index: 0 };
-    playStep(0);
+    // A tour that was already completed or skipped on any device is never shown again automatically.
+    (async () => {
+      const done = await readTourStatus(uid).catch(() => null);
+      const localDone = await AsyncStorage.getItem(tutorialDoneKey(uid)).catch(() => null);
+      if (done || localDone) return;
+      setTutorial({ active: true, index: 0 });
+      tutorialRef.current = { active: true, index: 0 };
+      playStep(0);
+    })();
   }, [uid, playStep]);
 
   const goTo = useCallback(
@@ -271,11 +277,14 @@ export function VoiceoverProvider({ children }: { children: React.ReactNode }) {
   );
 
   const endTutorial = useCallback(
-    (persist: boolean) => {
+    (status: TourStatus) => {
       stopNow();
       setTutorial({ active: false, index: 0 });
       tutorialRef.current = { active: false, index: 0 };
-      if (persist && uid) AsyncStorage.setItem(tutorialDoneKey(uid), 'true').catch(() => undefined);
+      if (!uid) return;
+      // Saved on this device at once; saved to the account when the network allows, and retried next time.
+      AsyncStorage.setItem(tutorialDoneKey(uid), status).catch(() => undefined);
+      saveTourStatus(uid, status).catch(() => undefined);
     },
     [stopNow, uid],
   );
@@ -293,8 +302,8 @@ export function VoiceoverProvider({ children }: { children: React.ReactNode }) {
       startTutorial,
       nextStep: () => goTo(tutorialRef.current.index + 1),
       previousStep: () => goTo(tutorialRef.current.index - 1),
-      skipTutorial: () => endTutorial(true),
-      finishTutorial: () => endTutorial(true),
+      skipTutorial: () => endTutorial('skipped'),
+      finishTutorial: () => endTutorial('completed'),
     }),
     [enabled, setEnabled, playing, notice, play, stop, replay, tutorial, startTutorial, goTo, endTutorial],
   );

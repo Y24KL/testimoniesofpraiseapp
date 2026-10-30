@@ -1,0 +1,44 @@
+name: Analyse testimony videos
+
+# Every hour: finds published testimonies whose clips are not yet analysed, and analyses a small batch.
+# Manual runs are possible from the Actions tab (Run workflow). Budget caps are below.
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      max_videos:
+        description: 'Videos to analyse this run'
+        default: '3'
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: analyse-clips
+  cancel-in-progress: false
+
+jobs:
+  analyse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      MAX_VIDEOS: ${{ github.event.inputs.max_videos || '3' }}
+      MAX_MINUTES: '130'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install indexer dependencies
+        working-directory: scripts/clips
+        run: npm install --no-audit --no-fund
+      - name: Run indexer tests
+        working-directory: scripts/clips
+        run: node lib.test.mjs
+      - name: Analyse waiting videos
+        working-directory: scripts/clips
+        run: node analyze-clips.mjs

@@ -12,11 +12,13 @@ interface Props {
   live?: boolean;
   autoPlay?: boolean;
   label?: string;
+  /** Start at this second (a moment found by search). Takes priority over the saved resume position. */
+  startAt?: number;
 }
 
 const PLAYBACK_PREFIX = 'top:playback:v1:';
 
-export function VideoPlayer({ uri, contentId, live = false, autoPlay = true, label }: Props) {
+export function VideoPlayer({ uri, contentId, live = false, autoPlay = true, label, startAt }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -87,6 +89,13 @@ export function VideoPlayer({ uri, contentId, live = false, autoPlay = true, lab
 
     const onLoadedMetadata = () => {
       setLoading(false);
+      // A moment found by search: start there (browsers allow autoplay here because the user tapped a result).
+      if (!live && startAt && startAt > 0 && !resumedRef.current) {
+        resumedRef.current = true;
+        video.currentTime = Math.min(startAt, Math.max(0, video.duration - 1));
+        void video.play().catch(() => undefined);
+        return;
+      }
       // Resume playback timestamp if not live
       if (!live && contentId && !resumedRef.current) {
         resumedRef.current = true;

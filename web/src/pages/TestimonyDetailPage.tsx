@@ -14,6 +14,8 @@ import type { Testimony } from '../types';
 interface Props {
   id: string;
   onBack: () => void;
+  /** Second to start the video from (a moment found by search). */
+  startAt?: number;
 }
 
 function formatDate(iso: string | null | undefined): string {
@@ -32,7 +34,7 @@ function formatDuration(seconds?: number): string {
   return `${h > 0 ? `${h}:` : ''}${mm}:${String(s).padStart(2, '0')}`;
 }
 
-export function TestimonyDetailPage({ id, onBack }: Props) {
+export function TestimonyDetailPage({ id, onBack, startAt }: Props) {
   const dl = useDownloads();
   const saved = dl.get(id);
   const [item, setItem] = useState<Testimony | null>(
@@ -136,6 +138,7 @@ export function TestimonyDetailPage({ id, onBack }: Props) {
               contentId={item.id}
               label={item.title}
               autoPlay
+              startAt={startAt}
             />
           ) : (
             <div style={{ padding: '24px', backgroundColor: colors.card, textAlign: 'center', color: colors.textMuted }}>

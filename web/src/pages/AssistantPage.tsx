@@ -8,6 +8,7 @@ import { colors, radius } from '../theme';
 interface Turn extends AssistantMessage {
   id: string;
   testimonies?: AssistantReply['testimonies'];
+  clips?: AssistantReply['clips'];
   sources?: AssistantReply['sources'];
   navigate?: string | null;
 }
@@ -53,7 +54,7 @@ export function AssistantPage({ onBack }: { onBack: () => void }) {
       const answer = await askAssistant(next.map(({ role, content }) => ({ role, content })), controller.signal);
       setTurns((cur) => [
         ...cur,
-        { id: `a${Date.now()}`, role: 'assistant', content: answer.reply || 'I could not find an answer to that.', testimonies: answer.testimonies, sources: answer.sources, navigate: answer.navigate },
+        { id: `a${Date.now()}`, role: 'assistant', content: answer.reply || 'I could not find an answer to that.', testimonies: answer.testimonies, clips: answer.clips, sources: answer.sources, navigate: answer.navigate },
       ]);
     } catch (e) {
       if ((e as Error).name === 'AbortError') setError('Stopped. You can ask again.');
@@ -107,6 +108,24 @@ export function AssistantPage({ onBack }: { onBack: () => void }) {
                     <strong style={{ fontSize: 14 }}>{tm.title}</strong>
                     {tm.description ? <div style={{ fontSize: 12, color: colors.textMuted }}>{tm.description}</div> : null}
                   </a>
+                ))}
+              </div>
+            ) : null}
+
+            {t.clips && t.clips.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <p style={label}>Moments in videos</p>
+                {t.clips.map((c) => (
+                  <button
+                    key={`${c.testimonyId}-${c.startSec}`}
+                    type="button"
+                    onClick={() => navigate({ name: 'testimony', id: c.testimonyId, startAt: c.startSec })}
+                    style={{ ...card, textAlign: 'left', cursor: 'pointer', font: 'inherit' }}
+                  >
+                    <strong style={{ fontSize: 14 }}>{c.title}</strong>
+                    {c.description ? <div style={{ fontSize: 12, color: colors.textMuted }}>{c.description}</div> : null}
+                    <div style={{ fontSize: 12, color: colors.accent, fontWeight: 700 }}>Watch at {c.startLabel}</div>
+                  </button>
                 ))}
               </div>
             ) : null}

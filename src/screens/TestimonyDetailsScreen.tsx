@@ -20,7 +20,7 @@ import { shareMediaUrl } from '@/utils/links';
 
 export function TestimonyDetailsScreen() {
   const nav = useNavigation();
-  const { id } = useRoute<RouteProp<RootStackParamList, 'TestimonyDetails'>>().params;
+  const { id, startAt } = useRoute<RouteProp<RootStackParamList, 'TestimonyDetails'>>().params;
   const dl = useDownloads();
   const key = downloadKey('testimony', id);
   const saved = dl.get(key);
@@ -66,7 +66,7 @@ export function TestimonyDetailsScreen() {
       ) : (
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          {uri ? <VideoPlayer uri={uri} contentId={item.id} label={item.title} autoPlay /> : <ErrorState compact message={MESSAGES.video} />}
+          {uri ? <VideoPlayer uri={uri} contentId={item.id} label={item.title} autoPlay startAt={startAt} /> : <ErrorState compact message={MESSAGES.video} />}
           <View style={{ gap: 6 }}>
             {item.category ? <Text style={styles.cat}>{item.category.toUpperCase()}</Text> : null}
             <Text style={styles.title} accessibilityRole="header">{item.title}</Text>

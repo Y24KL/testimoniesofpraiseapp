@@ -11,6 +11,7 @@ import { isWebUrl } from '@/utils/openExternal';
 interface Turn extends AssistantMessage {
   id: string;
   testimonies?: AssistantReply['testimonies'];
+  clips?: AssistantReply['clips'];
   sources?: AssistantReply['sources'];
   navigate?: string | null;
 }
@@ -44,7 +45,7 @@ export function AssistantScreen() {
       const answer = await askAssistant(history, controller.signal);
       setTurns((cur) => [
         ...cur,
-        { id: `a${Date.now()}`, role: 'assistant', content: answer.reply || 'I could not find an answer to that.', testimonies: answer.testimonies, sources: answer.sources, navigate: answer.navigate },
+        { id: `a${Date.now()}`, role: 'assistant', content: answer.reply || 'I could not find an answer to that.', testimonies: answer.testimonies, clips: answer.clips, sources: answer.sources, navigate: answer.navigate },
       ]);
     } catch (e) {
       if ((e as Error).name === 'AbortError') {
@@ -104,6 +105,25 @@ export function AssistantScreen() {
                     <Pressable key={tm.id} onPress={() => nav.navigate('TestimonyDetails', { id: tm.id })} style={styles.card} accessibilityRole="link">
                       <Text style={styles.cardTitle} numberOfLines={2}>{tm.title}</Text>
                       {tm.description ? <Text style={styles.cardText} numberOfLines={2}>{tm.description}</Text> : null}
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
+
+              {item.clips && item.clips.length > 0 ? (
+                <View style={{ gap: 6, marginTop: 8 }}>
+                  <Text style={styles.label}>Moments in videos</Text>
+                  {item.clips.map((c) => (
+                    <Pressable
+                      key={`${c.testimonyId}-${c.startSec}`}
+                      onPress={() => nav.navigate('TestimonyDetails', { id: c.testimonyId, startAt: c.startSec })}
+                      style={styles.card}
+                      accessibilityRole="link"
+                      accessibilityLabel={`Watch ${c.title} at ${c.startLabel}`}
+                    >
+                      <Text style={styles.cardTitle} numberOfLines={2}>{c.title}</Text>
+                      {c.description ? <Text style={styles.cardText} numberOfLines={2}>{c.description}</Text> : null}
+                      <Text style={styles.linkText}>Watch at {c.startLabel}</Text>
                     </Pressable>
                   ))}
                 </View>

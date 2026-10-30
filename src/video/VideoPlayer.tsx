@@ -20,9 +20,11 @@ interface Props {
   live?: boolean;
   autoPlay?: boolean;
   label: string;
+  /** Start at this second (a moment found by search). Takes priority over the saved resume position. */
+  startAt?: number;
 }
 
-export function VideoPlayer({ uri, contentId, live, autoPlay, label }: Props) {
+export function VideoPlayer({ uri, contentId, live, autoPlay, label, startAt }: Props) {
   const [failed, setFailed] = useState(false);
   const resumed = useRef(false);
   const played = useRef(false);
@@ -36,6 +38,14 @@ export function VideoPlayer({ uri, contentId, live, autoPlay, label }: Props) {
 
   const { status } = useEvent(player, 'statusChange', { status: player.status });
   const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
+
+  // A moment found by search: jump straight to it once the video is ready.
+  useEffect(() => {
+    if (live || !startAt || status !== 'readyToPlay' || resumed.current) return;
+    resumed.current = true;
+    player.currentTime = Math.max(0, startAt);
+    player.play();
+  }, [status, live, startAt, player]);
 
   // Resume where the viewer left off (recorded videos only)
   useEffect(() => {

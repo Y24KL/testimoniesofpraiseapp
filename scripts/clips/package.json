@@ -1,0 +1,17 @@
+{
+  "name": "top-clip-indexer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Analyses published testimony videos with Gemini and writes timed clips to Firestore. Runs in GitHub Actions.",
+  "scripts": {
+    "plan": "node analyze-clips.mjs --dry-run",
+    "run": "node analyze-clips.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

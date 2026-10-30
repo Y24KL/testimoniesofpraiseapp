@@ -85,6 +85,13 @@ service cloud.firestore {
         && d.zone is string && d.zone.size() > 0 && d.zone.size() <= 120
         && d.church is string && d.church.size() > 0 && d.church.size() <= 160;
     }
+    // Video moment clips: written only by the scheduled indexer (admin SDK, which bypasses rules).
+    // The app can read clips of published testimonies, and cannot write any.
+    match /testimonyClips/{clipId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
+      allow write: if false;
+    }
+
     match /users/{uid} {
       allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
 

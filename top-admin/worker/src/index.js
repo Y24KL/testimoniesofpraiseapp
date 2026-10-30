@@ -13,6 +13,7 @@
 import { AUTH_ROUTES, AuthError, verifyFirebaseToken } from './auth.js';
 import { AIEndpointError, createEmbeddings, deepSeekSearch, enforceAiRateLimit, semanticSearch } from './ai.js';
 import { runAssistant } from './assistant.js';
+import { searchClips } from './clips.js';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 const PREFS = new Set(['testimonies', 'live', 'announcements']);
@@ -200,6 +201,8 @@ async function handle(request, env) {
       } else if (pathname === '/api/ai/semantic-search') {
         await enforceAiRateLimit(env, caller.uid, 'semantic-search', 25);
         result = await semanticSearch(env, authorization, body.query, body.limit);
+      } else if (pathname === '/api/ai/clip-search') {
+        result = await searchClips(env, authorization, caller.uid, body.query, body.limit);
       } else if (pathname === '/api/ai/assistant') {
         result = { ...(await runAssistant(env, authorization, caller.uid, body.messages)) };
       } else if (pathname === '/api/ai/embed-query') {

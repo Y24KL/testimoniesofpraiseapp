@@ -20,7 +20,7 @@ export type RootStackParamList = {
   ProfileCompletion: undefined;
   // Main
   Tabs: NavigatorScreenParams<TabParamList> | undefined;
-  TestimonyDetails: { id: string };
+  TestimonyDetails: { id: string; startAt?: number };
   ShareTestimony: undefined;
   Sponsor: undefined;
   Notifications: undefined;

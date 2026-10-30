@@ -7,6 +7,7 @@
  *  - open_screen returns a screen name that the app checks against its own list.
  */
 import { AIEndpointError, enforceAiRateLimit, semanticSearch } from './ai.js';
+import { searchClips } from './clips.js';
 
 export const ASSISTANT_MODEL = 'gemini-3.8-flash';
 const GEMINI = 'https://generativelanguage.googleapis.com';
@@ -34,6 +35,7 @@ What the app offers (use these exact names when you refer to them):
 Rules:
 - For testimonies in the app, use search_testimonies and mention only testimonies it returned.
 - For general or current questions, use search_web and report what it found. Name the source titles it gives. Never invent sources or links.
+- When someone asks to find a moment inside a video (for example "the part where a cat appears"), use search_clips and name the video and the time.
 - Use open_screen only when the person asks to go somewhere; name the screen in your reply.
 - If a tool fails or finds nothing, say so plainly. Do not guess.
 - If you do not know something, say so. Never invent prices, bank details, phone numbers, links, dates or statistics.
@@ -45,6 +47,11 @@ const FUNCTION_DECLARATIONS = [
     name: 'search_testimonies',
     description: 'Search published testimonies in the app by meaning. Returns titles and short descriptions.',
     parameters: { type: 'OBJECT', properties: { query: { type: 'STRING', description: 'What the person is looking for, in a few words.' } }, required: ['query'] },
+  },
+  {
+    name: 'search_clips',
+    description: 'Find the moment inside a testimony video that matches a description (for example "a cat", "the pastor prays"). Returns the video and the start time.',
+    parameters: { type: 'OBJECT', properties: { query: { type: 'STRING', description: 'What is seen or said in the moment, in a few words.' } }, required: ['query'] },
   },
   {
     name: 'search_web',
@@ -80,7 +87,7 @@ export function validateMessages(value) {
 
 /** Checks the arguments the model chose for a tool call before anything runs. */
 export function validateToolCall(name, args) {
-  if (name === 'search_testimonies' || name === 'search_web') {
+  if (name === 'search_testimonies' || name === 'search_web' || name === 'search_clips') {
     if (typeof args?.query !== 'string' || !args.query.trim() || args.query.length > 200) return { ok: false, reason: 'invalid_arguments' };
     return { ok: true, name, args: { query: args.query.trim() } };
   }
@@ -108,6 +115,7 @@ export async function runAssistant(env, authorization, uid, rawMessages) {
   const contents = messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
   let navigate = null;
   let testimonies = [];
+  let clips = [];
   let sources = [];
   let webSearches = 0;
 
@@ -129,7 +137,7 @@ export async function runAssistant(env, authorization, uid, rawMessages) {
     if (calls.length === 0) {
       const reply = parts.map((p) => p.text || '').join('').trim().slice(0, MAX_REPLY_CHARS);
       if (!reply) throw new AIEndpointError(502, 'empty_answer', 'The assistant did not return an answer. Please try again.');
-      return { reply, navigate, testimonies, sources };
+      return { reply, navigate, testimonies, clips, sources };
     }
 
     // Keep the model's own turn exactly as returned (including thought signatures) before its results.
@@ -144,6 +152,10 @@ export async function runAssistant(env, authorization, uid, rawMessages) {
         const found = await semanticSearch(env, authorization, checked.args.query, 5);
         testimonies = found.results.slice(0, 5).map((t) => ({ id: t.id, title: t.title, description: String(t.description || '').slice(0, 300) }));
         result = { testimonies };
+      } else if (checked.name === 'search_clips') {
+        const found = await searchClips(env, authorization, uid, checked.args.query, 4);
+        clips = found.clips.slice(0, 4);
+        result = { clips: clips.map((c) => ({ testimonyId: c.testimonyId, title: c.title, startLabel: c.startLabel, startSec: c.startSec, description: c.description })) };
       } else if (checked.name === 'search_web') {
         if (webSearches >= MAX_WEB_SEARCHES) {
           result = { error: 'search_limit_reached' };
@@ -170,7 +182,7 @@ export async function runAssistant(env, authorization, uid, rawMessages) {
 }
 
 /** A web question with Google Search grounding. Sources come only from Gemini's grounding data. */
-async function webSearch(env, query) {
+export async function webSearch(env, query) {
   const data = await generate(env, ASSISTANT_MODEL, {
     contents: [{ role: 'user', parts: [{ text: `Answer briefly with current facts: ${query}` }] }],
     tools: [{ google_search: {} }],

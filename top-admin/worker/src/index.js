@@ -11,8 +11,8 @@
  */
 
 import { AUTH_ROUTES, AuthError, verifyFirebaseToken } from './auth.js';
-import { AIEndpointError, createEmbeddings, deepSeekSearch, enforceAiRateLimit, semanticSearch } from './ai.js';
-import { runAssistant } from './assistant.js';
+import { AIEndpointError, createEmbeddings, enforceAiRateLimit, semanticSearch, validateSearchQuery } from './ai.js';
+import { runAssistant, webSearch } from './assistant.js';
 import { searchClips } from './clips.js';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
@@ -197,7 +197,12 @@ async function handle(request, env) {
       let result;
       if (pathname === '/api/ai/search') {
         await enforceAiRateLimit(env, caller.uid, 'search', 8);
-        result = await deepSeekSearch(env, body.query);
+        // Web search uses Gemini with Google Search grounding; sources come only from Gemini's grounding data.
+        const found = await webSearch(env, validateSearchQuery(body.query));
+        result = {
+          answer: found.answer || 'I could not find relevant sources for that question. Try rephrasing it or search the app’s published testimonies.',
+          sources: found.sources.map((s) => ({ title: s.title, url: s.url, snippet: '', summary: '', siteName: new URL(s.url).hostname, date: null })),
+        };
       } else if (pathname === '/api/ai/semantic-search') {
         await enforceAiRateLimit(env, caller.uid, 'semantic-search', 25);
         result = await semanticSearch(env, authorization, body.query, body.limit);

@@ -12,6 +12,14 @@ export interface AssistantTestimony {
   description: string;
 }
 
+export interface AssistantClip {
+  testimonyId: string;
+  title: string;
+  startSec: number;
+  startLabel: string;
+  description: string;
+}
+
 export interface AssistantSource {
   title: string;
   url: string;
@@ -21,6 +29,8 @@ export interface AssistantSource {
 export interface AssistantReply {
   reply: string;
   testimonies: AssistantTestimony[];
+  /** Moments inside testimony videos, each with the second to start from. */
+  clips: AssistantClip[];
   /** External web sources. Shown separately and labelled, never mixed with app content. */
   sources: AssistantSource[];
   /** A screen the assistant suggested; the app only opens names from its own list. */
@@ -66,6 +76,7 @@ export async function askAssistant(messages: AssistantMessage[], signal?: AbortS
   return {
     reply: String(data.reply ?? ''),
     testimonies: Array.isArray(data.testimonies) ? data.testimonies : [],
+    clips: Array.isArray((data as { clips?: unknown }).clips) ? ((data as { clips: AssistantClip[] }).clips) : [],
     sources: Array.isArray(data.sources) ? data.sources : [],
     navigate: typeof data.navigate === 'string' && ASSISTANT_TARGETS[data.navigate] ? data.navigate : null,
   };

@@ -104,6 +104,13 @@ service cloud.firestore {
               && validProfileValues(request.resource.data)
               && request.resource.data.profileCompletedAt == request.time));
 
+      // The welcome tour status, saved on the account so it follows the user to other devices.
+      // Only tourStatus/tourUpdatedAt may change, and only to 'completed' or 'skipped'.
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tourStatus', 'tourUpdatedAt'])
+        && request.resource.data.tourStatus in ['completed', 'skipped']
+        && request.resource.data.tourUpdatedAt == request.time;
+
       // Completing a pending profile, once, with validated values.
       allow update: if signedIn() && request.auth.uid == uid
         && resource.data.profileStatus == 'pending'

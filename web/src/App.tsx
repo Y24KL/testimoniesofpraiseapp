@@ -19,6 +19,7 @@ import { colors, gradients } from './theme';
 import { HomePage } from './pages/HomePage';
 import { WelcomePage } from './pages/WelcomePage';
 import { ProfileCompletionPage } from './pages/ProfileCompletionPage';
+import { TourOverlay, TourProvider, useTour } from './tour/tour';
 
 const named = <K extends string>(load: () => Promise<Record<K, React.ComponentType<any>>>, key: K) =>
   lazy(() => load().then((m) => ({ default: m[key] })));
@@ -146,7 +147,7 @@ function Shell({ route }: { route: Route }) {
       page = <DownloadsPage onNotifications={go({ name: 'notifications' })} onProfile={openDrawer} onSelectTestimony={(id: string) => navigate({ name: 'testimony', id })} />;
       break;
     case 'testimony':
-      page = <TestimonyDetailPage key={route.id} id={route.id} onBack={back} />;
+      page = <TestimonyDetailPage key={`${route.id}:${route.startAt ?? ''}`} id={route.id} onBack={back} startAt={route.startAt} />;
       break;
     case 'audio':
       page = <AudioTestimonyPage key={route.id} id={route.id} onBack={() => goBack({ name: 'listen' })} />;
@@ -246,6 +247,7 @@ function Shell({ route }: { route: Route }) {
 
 function AppContent() {
   const { user, initializing, isNewAccount, profileChecked, needsProfile } = useAuth();
+  const tour = useTour();
   const route = useRoute();
   const [primerSeen, setPrimerSeen] = useState<boolean>(() => {
     try {
@@ -275,11 +277,16 @@ function AppContent() {
   let content: React.ReactNode;
   if (!user) content = <SignedOut route={route} />;
   else if (needsProfile) content = <ProfileCompletionPage />;
-  else if (isNewAccount) content = <FirstTimeWelcomePage onDone={() => {}} />;
+  else if (isNewAccount) content = <FirstTimeWelcomePage onDone={() => tour.start()} />;
   else if (!primerSeen) content = <NotificationPrimerPage onDone={() => setPrimerSeen(true)} />;
   else content = <Shell route={route} />;
 
-  return <Suspense fallback={<Splash />}>{content}</Suspense>;
+  return (
+    <>
+      <Suspense fallback={<Splash />}>{content}</Suspense>
+      <TourOverlay />
+    </>
+  );
 }
 
 export function App() {
@@ -287,7 +294,9 @@ export function App() {
     <AuthProvider>
       <DownloadsProvider>
         <AudioPlayerProvider>
-          <AppContent />
+          <TourProvider>
+            <AppContent />
+          </TourProvider>
         </AudioPlayerProvider>
       </DownloadsProvider>
     </AuthProvider>

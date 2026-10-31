@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/auth/AuthContext';
@@ -12,6 +12,7 @@ import { colors, radius, type as t } from '@/constants/theme';
 import { PROFILE_LIMITS, validateProfile, type ProfileErrors, type ProfileInput } from '@/profile/validation';
 
 const EMPTY: ProfileInput = { title: '', fullName: '', zone: '', church: '' };
+type FieldKey = 'fullName' | 'zone' | 'church';
 
 /**
  * Shown once, right after a new account is created (email or Google), before the app opens.
@@ -25,7 +26,32 @@ export function ProfileCompletionScreen() {
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const submitting = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const fieldY = useRef<Partial<Record<FieldKey, number>>>({});
+
+  // Android does not resize the window for the keyboard here, so keep room under the form while it is open.
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  // Scrolls so the field being typed in sits above the keyboard.
+  const focusField = (key: FieldKey) => {
+    setTimeout(() => {
+      const y = fieldY.current[key] ?? 0;
+      scrollRef.current?.scrollTo({ y: Math.max(0, y - 120), animated: true });
+    }, 250);
+  };
+
+  const fieldLayout = (key: FieldKey) => (e: { nativeEvent: { layout: { y: number } } }) => {
+    fieldY.current[key] = e.nativeEvent.layout.y;
+  };
 
   const set = (key: keyof ProfileInput) => (value: string) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -58,7 +84,11 @@ export function ProfileCompletionScreen() {
   return (
     <Screen>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={[styles.content, { paddingBottom: 40 + keyboardHeight }]}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.header}>
             <Logo size={56} />
             <Text style={styles.title} accessibilityRole="header">
@@ -71,37 +101,46 @@ export function ProfileCompletionScreen() {
 
           <TitlePicker value={form.title} onChange={set('title')} error={errors.title} disabled={busy} />
 
-          <TextField
-            label="Full name *"
-            value={form.fullName}
-            onChangeText={set('fullName')}
-            autoCapitalize="words"
-            textContentType="name"
-            autoComplete="name"
-            maxLength={PROFILE_LIMITS.fullName}
-            editable={!busy}
-            error={errors.fullName}
-          />
-          <TextField
-            label="Zone *"
-            value={form.zone}
-            onChangeText={set('zone')}
-            autoCapitalize="words"
-            maxLength={PROFILE_LIMITS.zone}
-            placeholder="e.g. Lagos Zone 1"
-            editable={!busy}
-            error={errors.zone}
-          />
-          <TextField
-            label="Church *"
-            value={form.church}
-            onChangeText={set('church')}
-            autoCapitalize="words"
-            maxLength={PROFILE_LIMITS.church}
-            placeholder="e.g. Christ Embassy Lagos"
-            editable={!busy}
-            error={errors.church}
-          />
+          <View onLayout={fieldLayout('fullName')}>
+            <TextField
+              label="Full name *"
+              value={form.fullName}
+              onChangeText={set('fullName')}
+              onFocus={() => focusField('fullName')}
+              autoCapitalize="words"
+              textContentType="name"
+              autoComplete="name"
+              maxLength={PROFILE_LIMITS.fullName}
+              editable={!busy}
+              error={errors.fullName}
+            />
+          </View>
+          <View onLayout={fieldLayout('zone')}>
+            <TextField
+              label="Zone *"
+              value={form.zone}
+              onChangeText={set('zone')}
+              onFocus={() => focusField('zone')}
+              autoCapitalize="words"
+              maxLength={PROFILE_LIMITS.zone}
+              placeholder="e.g. Lagos Zone 1"
+              editable={!busy}
+              error={errors.zone}
+            />
+          </View>
+          <View onLayout={fieldLayout('church')}>
+            <TextField
+              label="Church *"
+              value={form.church}
+              onChangeText={set('church')}
+              onFocus={() => focusField('church')}
+              autoCapitalize="words"
+              maxLength={PROFILE_LIMITS.church}
+              placeholder="e.g. Christ Embassy Lagos"
+              editable={!busy}
+              error={errors.church}
+            />
+          </View>
 
           {formError ? (
             <View style={styles.errBox} accessibilityRole="alert">
@@ -122,7 +161,7 @@ export function ProfileCompletionScreen() {
 
 const styles = StyleSheet.create({
   avatar: { width: 64, height: 64, borderRadius: 32, marginBottom: 8, backgroundColor: colors.surface },
-  content: { padding: 20, gap: 18, paddingBottom: 40 },
+  content: { padding: 20, gap: 18 },
   header: { alignItems: 'center', gap: 8, marginBottom: 4 },
   title: { ...t.h1, color: colors.text, textAlign: 'center' },
   sub: { ...t.body, color: colors.textMuted, textAlign: 'center' },

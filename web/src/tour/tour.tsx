@@ -20,7 +20,7 @@ const STEPS: { title: string; caption: string; route: Route; audio: string }[] =
   { title: 'Read Testimonies', caption: 'Read written testimonies in full and leave a comment.', route: { name: 'written' }, audio: 'tutorial.read.v1.mp3' },
   { title: 'ADOTOPOC Resource Center', caption: 'Materials for hosting outreaches and crusades.', route: { name: 'adotopoc' }, audio: 'tutorial.resources.v1.mp3' },
   { title: 'AI features', caption: 'The T.O.P AI Assistant finds testimonies and moments in videos, and answers your questions.', route: { name: 'assistant' }, audio: 'tutorial.ai.v1.mp3' },
-  { title: 'Home', caption: 'That is the tour. You can replay it from the menu.', route: { name: 'home' }, audio: 'tutorial.ending.v2.mp3' },
+  { title: 'Home', caption: 'That is the tour. You can replay it from the menu.', route: { name: 'home' }, audio: '' },
 ];
 
 const MUSIC_LEVEL = 0.3;
@@ -89,10 +89,13 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       stopVoice();
       // Called from a button press, so the browser allows this play().
       try {
-        const audio = new Audio(`/audio/narration/${STEPS[i].audio}`);
-        audio.volume = muted ? 0 : 1;
-        voice.current = audio;
-        void audio.play().catch(() => undefined);
+        // Steps with no narration (the closing card) show the caption only.
+        if (STEPS[i].audio) {
+          const audio = new Audio(`/audio/narration/${STEPS[i].audio}`);
+          audio.volume = muted ? 0 : 1;
+          voice.current = audio;
+          void audio.play().catch(() => undefined);
+        }
       } catch {
         /* no narration is fine: the caption is still shown */
       }

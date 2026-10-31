@@ -129,7 +129,7 @@ Take some time to discover what is available.
 Next, let's look at the Downloads section!`),
   'tutorial.read': { ...scripted('tutorial.read', `Read Testimonies lets you read written testimonies in full. Open any story that catches your attention, and when you are ready, leave a comment to share how it encouraged you.`) },
   'tutorial.ai': { ...scripted('tutorial.ai', `Our T.O.P AI Assistant can help you in a few ways. It can find testimonies by what they are about. It can find a moment inside a video, such as the part where someone prays, and open it for you. It can show you around the app, and answer general questions with sources from the web. Find it in the Assistant tab.`) },
-  'tutorial.ending': { ...scripted('tutorial.ending', `That brings us to the end of your tour. You have seen the Home dashboard, live broadcasts, testimonies, the Resource Center and the AI features. We encourage you to explore, and remember: every testimony tells a story of God's goodness. Welcome to Testimonies of Praise!`), version: 2 },
+  'tutorial.ending': entry('tutorial.ending'), // silent: the closing step shows its caption only
   'feature.live': entry('feature.live'),
   'feature.radio': entry('feature.radio'),
   'feature.adotopoc': entry('feature.adotopoc'),

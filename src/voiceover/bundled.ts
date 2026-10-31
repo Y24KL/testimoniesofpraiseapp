@@ -13,6 +13,5 @@ export const BUNDLED_AUDIO: Partial<Record<VoiceoverId, number>> = {
   'tutorial.ai': require('../../assets/voiceovers/tutorial.ai.v1.mp3'),
   'tutorial.live': require('../../assets/voiceovers/tutorial.live.v1.mp3'),
   'tutorial.resources': require('../../assets/voiceovers/tutorial.resources.v1.mp3'),
-  'tutorial.ending': require('../../assets/voiceovers/tutorial.ending.v2.mp3'),
   'assistant.response': require('../../assets/voiceovers/assistant.response.v1.mp3'),
 };

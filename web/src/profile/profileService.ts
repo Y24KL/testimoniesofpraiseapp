@@ -24,6 +24,9 @@ export async function readProfileStatus(uid: string): Promise<ProfileStatus> {
 /** Records a brand-new account that still has to complete the form (e.g. first Google sign-in). */
 export async function createPendingProfile(uid: string): Promise<void> {
   try {
+    // Never overwrite a profile that already exists (saved details must survive a later sign-in).
+    const existing = await getDoc(userRef(uid));
+    if (existing.exists()) return;
     await setDoc(userRef(uid), { profileStatus: 'pending', createdAt: serverTimestamp() });
   } catch (e) {
     // Already exists (retry or second device) or offline: the local pending flag still covers it.

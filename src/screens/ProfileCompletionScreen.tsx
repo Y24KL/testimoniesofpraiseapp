@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/auth/AuthContext';
 import { Logo } from '@/components/Logo';
@@ -18,7 +19,8 @@ const EMPTY: ProfileInput = { title: '', fullName: '', zone: '', church: '' };
  */
 export function ProfileCompletionScreen() {
   const { completeProfile, signOut, user } = useAuth();
-  const [form, setForm] = useState<ProfileInput>(EMPTY);
+  // The name from the account (Google or the sign-up form) is filled in, so the person only completes what is missing.
+  const [form, setForm] = useState<ProfileInput>(() => ({ ...EMPTY, fullName: user?.displayName?.trim() ?? '' }));
   const [errors, setErrors] = useState<ProfileErrors>({});
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -63,6 +65,7 @@ export function ProfileCompletionScreen() {
               Complete your profile
             </Text>
             <Text style={styles.sub}>Tell us a little about you before you start. This takes less than a minute.</Text>
+            {user?.photoURL ? <Image source={{ uri: user.photoURL }} style={styles.avatar} accessibilityLabel="Your profile photo" /> : null}
             {user?.email ? <Text style={styles.email}>{user.email}</Text> : null}
           </View>
 
@@ -118,6 +121,7 @@ export function ProfileCompletionScreen() {
 }
 
 const styles = StyleSheet.create({
+  avatar: { width: 64, height: 64, borderRadius: 32, marginBottom: 8, backgroundColor: colors.surface },
   content: { padding: 20, gap: 18, paddingBottom: 40 },
   header: { alignItems: 'center', gap: 8, marginBottom: 4 },
   title: { ...t.h1, color: colors.text, textAlign: 'center' },

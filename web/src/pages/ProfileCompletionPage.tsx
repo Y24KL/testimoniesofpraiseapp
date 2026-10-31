@@ -14,7 +14,8 @@ const EMPTY: ProfileInput = { title: '', fullName: '', zone: '', church: '' };
  */
 export function ProfileCompletionPage() {
   const { completeProfile, signOut, user } = useAuth();
-  const [form, setForm] = useState<ProfileInput>(EMPTY);
+  // The name from the account (Google or the sign-up form) is filled in, so the person only completes what is missing.
+  const [form, setForm] = useState<ProfileInput>(() => ({ ...EMPTY, fullName: user?.displayName?.trim() ?? '' }));
   const [errors, setErrors] = useState<ProfileErrors>({});
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -56,6 +57,7 @@ export function ProfileCompletionPage() {
         <div className="auth-head">
           <h1>Complete your profile</h1>
           <p>Tell us a little about you before you start. It takes less than a minute.</p>
+          {user?.photoURL ? <img src={user.photoURL} alt="Your profile photo" referrerPolicy="no-referrer" style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', margin: '0 auto 8px', display: 'block' }} /> : null}
           {user?.email ? <p style={{ color: colors.accent, fontSize: '13px' }}>{user.email}</p> : null}
         </div>
 

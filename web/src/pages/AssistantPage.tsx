@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Check, ChevronRight, Copy, HelpCircle, History, KeyRound, Library, LogIn, Mail, MessageCircle, MessagesSquare, Pencil, Plus, RotateCw, Search, Send, Square, Trash2, UserCircle, Video, type LucideIcon } from 'lucide-react';
 import { askAssistant, AssistantError, type AssistantMessage, type AssistantReply } from '../api/assistant';
-import { groupByDate, loadConversations, previewOf, saveConversations, titleFrom, type Conversation, type StoredTurn } from '../api/chatHistory';
+import { groupByDate, loadConversations, previewOf, syncConversations, titleFrom, type Conversation, type StoredTurn } from '../api/chatHistory';
 import { useAuth } from '../context/AuthContext';
 import { TopBar } from '../components/TopBar';
 import { navigate, type Route } from '../router';
@@ -159,9 +159,20 @@ export function AssistantPage({ onBack }: { onBack: () => void }) {
     setActiveId(null);
     setError(null);
     setBusy(false);
-    const list = uid ? loadConversations(uid) : [];
-    latest.current = list;
-    setConversations(list);
+    if (!uid) {
+      latest.current = [];
+      setConversations([]);
+      return;
+    }
+    let cancelled = false;
+    void loadConversations(uid).then((list) => {
+      if (cancelled) return;
+      latest.current = list;
+      setConversations(list);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [uid]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -172,10 +183,11 @@ export function AssistantPage({ onBack }: { onBack: () => void }) {
 
   const commit = (next: Conversation[]) => {
     const sorted = [...next].sort((a, b) => b.updatedAt - a.updatedAt);
+    const prev = latest.current;
     latest.current = sorted;
     setConversations(sorted);
     const owner = uidRef.current;
-    if (owner) saveConversations(owner, sorted);
+    if (owner) syncConversations(owner, prev, sorted);
   };
 
   const send = async (text?: string) => {

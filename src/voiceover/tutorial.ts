@@ -1,14 +1,14 @@
 import type { VoiceoverId } from './manifest';
 
 /**
- * Guided app tour. Each step opens the real screen it describes (see RootNavigator / TabNavigator) and
- * shows a short on-screen caption. The narration for `voice` comes from its script in manifest.ts; no
- * audio plays until that narration has been generated and published.
+ * Guided app tour: the main features only. Each step opens the real screen it describes (see RootNavigator /
+ * TabNavigator) and shows a short on-screen caption. The narration for `voice` comes from its script in
+ * manifest.ts; the audio is bundled from the generated drafts.
  */
 export type TutorialRoute =
   | { kind: 'home' }
-  | { kind: 'tab'; screen: 'Testimonies' | 'Live' | 'Downloads' }
-  | { kind: 'stack'; screen: 'Adotopoc' | 'Search' | 'Notifications' | 'Profile' };
+  | { kind: 'tab'; screen: 'Testimonies' | 'Live' | 'Assistant' }
+  | { kind: 'stack'; screen: 'Adotopoc' | 'WrittenTestimonies' };
 
 export interface TutorialStep {
   voice: VoiceoverId;
@@ -33,51 +33,39 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     route: { kind: 'home' },
   },
   {
-    voice: 'tutorial.testimonies',
-    title: 'Testimonies',
-    caption: 'Browse, search, watch, listen to and read testimonies. You can share them too.',
-    route: { kind: 'tab', screen: 'Testimonies' },
-  },
-  {
     voice: 'tutorial.live',
-    title: 'Live',
-    caption: 'Watch our live broadcasts here. You can turn on notifications for them.',
+    title: 'Watch Live',
+    caption: 'Watch our live broadcasts here, with live chat when we are on air.',
     route: { kind: 'tab', screen: 'Live' },
   },
   {
+    voice: 'tutorial.testimonies',
+    title: 'Watch Testimonies',
+    caption: 'Browse and watch video testimonies from the Testimonies tab.',
+    route: { kind: 'tab', screen: 'Testimonies' },
+  },
+  {
+    voice: 'tutorial.read',
+    title: 'Read Testimonies',
+    caption: 'Read written testimonies in full and leave a comment.',
+    route: { kind: 'stack', screen: 'WrittenTestimonies' },
+  },
+  {
     voice: 'tutorial.resources',
-    title: 'Resource Center',
-    caption: 'Materials for hosting outreaches and crusades, from the ADOTOPOC Resource Center.',
+    title: 'ADOTOPOC Resource Center',
+    caption: 'Materials for hosting outreaches and crusades.',
     route: { kind: 'stack', screen: 'Adotopoc' },
   },
   {
-    voice: 'tutorial.downloads',
-    title: 'Downloads',
-    caption: 'Testimonies you saved for offline viewing are kept here.',
-    route: { kind: 'tab', screen: 'Downloads' },
-  },
-  {
-    voice: 'tutorial.search',
-    title: 'Search',
-    caption: 'Search for testimonies and other content, then open any result.',
-    route: { kind: 'stack', screen: 'Search' },
-  },
-  {
-    voice: 'tutorial.notifications',
-    title: 'Notifications',
-    caption: 'Updates on new testimonies, announcements and live broadcasts appear here.',
-    route: { kind: 'stack', screen: 'Notifications' },
-  },
-  {
-    voice: 'tutorial.account',
-    title: 'Your account',
-    caption: 'Your profile and account options. Keep your sign-in details to yourself.',
-    route: { kind: 'stack', screen: 'Profile' },
+    voice: 'tutorial.ai',
+    title: 'AI features',
+    caption: 'The T.O.P AI Assistant finds testimonies and moments in videos, and answers your questions.',
+    route: { kind: 'tab', screen: 'Assistant' },
   },
   {
     voice: 'tutorial.ending',
     title: 'Home',
-    caption: 'That is the tour. Enjoy the experience. You can replay it from the menu.',
+    caption: 'That is the tour. You can replay it from the menu.',
     route: { kind: 'home' },
   },
 ];

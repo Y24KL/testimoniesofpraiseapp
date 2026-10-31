@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Keyboard, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Keyboard, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextStyle } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Clipboard from 'expo-clipboard';
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
@@ -45,6 +45,56 @@ const FOLLOW_UPS: { label: string; prompt: string }[] = [
 
 /** Opens on KingsChat if the app is installed, otherwise in the browser. */
 const SUPPORT_URL = 'https://kingschat.online/user/topappsupport';
+
+/** Bold text: **like this**. Quotes inside the bold are dropped, since they add noise. */
+function InlineText({ text, style }: { text: string; style: StyleProp<TextStyle> }) {
+  const parts = text.replace(/\*{3,}/g, '**').split(/(\*\*[^*]+\*\*)/g);
+  return (
+    <Text style={style}>
+      {parts.map((part, i) =>
+        part.startsWith('**') && part.endsWith('**') && part.length > 4 ? (
+          <Text key={i} style={{ fontWeight: '800' }}>{part.slice(2, -2).replace(/^["“”]|["“”]$/g, '')}</Text>
+        ) : (
+          <Text key={i}>{part}</Text>
+        ),
+      )}
+    </Text>
+  );
+}
+
+/** Shows an assistant reply with paragraphs, bold text and bullet lists. */
+function FormattedReply({ text }: { text: string }) {
+  const blocks: React.ReactNode[] = [];
+  let items: string[] = [];
+  const flush = () => {
+    if (items.length === 0) return;
+    blocks.push(
+      <View key={`list${blocks.length}`} style={{ gap: 6 }}>
+        {items.map((item, i) => (
+          <View key={i} style={{ flexDirection: 'row', gap: 8, paddingRight: 4 }}>
+            <Text style={styles.text}>•</Text>
+            <InlineText text={item} style={[styles.text, { flex: 1 }]} />
+          </View>
+        ))}
+      </View>,
+    );
+    items = [];
+  };
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    const bullet = line.match(/^[-*•]\s+(.*)$/);
+    if (bullet) {
+      items.push(bullet[1]);
+    } else if (line === '') {
+      flush();
+    } else {
+      flush();
+      blocks.push(<InlineText key={`p${blocks.length}`} text={line} style={styles.text} />);
+    }
+  }
+  flush();
+  return <View style={{ gap: 10 }}>{blocks}</View>;
+}
 
 const timeLabel = (at: number) => new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -293,7 +343,11 @@ export function AssistantScreen() {
     return (
       <View style={[styles.row, item.role === 'user' && styles.rowMe]}>
         <View style={[styles.bubble, item.role === 'user' ? styles.me : styles.bot]}>
-          <Text selectable style={[styles.text, item.role === 'user' && { color: colors.onAccent }]}>{item.content}</Text>
+          {item.role === 'user' ? (
+            <Text selectable style={[styles.text, { color: colors.onAccent }]}>{item.content}</Text>
+          ) : (
+            <FormattedReply text={item.content} />
+          )}
 
           {item.testimonies && item.testimonies.length > 0 ? (
             <View style={{ gap: 6, marginTop: 8 }}>

@@ -5,7 +5,7 @@ import * as Clipboard from 'expo-clipboard';
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { ASSISTANT_TARGETS, AssistantError, askAssistant, type AssistantMessage } from '@/ai/assistant';
-import { groupByDate, loadConversations, previewOf, saveConversations, titleFrom, type Conversation, type StoredTurn } from '@/ai/chatHistory';
+import { groupByDate, loadConversations, previewOf, syncConversations, titleFrom, type Conversation, type StoredTurn } from '@/ai/chatHistory';
 import { useAuth } from '@/auth/AuthContext';
 import { Screen } from '@/components/Screen';
 import { TopBar } from '@/components/TopBar';
@@ -173,10 +173,11 @@ export function AssistantScreen() {
 
   const commit = (next: Conversation[]) => {
     const sorted = [...next].sort((a, b) => b.updatedAt - a.updatedAt);
+    const prev = latest.current;
     latest.current = sorted;
     setConversations(sorted);
     const owner = uidRef.current;
-    if (owner) void saveConversations(owner, sorted);
+    if (owner) syncConversations(owner, prev, sorted);
   };
 
   const send = async (text?: string) => {

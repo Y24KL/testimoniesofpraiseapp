@@ -1,11 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { collection, deleteDoc, doc, getDocs, setDoc } from 'firebase/firestore';
+import { db } from '@/api/firebase';
 import { STORAGE_KEYS } from '@/constants/config';
 import type { AssistantReply } from '@/ai/assistant';
 
 /**
- * Assistant chats are kept on this device only, one list per signed-in account (keyed by uid), so
- * conversations never mix between accounts. Nothing here is sent to the server. Cross-device sync is
- * not built yet; this module is the single place to change if it is added later.
+ * Assistant chats are saved to the signed-in account, so they follow the user to other devices. Each chat is
+ * one document at users/{uid}/assistantChats/{chatId}; the security rules only let the owner read or change it.
+ * A copy is kept on this device so the list still opens when offline. Writes that fail are retried the next
+ * time that chat changes.
  */
 
 export interface StoredTurn {
@@ -27,23 +30,93 @@ export interface Conversation {
 }
 
 const DAY = 24 * 60 * 60 * 1000;
-const key = (uid: string) => `${STORAGE_KEYS.assistantChatsPrefix}${uid}`;
+/** Firestore documents are limited to 1 MB; the rules allow 200,000 characters of turns. */
+const MAX_TURNS_CHARS = 180_000;
+const cacheKey = (uid: string) => `${STORAGE_KEYS.assistantChatsPrefix}${uid}`;
+const chatsRef = (uid: string) => collection(db, 'users', uid, 'assistantChats');
 
-export async function loadConversations(uid: string): Promise<Conversation[]> {
+/** Keeps the newest turns so a very long chat still fits in one document. */
+function fitTurns(turns: StoredTurn[]): StoredTurn[] {
+  let kept = turns;
+  while (kept.length > 2 && JSON.stringify(kept).length > MAX_TURNS_CHARS) kept = kept.slice(2);
+  return kept;
+}
+
+async function cacheConversations(uid: string, list: Conversation[]): Promise<void> {
   try {
-    const raw = await AsyncStorage.getItem(key(uid));
+    await AsyncStorage.setItem(cacheKey(uid), JSON.stringify(list));
+  } catch {
+    // Storage can be full or unavailable; the account copy still holds the chats.
+  }
+}
+
+async function readCache(uid: string): Promise<Conversation[]> {
+  try {
+    const raw = await AsyncStorage.getItem(cacheKey(uid));
     const parsed = raw ? (JSON.parse(raw) as unknown) : [];
-    return Array.isArray(parsed) ? (parsed as Conversation[]).sort((a, b) => b.updatedAt - a.updatedAt) : [];
+    return Array.isArray(parsed) ? (parsed as Conversation[]) : [];
   } catch {
     return [];
   }
 }
 
-export async function saveConversations(uid: string, list: Conversation[]): Promise<void> {
+/** The account's chats, newest first. Falls back to this device's copy when offline. */
+export async function loadConversations(uid: string): Promise<Conversation[]> {
   try {
-    await AsyncStorage.setItem(key(uid), JSON.stringify(list));
+    const snap = await getDocs(chatsRef(uid));
+    const list = snap.docs
+      .map((d) => {
+        const data = d.data();
+        let turns: StoredTurn[] = [];
+        try {
+          turns = JSON.parse(String(data.turnsJson ?? '[]')) as StoredTurn[];
+        } catch {
+          turns = [];
+        }
+        return { id: d.id, title: String(data.title ?? ''), updatedAt: Number(data.updatedAt ?? 0), turns };
+      })
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+    if (list.length === 0) {
+      // Chats saved on this device before accounts stored them move to the account once.
+      const local = await readCache(uid);
+      for (const c of local) void saveConversation(uid, c).catch(() => undefined);
+      if (local.length) return local.sort((x, y) => y.updatedAt - x.updatedAt);
+    }
+    await cacheConversations(uid, list);
+    return list;
   } catch {
-    // Storage can be full or unavailable; the chat still works for this session.
+    return (await readCache(uid)).sort((a, b) => b.updatedAt - a.updatedAt);
+  }
+}
+
+async function saveConversation(uid: string, c: Conversation): Promise<void> {
+  await setDoc(doc(chatsRef(uid), c.id), {
+    title: c.title.slice(0, 80),
+    turnsJson: JSON.stringify(fitTurns(c.turns)),
+    updatedAt: c.updatedAt,
+  });
+}
+
+async function deleteConversation(uid: string, id: string): Promise<void> {
+  await deleteDoc(doc(chatsRef(uid), id));
+}
+
+/**
+ * Brings the account in line with the list on screen: saves changed chats, removes deleted ones, and keeps
+ * the device copy current. Network errors are ignored here; the next change to that chat saves it again.
+ */
+export function syncConversations(uid: string, prev: Conversation[], next: Conversation[]): void {
+  void cacheConversations(uid, next);
+  const before = new Map(prev.map((c) => [c.id, c]));
+  for (const c of next) {
+    const old = before.get(c.id);
+    if (!old || old.updatedAt !== c.updatedAt || old.title !== c.title) {
+      void saveConversation(uid, c).catch(() => undefined);
+    }
+  }
+  const kept = new Set(next.map((c) => c.id));
+  for (const c of prev) {
+    if (!kept.has(c.id)) void deleteConversation(uid, c.id).catch(() => undefined);
   }
 }
 

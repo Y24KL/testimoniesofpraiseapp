@@ -2,8 +2,8 @@
  * VOICEOVER MANIFEST: the one place that maps every narration to its approved script, voice and audio.
  *
  * How a script becomes audio (full steps in docs/VOICEOVERS.md):
- *   1. Paste the approved script into `script` below and set `status: 'approved'`. Bump `version`
- *      whenever the approved wording changes, so old audio is never replayed by mistake.
+ * 1. Paste the approved script into `script` below and set `status: 'approved'`. Bump `version`
+ *whenever the approved wording changes, so old audio is never replayed by mistake.
  *   2. Run `npm run voiceovers:generate` (ElevenLabs key read from .env.local, never printed).
  *      Drafts are written to voiceover-drafts/ (git-ignored) for listening.
  *   3. After approval, upload the mp3 to the CDN and set `asset.url` and `status: 'generated'`.
@@ -16,12 +16,10 @@ export type VoiceoverId =
   | 'tutorial.intro'
   | 'tutorial.home'
   | 'tutorial.testimonies'
+  | 'tutorial.read'
+  | 'tutorial.ai'
   | 'tutorial.live'
   | 'tutorial.resources'
-  | 'tutorial.downloads'
-  | 'tutorial.search'
-  | 'tutorial.notifications'
-  | 'tutorial.account'
   | 'tutorial.ending'
   | 'feature.live'
   | 'feature.radio'
@@ -129,55 +127,9 @@ Whether you are looking for videos, audio or other ministry resources, this is w
 Take some time to discover what is available.
 
 Next, let's look at the Downloads section!`),
-  'tutorial.downloads': scripted('tutorial.downloads', `Welcome to Downloads!
-
-This section helps you access content you have downloaded through the application.
-
-You can find your saved media here and enjoy supported content without needing to search for it again.
-
-Whenever offline downloads are supported, downloading content allows you to access it later, even when you do not have an active internet connection.
-
-Your downloaded content is organised to make it easier to find and enjoy.
-
-Now, let's explore the other ways to discover content!`),
-  'tutorial.search': scripted('tutorial.search', `Finding something specific is easy!
-
-Use the available search functionality to look for testimonies, resources or other content within the application.
-
-Enter what you are looking for and explore the results.
-
-When you find something interesting, simply open it to enjoy the content.
-
-Next, let's take a look at notifications!`),
-  'tutorial.notifications': scripted('tutorial.notifications', `Stay connected with what's happening on Testimonies of Praise!
-
-The Notifications section helps keep you informed about important updates, new testimonies, announcements and live broadcasts.
-
-When notifications are enabled on your device, you can receive updates even when you are not actively using the application.
-
-Simply open a notification to access the related content.
-
-Finally, let's explore your account!`),
-  'tutorial.account': scripted('tutorial.account', `This is your account and profile area.
-
-Here, you can access the account options available to you, manage your profile and find relevant account settings.
-
-Remember to keep your sign-in information secure.
-
-Should you experience any account access problems, use the available account recovery options or contact the Testimonies of Praise support team.
-
-You are now familiar with the main sections of the application!`),
-  'tutorial.ending': scripted('tutorial.ending', `And that brings us to the end of your Testimonies of Praise application tour!
-
-You have explored the Home dashboard, discovered testimonies, visited the Live section, explored the Resource Center, learned about Downloads and discovered the other important features available in the application.
-
-We encourage you to explore, watch, listen, share and stay connected.
-
-Thank you for being part of Testimonies of Praise.
-
-Enjoy the experience, and remember: every testimony tells a story of God's goodness.
-
-Welcome to Testimonies of Praise!`),
+  'tutorial.read': { ...scripted('tutorial.read', `Read Testimonies lets you read written testimonies in full. Open any story that catches your attention, and when you are ready, leave a comment to share how it encouraged you.`) },
+  'tutorial.ai': { ...scripted('tutorial.ai', `Our T.O.P AI Assistant can help you in a few ways. It can find testimonies by what they are about. It can find a moment inside a video, such as the part where someone prays, and open it for you. It can show you around the app, and answer general questions with sources from the web. Find it in the Assistant tab.`) },
+  'tutorial.ending': entry('tutorial.ending'), // silent: the closing step shows its caption only
   'feature.live': entry('feature.live'),
   'feature.radio': entry('feature.radio'),
   'feature.adotopoc': entry('feature.adotopoc'),

@@ -6,7 +6,7 @@ import { navigate, type Route } from '../router';
 import { colors, radius } from '../theme';
 
 /**
- * Welcome tour for the website: ten stops, the same as the app tour, each opening the real page it describes.
+ * Welcome tour for the website: eight stops, the same as the app tour, each opening the real page it describes.
  * Each stop plays its approved narration (generated with ElevenLabs, see docs/VOICEOVERS.md). Background music
  * is the team's own track, quiet, and only plays after the user has pressed a button (browsers block autoplay
  * otherwise). The tour's status is saved on the account, so it is never shown again on any device once completed
@@ -15,14 +15,12 @@ import { colors, radius } from '../theme';
 const STEPS: { title: string; caption: string; route: Route; audio: string }[] = [
   { title: 'Welcome', caption: 'Testimonies of Praise shares testimonies, live broadcasts and resources.', route: { name: 'home' }, audio: 'tutorial.intro.v2.mp3' },
   { title: 'Home', caption: 'Home shows featured content, the latest testimonies and announcements.', route: { name: 'home' }, audio: 'tutorial.home.v1.mp3' },
-  { title: 'Testimonies', caption: 'Browse, search, watch, listen to and read testimonies. You can share them too.', route: { name: 'testimonies' }, audio: 'tutorial.testimonies.v2.mp3' },
-  { title: 'Live', caption: 'Watch our live broadcasts here. You can turn on notifications for them.', route: { name: 'live' }, audio: 'tutorial.live.v1.mp3' },
-  { title: 'Resource Center', caption: 'Materials for hosting outreaches and crusades, from the ADOTOPOC Resource Center.', route: { name: 'adotopoc' }, audio: 'tutorial.resources.v1.mp3' },
-  { title: 'Downloads', caption: 'Testimonies you saved for offline viewing are kept here.', route: { name: 'downloads' }, audio: 'tutorial.downloads.v1.mp3' },
-  { title: 'Search', caption: 'Search for testimonies and other content, then open any result.', route: { name: 'search' }, audio: 'tutorial.search.v1.mp3' },
-  { title: 'Notifications', caption: 'Updates on new testimonies, announcements and live broadcasts appear here.', route: { name: 'notifications' }, audio: 'tutorial.notifications.v1.mp3' },
-  { title: 'Your account', caption: 'Your profile and account options. Keep your sign-in details to yourself.', route: { name: 'profile' }, audio: 'tutorial.account.v1.mp3' },
-  { title: 'Home', caption: 'That is the tour. Enjoy the experience. You can replay it from the menu.', route: { name: 'home' }, audio: 'tutorial.ending.v1.mp3' },
+  { title: 'Watch Live', caption: 'Watch our live broadcasts here, with live chat when we are on air.', route: { name: 'live' }, audio: 'tutorial.live.v1.mp3' },
+  { title: 'Watch Testimonies', caption: 'Browse and watch video testimonies from the Testimonies page.', route: { name: 'testimonies' }, audio: 'tutorial.testimonies.v2.mp3' },
+  { title: 'Read Testimonies', caption: 'Read written testimonies in full and leave a comment.', route: { name: 'written' }, audio: 'tutorial.read.v1.mp3' },
+  { title: 'ADOTOPOC Resource Center', caption: 'Materials for hosting outreaches and crusades.', route: { name: 'adotopoc' }, audio: 'tutorial.resources.v1.mp3' },
+  { title: 'AI features', caption: 'The T.O.P AI Assistant finds testimonies and moments in videos, and answers your questions.', route: { name: 'assistant' }, audio: 'tutorial.ai.v1.mp3' },
+  { title: 'Home', caption: 'That is the tour. You can replay it from the menu.', route: { name: 'home' }, audio: '' },
 ];
 
 const MUSIC_LEVEL = 0.3;
@@ -91,10 +89,13 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       stopVoice();
       // Called from a button press, so the browser allows this play().
       try {
-        const audio = new Audio(`/audio/narration/${STEPS[i].audio}`);
-        audio.volume = muted ? 0 : 1;
-        voice.current = audio;
-        void audio.play().catch(() => undefined);
+        // Steps with no narration (the closing card) show the caption only.
+        if (STEPS[i].audio) {
+          const audio = new Audio(`/audio/narration/${STEPS[i].audio}`);
+          audio.volume = muted ? 0 : 1;
+          voice.current = audio;
+          void audio.play().catch(() => undefined);
+        }
       } catch {
         /* no narration is fine: the caption is still shown */
       }

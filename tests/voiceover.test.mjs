@@ -35,7 +35,7 @@ assert.equal(VOICEOVERS['app.open'].bundled, true);
 n += 3;
 
 // Tutorial steps only reference ids that exist, and cover the seven welcome-tour stops.
-assert.equal(TUTORIAL_STEPS.length, 10);
+assert.equal(TUTORIAL_STEPS.length, 8);
 for (const s of TUTORIAL_STEPS) assert.ok(VOICEOVERS[s.voice], `unknown voice id ${s.voice}`);
 n += 2;
 

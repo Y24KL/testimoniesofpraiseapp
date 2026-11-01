@@ -11,6 +11,7 @@
  */
 
 import { AUTH_ROUTES, AuthError, verifyFirebaseToken } from './auth.js';
+import { handleKingsChatCallback } from './kingschat.js';
 import { AIEndpointError, createEmbeddings, enforceAiRateLimit, semanticSearch, validateSearchQuery } from './ai.js';
 import { runAssistant, webSearch } from './assistant.js';
 import { searchClips } from './clips.js';
@@ -165,6 +166,9 @@ async function handle(request, env) {
   // 0) Email verification + trusted devices (POST /auth/...), used by the mobile app.
   //    Native apps send no Origin header; browsers from unknown sites are still refused.
   // -------------------------------------------------------------
+  // KingsChat sign-in callback: KingsChat posts the code here (form POST). See kingschat.js.
+  if (pathname === '/api/auth/kingschat/callback') return handleKingsChatCallback(request, env);
+
   if (pathname.startsWith('/auth/') && AUTH_ROUTES[pathname]) {
     if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405, cors);
     if (origin && !isOriginAllowed) return json({ error: 'Origin not allowed.' }, 403, cors);

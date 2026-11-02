@@ -37,6 +37,15 @@ export type RootStackParamList = {
   AudioTestimony: { id: string };
   WrittenTestimonies: undefined;
   WrittenTestimony: { id: string };
+  // Worship with your LoveWorld Singers
+  LoveworldSingers: undefined;
+  LoveworldSingerVideo: { id: string };
+  // Feature your choir/group on T.O.P
+  ChoirFeature: undefined;
+  ChoirShowcase: undefined;
+  FeaturedChoir: { id: string };
+  ChoirRequest: undefined;
+  ChoirRequestSent: undefined;
 };
 
 declare global {

@@ -19,6 +19,10 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type {
+  ChoirFeatureRequest,
+  ChoirRequestStatus,
+  FeaturedChoir,
+  LoveworldSingersVideo,
   WrittenTestimony,
   PreLiveMedia,
   AdotopocConfig,
@@ -263,7 +267,117 @@ export interface PageOptions {
   featuredOnly?: boolean;
 }
 
+const CHOIR_STATUSES: ChoirRequestStatus[] = ['pending', 'reviewed', 'approved', 'rejected'];
+
+export function normalizeLoveworldSingersVideo(id: string, r: Raw): LoveworldSingersVideo {
+  return {
+    id,
+    title: String(pick(r, ['title']) ?? 'Untitled video'),
+    description: String(pick(r, ['description']) ?? ''),
+    videoUrl: String(pick(r, ['videoUrl', 'url']) ?? ''),
+    thumbnail: pick(r, ['thumbnailUrl', 'thumbnail']) || undefined,
+    duration: typeof r.duration === 'number' ? r.duration : undefined,
+    isFeatured: r.isFeatured === true,
+    order: typeof r.order === 'number' ? r.order : 0,
+    isDownloadable: r.isDownloadable === true,
+    isPublished: r.isPublished === true,
+    publishedAt: toIso(pick(r, ['publishedAt'])),
+    createdAt: toIso(pick(r, ['createdAt'])),
+  };
+}
+
+export function normalizeFeaturedChoir(id: string, r: Raw): FeaturedChoir {
+  return {
+    id,
+    groupName: String(pick(r, ['groupName']) ?? 'Choir'),
+    songTitle: String(pick(r, ['songTitle']) ?? ''),
+    videoUrl: String(pick(r, ['videoUrl', 'url']) ?? ''),
+    thumbnail: pick(r, ['thumbnailUrl', 'thumbnail']) || undefined,
+    duration: typeof r.duration === 'number' ? r.duration : undefined,
+    order: typeof r.order === 'number' ? r.order : 0,
+    isPublished: r.isPublished === true,
+    createdAt: toIso(pick(r, ['createdAt'])),
+  };
+}
+
+export function normalizeChoirFeatureRequest(id: string, r: Raw): ChoirFeatureRequest {
+  return {
+    id,
+    groupName: String(pick(r, ['groupName']) ?? ''),
+    churchZone: String(pick(r, ['churchZone']) ?? ''),
+    ministrationUrl: String(pick(r, ['ministrationUrl']) ?? ''),
+    songTitle: String(pick(r, ['songTitle']) ?? ''),
+    submittedBy: String(pick(r, ['submittedBy']) ?? ''),
+    status: CHOIR_STATUSES.includes(r.status) ? (r.status as ChoirRequestStatus) : 'pending',
+    submittedAt: toIso(pick(r, ['submittedAt'])),
+    reviewedAt: toIso(pick(r, ['reviewedAt'])),
+    reviewedBy: pick(r, ['reviewedBy']) || null,
+  };
+}
+
 export const repo = {
+  async getLoveworldSingersVideos(max = 100): Promise<LoveworldSingersVideo[]> {
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'loveworldSingersVideos'), where('isPublished', '==', true), orderBy('order', 'asc'), qLimit(max)),
+      );
+      return snap.docs.map((d) => normalizeLoveworldSingersVideo(d.id, d.data()));
+    } catch (e: any) {
+      if (e?.code === 'permission-denied') return [];
+      throw e;
+    }
+  },
+
+  async getLoveworldSingersVideo(id: string): Promise<LoveworldSingersVideo | null> {
+    try {
+      const s = await getDoc(doc(db, 'loveworldSingersVideos', id));
+      if (!s.exists()) return null;
+      const item = normalizeLoveworldSingersVideo(s.id, s.data());
+      return item.isPublished ? item : null;
+    } catch (e: any) {
+      if (e?.code === 'permission-denied') return null;
+      throw e;
+    }
+  },
+
+  async getFeaturedChoirs(max = 100): Promise<FeaturedChoir[]> {
+    try {
+      const snap = await getDocs(query(collection(db, 'featuredChoirs'), where('isPublished', '==', true), orderBy('order', 'asc'), qLimit(max)));
+      return snap.docs.map((d) => normalizeFeaturedChoir(d.id, d.data()));
+    } catch (e: any) {
+      if (e?.code === 'permission-denied') return [];
+      throw e;
+    }
+  },
+
+  async getFeaturedChoir(id: string): Promise<FeaturedChoir | null> {
+    try {
+      const s = await getDoc(doc(db, 'featuredChoirs', id));
+      if (!s.exists()) return null;
+      const item = normalizeFeaturedChoir(s.id, s.data());
+      return item.isPublished ? item : null;
+    } catch (e: any) {
+      if (e?.code === 'permission-denied') return null;
+      throw e;
+    }
+  },
+
+  /** Saves a request as pending review. Rules accept only these fields, status 'pending' and the signed-in uid. */
+  async submitChoirFeatureRequest(
+    input: { groupName: string; churchZone: string; ministrationUrl: string; songTitle: string },
+    submittedBy: string,
+  ): Promise<void> {
+    await addDoc(collection(db, 'choirFeatureRequests'), {
+      groupName: input.groupName.trim(),
+      churchZone: input.churchZone.trim(),
+      ministrationUrl: input.ministrationUrl.trim(),
+      songTitle: input.songTitle.trim(),
+      submittedBy,
+      status: 'pending',
+      submittedAt: serverTimestamp(),
+    });
+  },
+
   async getTestimonies({ limit, cursor, featuredOnly }: PageOptions): Promise<Page<Testimony>> {
     const c: QueryConstraint[] = [where('isPublished', '==', true)];
     if (featuredOnly) c.push(where('isFeatured', '==', true));

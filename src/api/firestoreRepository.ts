@@ -23,6 +23,9 @@ import type { Page } from '@/types';
 import { db } from './firebase';
 import {
   normalizeAdotopoc,
+  normalizeChoirFeatureRequest,
+  normalizeFeaturedChoir,
+  normalizeLoveworldSingersVideo,
   normalizeArticle,
   normalizeAudioTestimony,
   normalizeLive,
@@ -32,7 +35,7 @@ import {
   normalizeTestimony,
   normalizeWrittenTestimony,
 } from './normalize';
-import type { ContentRepository, PageOptions, CreateArticleInput } from './repository';
+import type { ContentRepository, PageOptions, CreateArticleInput, ChoirRequestInput } from './repository';
 
 async function getPage<T>(
   col: string,
@@ -303,6 +306,77 @@ export const firestoreRepository: ContentRepository = {
         }
       },
     );
+  },
+
+  async getLoveworldSingersVideos(max = 100) {
+    try {
+      const snap = await getDocs(
+        query(
+          collection(db, CONFIG.collections.loveworldSingersVideos),
+          where('isPublished', '==', true),
+          orderBy('order', 'asc'),
+          qLimit(max),
+        ),
+      );
+      return snap.docs.map((d) => normalizeLoveworldSingersVideo(d.id, d.data()));
+    } catch (e) {
+      if ((e as { code?: string })?.code === 'permission-denied') return [];
+      throw e;
+    }
+  },
+
+  async getLoveworldSingersVideo(id) {
+    try {
+      const snap = await getDoc(doc(db, CONFIG.collections.loveworldSingersVideos, id));
+      if (!snap.exists()) return null;
+      const item = normalizeLoveworldSingersVideo(snap.id, snap.data());
+      return item.isPublished ? item : null;
+    } catch (e) {
+      if ((e as { code?: string })?.code === 'permission-denied') return null;
+      throw e;
+    }
+  },
+
+  async getFeaturedChoirs(max = 100) {
+    try {
+      const snap = await getDocs(
+        query(
+          collection(db, CONFIG.collections.featuredChoirs),
+          where('isPublished', '==', true),
+          orderBy('order', 'asc'),
+          qLimit(max),
+        ),
+      );
+      return snap.docs.map((d) => normalizeFeaturedChoir(d.id, d.data()));
+    } catch (e) {
+      if ((e as { code?: string })?.code === 'permission-denied') return [];
+      throw e;
+    }
+  },
+
+  async getFeaturedChoir(id) {
+    try {
+      const snap = await getDoc(doc(db, CONFIG.collections.featuredChoirs, id));
+      if (!snap.exists()) return null;
+      const item = normalizeFeaturedChoir(snap.id, snap.data());
+      return item.isPublished ? item : null;
+    } catch (e) {
+      if ((e as { code?: string })?.code === 'permission-denied') return null;
+      throw e;
+    }
+  },
+
+  async submitChoirFeatureRequest(input: ChoirRequestInput, submittedBy: string) {
+    // Rules accept exactly these fields, status 'pending' and the signed-in user's own uid.
+    await addDoc(collection(db, CONFIG.collections.choirFeatureRequests), {
+      groupName: input.groupName.trim(),
+      churchZone: input.churchZone.trim(),
+      ministrationUrl: input.ministrationUrl.trim(),
+      songTitle: input.songTitle.trim(),
+      submittedBy,
+      status: 'pending',
+      submittedAt: serverTimestamp(),
+    });
   },
 
   async getAdotopocConfig() {

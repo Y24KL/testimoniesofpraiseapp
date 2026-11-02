@@ -22,6 +22,9 @@ import { MediaManager } from './pages/MediaManager';
 import { Comments } from './pages/Comments';
 import { WrittenTestimonies } from './pages/WrittenTestimonies';
 import { WrittenTestimonyEditor } from './pages/WrittenTestimonyEditor';
+import { LoveworldSingers } from './pages/LoveworldSingers';
+import { FeaturedChoirs } from './pages/FeaturedChoirs';
+import { ChoirRequests } from './pages/ChoirRequests';
 
 type Gate = { state: 'loading' } | { state: 'out' } | { state: 'denied'; user: User } | { state: 'admin'; user: User };
 
@@ -81,6 +84,9 @@ export default function App() {
       {route.name === 'comments' && <Comments go={setRoute} />}
       {route.name === 'written' && <WrittenTestimonies go={setRoute} />}
       {route.name === 'writtenEditor' && <WrittenTestimonyEditor key={route.id ?? 'new'} id={route.id} prefill={route.prefill} go={setRoute} />}
+      {route.name === 'singers' && <LoveworldSingers />}
+      {route.name === 'featuredChoirs' && <FeaturedChoirs />}
+      {route.name === 'choirRequests' && <ChoirRequests go={setRoute} />}
       {route.name === 'announcements' && <Announcements />}
       {route.name === 'sponsorships' && <Sponsorships />}
       {route.name === 'data' && <DataSettings />}

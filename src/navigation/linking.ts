@@ -20,6 +20,11 @@ export const linking: LinkingOptions<RootStackParamList> = {
       AudioTestimony: 'audio/:id',
       WrittenTestimonies: 'written',
       WrittenTestimony: 'written/:id',
+      LoveworldSingers: 'singers',
+      LoveworldSingerVideo: 'singers/:id',
+      ChoirFeature: 'choir',
+      ChoirShowcase: 'choir/showcase',
+      FeaturedChoir: 'choir/:id',
     },
   },
 };

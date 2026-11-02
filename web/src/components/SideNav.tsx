@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, BookOpen, FileText, Globe, Heart, HandCoins, Megaphone, Search, Settings, User } from 'lucide-react';
+import { Bell, BookOpen, FileText, Globe, Heart, HandCoins, Megaphone, Music, Search, Settings, User, Users } from 'lucide-react';
 import { navigate, type Route } from '../router';
 import { TABS } from './BottomNavigation';
 
@@ -9,8 +9,10 @@ const MORE: { route: Route; label: string; icon: React.FC<{ size?: number }> }[]
   { route: { name: 'articles' }, label: 'Articles', icon: BookOpen },
   { route: { name: 'adotopoc' }, label: 'ADOTOPOC', icon: Globe },
   { route: { name: 'promotions' }, label: 'Events', icon: Megaphone },
-  { route: { name: 'share' }, label: 'Share testimony', icon: Heart },
   { route: { name: 'sponsor' }, label: 'Sponsor TOP', icon: HandCoins },
+  { route: { name: 'singers' }, label: 'Worship with your LoveWorld Singers', icon: Music },
+  { route: { name: 'choir' }, label: 'FEATURE YOUR CHOIR/GROUP ON T.O.P', icon: Users },
+  { route: { name: 'share' }, label: 'Share testimony', icon: Heart },
 ];
 
 const ACCOUNT: { route: Route; label: string; icon: React.FC<{ size?: number }> }[] = [

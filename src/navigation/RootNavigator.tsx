@@ -25,6 +25,13 @@ import { ArticleDetailsScreen } from '@/screens/ArticleDetailsScreen';
 import { AudioTestimonyScreen } from '@/screens/AudioTestimonyScreen';
 import { WrittenTestimoniesScreen } from '@/screens/WrittenTestimoniesScreen';
 import { WrittenTestimonyScreen } from '@/screens/WrittenTestimonyScreen';
+import { LoveworldSingersScreen } from '@/screens/LoveworldSingersScreen';
+import { LoveworldSingerVideoScreen } from '@/screens/LoveworldSingerVideoScreen';
+import { ChoirFeatureScreen } from '@/screens/ChoirFeatureScreen';
+import { FeaturedChoirsScreen } from '@/screens/FeaturedChoirsScreen';
+import { FeaturedChoirScreen } from '@/screens/FeaturedChoirScreen';
+import { ChoirRequestScreen } from '@/screens/ChoirRequestScreen';
+import { ChoirRequestSentScreen } from '@/screens/ChoirRequestSentScreen';
 import { TabNavigator } from './TabNavigator';
 import type { RootStackParamList } from './types';
 
@@ -100,6 +107,13 @@ export function RootNavigator() {
           <Stack.Screen name="AudioTestimony" component={AudioTestimonyScreen} />
           <Stack.Screen name="WrittenTestimonies" component={WrittenTestimoniesScreen} />
           <Stack.Screen name="WrittenTestimony" component={WrittenTestimonyScreen} />
+          <Stack.Screen name="LoveworldSingers" component={LoveworldSingersScreen} />
+          <Stack.Screen name="LoveworldSingerVideo" component={LoveworldSingerVideoScreen} />
+          <Stack.Screen name="ChoirFeature" component={ChoirFeatureScreen} />
+          <Stack.Screen name="ChoirShowcase" component={FeaturedChoirsScreen} />
+          <Stack.Screen name="FeaturedChoir" component={FeaturedChoirScreen} />
+          <Stack.Screen name="ChoirRequest" component={ChoirRequestScreen} />
+          <Stack.Screen name="ChoirRequestSent" component={ChoirRequestSentScreen} options={{ gestureEnabled: false }} />
         </Stack.Group>
       )}
     </Stack.Navigator>

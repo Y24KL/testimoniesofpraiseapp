@@ -2,11 +2,13 @@ import React from 'react';
 import { Download, CheckCircle, RefreshCw, X } from 'lucide-react';
 import { colors, radius } from '../theme';
 import { useDownloads } from '../context/DownloadsContext';
-import type { Testimony } from '../types';
+import { isHls } from '../api/repository';
+import type { VideoSnapshot } from '../types';
 import { PrimaryButton } from './PrimaryButton';
 
 interface Props {
-  data: Testimony;
+  data: VideoSnapshot;
+  kind?: 'testimony' | 'singers';
 }
 
 function formatBytes(bytes?: number): string {
@@ -21,11 +23,12 @@ function formatBytes(bytes?: number): string {
   return `${v.toFixed(v >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
-export function DownloadButton({ data }: Props) {
+export function DownloadButton({ data, kind = 'testimony' }: Props) {
   const dl = useDownloads();
   const item = dl.get(data.id);
 
-  if (!data.isDownloadable && !item) return null;
+  // Never offer a button that cannot work: HLS streams cannot be saved as one file.
+  if ((!data.isDownloadable || isHls(data.videoUrl)) && !item) return null;
 
   if (item?.status === 'downloading') {
     const pct = Math.round(item.progress * 100);
@@ -110,7 +113,7 @@ export function DownloadButton({ data }: Props) {
         <PrimaryButton
           title="Retry download"
           icon={<RefreshCw size={16} />}
-          onClick={() => dl.start(data)}
+          onClick={() => dl.start(data, kind)}
         />
       </div>
     );
@@ -120,7 +123,7 @@ export function DownloadButton({ data }: Props) {
     <PrimaryButton
       title="Download"
       icon={<Download size={18} />}
-      onClick={() => dl.start(data)}
+      onClick={() => dl.start(data, kind)}
     />
   );
 }

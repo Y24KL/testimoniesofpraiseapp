@@ -109,6 +109,22 @@ export const restRepository: ContentRepository = {
   async getWrittenTestimony() {
     return null;
   },
+  // Singers videos, featured choirs and choir requests live in Firestore only.
+  async getLoveworldSingersVideos() {
+    return [];
+  },
+  async getLoveworldSingersVideo() {
+    return null;
+  },
+  async getFeaturedChoirs() {
+    return [];
+  },
+  async getFeaturedChoir() {
+    return null;
+  },
+  async submitChoirFeatureRequest() {
+    throw new AppError('unknown', 'Choir requests are not available in REST mode');
+  },
   async getArticle() {
     return null;
   },

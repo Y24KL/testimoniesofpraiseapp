@@ -11,6 +11,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { auth } from '@/api/firebase';
+import { isKingsChatUid } from '@/auth/kingschat';
 import { isNewAccountPending, markNewAccount } from '@/onboarding/welcome';
 import { createPendingProfile, profileGateEnabled, readProfileStatus, saveCompleteProfile, type ProfileStatus } from '@/profile/profileService';
 import { validateProfile, type ProfileInput, type ValidProfile } from '@/profile/validation';
@@ -98,17 +99,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
       if (u) {
-        try {
-          // Check server-side device trust / fresh login status
-          const trust = await checkDeviceSessionTrust();
-          setIsSessionVerified(trust.trusted && trust.emailVerified);
-          if (!trust.trusted || !trust.emailVerified) {
-            setVerificationEmail(u.email);
-            // Initiate verification code dispatch for unverified/fresh session
-            void sendFirstCode();
+        if (isKingsChatUid(u.uid)) {
+          // KingsChat accounts skip the emailed code: KingsChat has already checked the person.
+          setIsSessionVerified(true);
+        } else {
+          try {
+            // Check server-side device trust / fresh login status
+            const trust = await checkDeviceSessionTrust();
+            setIsSessionVerified(trust.trusted && trust.emailVerified);
+            if (!trust.trusted || !trust.emailVerified) {
+              setVerificationEmail(u.email);
+              // Initiate verification code dispatch for unverified/fresh session
+              void sendFirstCode();
+            }
+          } catch {
+            setIsSessionVerified(false);
           }
-        } catch {
-          setIsSessionVerified(false);
         }
 
         await applyProfileStatus(u.uid);

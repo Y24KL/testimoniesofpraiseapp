@@ -11,7 +11,7 @@
  */
 
 import { AUTH_ROUTES, AuthError, verifyFirebaseToken } from './auth.js';
-import { handleKingsChatCallback } from './kingschat.js';
+import { handleKingsChatCallback, handleKingsChatRedeem, handleKingsChatState } from './kingschat.js';
 import { AIEndpointError, createEmbeddings, enforceAiRateLimit, semanticSearch, validateSearchQuery } from './ai.js';
 import { runAssistant, webSearch } from './assistant.js';
 import { searchClips } from './clips.js';
@@ -168,6 +168,8 @@ async function handle(request, env) {
   // -------------------------------------------------------------
   // KingsChat sign-in callback: KingsChat posts the code here (form POST). See kingschat.js.
   if (pathname === '/api/auth/kingschat/callback') return handleKingsChatCallback(request, env);
+  if (request.method === 'GET' && pathname === '/api/auth/kingschat/state') return handleKingsChatState(request, env);
+  if (request.method === 'POST' && pathname === '/api/auth/kingschat/redeem') return handleKingsChatRedeem(request, env);
 
   if (pathname.startsWith('/auth/') && AUTH_ROUTES[pathname]) {
     if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405, cors);

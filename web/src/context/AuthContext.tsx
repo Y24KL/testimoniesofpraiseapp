@@ -4,6 +4,7 @@ import {
   deleteUser,
   onAuthStateChanged,
   sendPasswordResetEmail,
+  signInWithCustomToken,
   signInWithEmailAndPassword,
   signOut as fbSignOut,
   updateProfile,
@@ -11,6 +12,15 @@ import {
 } from 'firebase/auth';
 import { auth } from '../api/firebase';
 import { checkDeviceSessionTrust, requestEmailVerification, verifyEmailCode, AuthServiceError } from '../api/authService';
+import { KingsChatSignInError, isKingsChatUid, redeemKingsChatHandoff, takeKingsChatReturn } from '../api/kingschatAuth';
+
+// Shown on the sign-in page when KingsChat sends the person back without a sign-in.
+const KINGSCHAT_MESSAGES: Record<string, string> = {
+  invalid: 'That KingsChat sign-in link is no longer valid. Please try again.',
+  missing: 'KingsChat did not send back the sign-in. Please try again.',
+  failed: 'KingsChat sign-in didn’t finish. Try again.',
+  unavailable: 'KingsChat sign-in is not available yet.',
+};
 import { createPendingProfile, profileGateEnabled, readProfileStatus, saveCompleteProfile, type ProfileStatus } from '../profile/profileService';
 import { validateProfile, type ProfileInput, type ValidProfile } from '../profile/validation';
 
@@ -41,6 +51,8 @@ interface AuthValue {
   /** True while a newly registered account still has to complete the profile form. */
   needsProfile: boolean;
   completeProfile(input: ProfileInput): Promise<void>;
+  /** Set when a KingsChat sign-in did not finish; shown on the sign-in page. */
+  kingsChatMessage: string | null;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -53,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [sessionVerified, setSessionVerified] = useState<boolean | null>(null);
   const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
   const [codeError, setCodeError] = useState<string | null>(null);
+  const [kingsChatMessage, setKingsChatMessage] = useState<string | null>(null);
   // Remote profile status for the current user (null = not read yet). Sequence-numbered so an older,
   // slower read can't overwrite a newer one (the auth listener vs. sign-up or the profile form).
   const [profileStatus, setProfileStatus] = useState<ProfileStatus | 'unknown' | null>(null);
@@ -83,12 +96,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // A browser that already verified this account skips the code. Otherwise a fresh code is sent.
-  const checkSession = useCallback(async () => {
+  const checkSession = useCallback(async (uid: string) => {
+    // KingsChat accounts skip the emailed code: KingsChat has already checked the person.
+    if (isKingsChatUid(uid)) {
+      setSessionVerified(true);
+      return;
+    }
     const trust = await checkDeviceSessionTrust();
     const verified = trust.trusted && trust.emailVerified;
     setSessionVerified(verified);
     if (!verified) await sendFirstCode();
   }, [sendFirstCode]);
+
+  // Finishes a KingsChat sign-in: KingsChat sent the person back here with a one-time handoff ID.
+  useEffect(() => {
+    const back = takeKingsChatReturn();
+    if (!back) return;
+    if (back.status !== 'ok' || !back.handoff) {
+      setKingsChatMessage(KINGSCHAT_MESSAGES[back.status] ?? KINGSCHAT_MESSAGES.failed);
+      return;
+    }
+    redeemKingsChatHandoff(back.handoff)
+      .then((token) => signInWithCustomToken(auth, token))
+      .catch((e) => setKingsChatMessage(e instanceof KingsChatSignInError ? e.message : KINGSCHAT_MESSAGES.failed));
+  }, []);
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
@@ -96,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (u) {
         const isNew = localStorage.getItem(`top:new-account:${u.uid}`) === 'true';
         setIsNewAccount(isNew);
-        await checkSession();
+        await checkSession(u.uid);
         await applyProfileStatus(u.uid);
       } else {
         setIsNewAccount(false);
@@ -215,6 +246,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profileChecked,
         needsProfile,
         completeProfile,
+        kingsChatMessage,
       }}
     >
       {children}

@@ -7,7 +7,7 @@ import { TitlePicker } from '../components/TitlePicker';
 import { validateProfile, type ProfileTitle, type ValidProfile } from '../profile/validation';
 import { useAuth } from '../context/AuthContext';
 import { emailAuthMessage } from '../utils/authErrors';
-import { KingsChatSignInError, signInWithKingsChat } from '../api/kingschatAuth';
+import { KingsChatSignInError, startKingsChatLogin } from '../api/kingschatAuth';
 
 interface Props {
   mode: 'signin' | 'signup';
@@ -25,7 +25,7 @@ const PASSWORD_RULES = [
 ];
 
 export function EmailAuthPage({ mode, onModeChange, onBack, onForgotPassword }: Props) {
-  const { signInWithEmail, register } = useAuth();
+  const { signInWithEmail, register, kingsChatMessage } = useAuth();
   const [fullName, setFullName] = useState('');
   const [title, setTitle] = useState('');
   const [zone, setZone] = useState('');
@@ -81,14 +81,14 @@ export function EmailAuthPage({ mode, onModeChange, onBack, onForgotPassword }: 
     }
   };
 
+  // Leaves the site for KingsChat's login page; the page stays busy until the browser navigates away.
   const kingsChat = async () => {
     setError(null);
     setKingsChatBusy(true);
     try {
-      await signInWithKingsChat();
+      await startKingsChatLogin();
     } catch (err) {
       setError(err instanceof KingsChatSignInError ? err.message : 'KingsChat sign-in didn’t finish. Try again.');
-    } finally {
       setKingsChatBusy(false);
     }
   };
@@ -155,10 +155,10 @@ export function EmailAuthPage({ mode, onModeChange, onBack, onForgotPassword }: 
             </div>
           )}
 
-          {error && (
+          {(error || kingsChatMessage) && (
             <div className="err-box" role="alert">
               <AlertCircle size={18} color={colors.danger} style={{ flexShrink: 0 }} />
-              <span>{error}</span>
+              <span>{error ?? kingsChatMessage}</span>
             </div>
           )}
 

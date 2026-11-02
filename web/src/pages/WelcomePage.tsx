@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { OnboardingBackdrop, useOnboardingMedia } from '../components/OnboardingBackdrop';
-import { KingsChatSignInError, signInWithKingsChat } from '../api/kingschatAuth';
+import { KingsChatSignInError, startKingsChatLogin } from '../api/kingschatAuth';
 
 interface Props {
   onGetStarted: () => void;
@@ -14,18 +14,16 @@ const FEATURES = ['Live broadcasts', 'Video testimonies', 'TOP Radio', 'Offline 
 export function WelcomePage({ onGetStarted, onSignIn }: Props) {
   const media = useOnboardingMedia();
   const [kingsChatBusy, setKingsChatBusy] = useState(false);
-  const [kingsChatConnected, setKingsChatConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Leaves the site for KingsChat's login page; the page stays busy until the browser navigates away.
   const handleKingsChat = async () => {
     setError(null);
     setKingsChatBusy(true);
     try {
-      if (await signInWithKingsChat()) setKingsChatConnected(true);
+      await startKingsChatLogin();
     } catch (e) {
-      if (e instanceof KingsChatSignInError) setError(e.message);
-      else setError('KingsChat sign-in didn’t finish. Try again.');
-    } finally {
+      setError(e instanceof KingsChatSignInError ? e.message : 'KingsChat sign-in didn’t finish. Try again.');
       setKingsChatBusy(false);
     }
   };
@@ -64,11 +62,6 @@ export function WelcomePage({ onGetStarted, onSignIn }: Props) {
             {kingsChatBusy ? <span className="spinner light" /> : null}
             Continue with KingsChat
           </button>
-          {kingsChatConnected ? (
-            <p className="onb-legal" role="status">
-              KingsChat connected. Linking it to a TOP account is not set up yet.
-            </p>
-          ) : null}
           <button type="button" className="onb-signin" onClick={onSignIn}>
             Already have an account? <b>Sign in</b>
           </button>

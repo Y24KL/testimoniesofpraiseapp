@@ -244,6 +244,22 @@
         { "fieldPath": "isPublished", "order": "ASCENDING" },
         { "fieldPath": "embedding", "vectorConfig": { "dimension": 1024, "flat": {} } }
       ]
+    },
+    {
+      "collectionGroup": "loveworldSingersVideos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isPublished", "order": "ASCENDING" },
+        { "fieldPath": "order", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "featuredChoirs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isPublished", "order": "ASCENDING" },
+        { "fieldPath": "order", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [
@@ -267,22 +283,6 @@
           "order": "DESCENDING",
           "queryScope": "COLLECTION_GROUP"
         }
-      ]
-    },
-    {
-      "collectionGroup": "loveworldSingersVideos",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "isPublished", "order": "ASCENDING" },
-        { "fieldPath": "order", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "featuredChoirs",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "isPublished", "order": "ASCENDING" },
-        { "fieldPath": "order", "order": "ASCENDING" }
       ]
     }
   ]

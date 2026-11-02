@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { KingsChatSignInError, signInWithKingsChat } from '@/auth/kingschat';
 import { Logo } from '@/components/Logo';
 import { OnboardingBackdrop } from '@/components/OnboardingBackdrop';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -16,7 +17,20 @@ export function WelcomeScreen() {
   const { media } = useOnboardingMedia();
   const reducedMotion = useReducedMotion();
   const [error, setError] = useState<string | null>(null);
+  const [kingsChatBusy, setKingsChatBusy] = useState(false);
   const enter = useRef(new Animated.Value(0)).current;
+
+  const kingsChat = async () => {
+    setError(null);
+    setKingsChatBusy(true);
+    try {
+      await signInWithKingsChat();
+    } catch (e) {
+      setError(e instanceof KingsChatSignInError ? e.message : 'KingsChat sign-in didn’t finish. Try again.');
+    } finally {
+      setKingsChatBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (reducedMotion) {
@@ -57,6 +71,7 @@ export function WelcomeScreen() {
 
           <Animated.View style={[styles.actions, rise]}>
             <PrimaryButton title="Get started" icon="arrow-forward" onPress={() => nav.navigate('EmailAuth', { mode: 'signup' })} accessibilityHint="Create a free account" />
+            <PrimaryButton title="Continue with KingsChat" variant="secondary" onPress={kingsChat} loading={kingsChatBusy} disabled={kingsChatBusy} accessibilityHint="Sign in with your KingsChat account" />
             <Pressable onPress={() => nav.navigate('EmailAuth', { mode: 'signin' })} style={styles.signIn} accessibilityRole="button" accessibilityLabel="I already have an account. Sign in">
               <Text style={styles.signInText}>
                 Already have an account? <Text style={styles.signInLink}>Sign in</Text>

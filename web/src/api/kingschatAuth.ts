@@ -1,26 +1,62 @@
-import kingsChatWebSdk from 'kingschat-web-sdk';
+import { AUTH_API_BASE } from './authService';
 
-// Public client ID of the TOP web app in the KingsChat developer dashboard. It is not a secret.
+// Public client ID of the TOP web app in the KingsChat dashboard. It is not a secret.
 export const KINGSCHAT_CLIENT_ID = 'f9f8da46-de8a-4f57-aa96-ab8fb2f83926';
-const KINGSCHAT_SCOPES = ['user'];
+const KINGSCHAT_LOGIN_URL = 'https://accounts.kingschat.online/log-in';
 
 export class KingsChatSignInError extends Error {}
 
+/** Firebase uids of KingsChat accounts start with "kc_" (set by the Worker). */
+export function isKingsChatUid(uid: string): boolean {
+  return uid.startsWith('kc_');
+}
+
 /**
- * Opens the KingsChat sign-in popup. Resolves with true once the person has allowed access, and with
- * false when they close the popup, so the caller can stay quiet. The tokens are not stored anywhere:
- * nothing uses them yet, and the refresh token must never go into localStorage on web.
+ * Sends the person to KingsChat's login page. The Worker gives a signed check value first; KingsChat returns it
+ * unchanged, and the Worker checks it before exchanging the code. The page leaves this site, so nothing is
+ * stored here.
  */
-export async function signInWithKingsChat(): Promise<boolean> {
+export async function startKingsChatLogin(): Promise<void> {
+  let state: string;
   try {
-    await kingsChatWebSdk.login({ clientId: KINGSCHAT_CLIENT_ID, scopes: KINGSCHAT_SCOPES });
-    return true;
-  } catch (e) {
-    const message = e instanceof Error ? e.message : '';
-    if (message.includes('User closed window')) return false;
-    if (message.includes('enable popups')) {
-      throw new KingsChatSignInError('Allow pop-ups for this site, then try again.');
-    }
-    throw new KingsChatSignInError('KingsChat sign-in didn’t finish. Try again.');
+    const res = await fetch(`${AUTH_API_BASE}/api/auth/kingschat/state`);
+    if (!res.ok) throw new Error('state unavailable');
+    state = ((await res.json()) as { state: string }).state;
+  } catch {
+    throw new KingsChatSignInError('KingsChat sign-in is not available right now. Try again later.');
   }
+  window.location.assign(
+    `${KINGSCHAT_LOGIN_URL}?clientId=${encodeURIComponent(KINGSCHAT_CLIENT_ID)}&origin=${encodeURIComponent(state)}`,
+  );
+}
+
+/** Exchanges the one-time handoff ID from the Worker for a Firebase custom token. The ID works once. */
+export async function redeemKingsChatHandoff(handoff: string): Promise<string> {
+  let res: Response;
+  try {
+    res = await fetch(`${AUTH_API_BASE}/api/auth/kingschat/redeem`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ handoff }),
+    });
+  } catch {
+    throw new KingsChatSignInError('No connection. Check your internet and try again.');
+  }
+  if (!res.ok) throw new KingsChatSignInError('This KingsChat sign-in has expired. Please try again.');
+  return ((await res.json()) as { token: string }).token;
+}
+
+/**
+ * Reads the result the Worker put in the address (#/signin?kingschat=…&handoff=…) and removes it from the
+ * address bar. Returns null when this page was not opened from KingsChat.
+ */
+export function takeKingsChatReturn(): { status: string; handoff: string | null } | null {
+  const hash = window.location.hash;
+  const queryStart = hash.indexOf('?');
+  if (queryStart === -1) return null;
+  const params = new URLSearchParams(hash.slice(queryStart + 1));
+  const status = params.get('kingschat');
+  if (!status) return null;
+  window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#/signin`);
+  return { status, handoff: params.get('handoff') };
 }

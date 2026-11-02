@@ -8,6 +8,8 @@ import { auth } from './firebase';
 
 /** The public Worker address (no secret); used when no build setting is given. */
 const BASE = (((import.meta.env.VITE_AUTH_API_URL || import.meta.env.VITE_AI_API_URL) as string | undefined) || 'https://top-push-relay.gtrusouth116.workers.dev').replace(/\/+$/, '');
+/** Worker address for other sign-in helpers (KingsChat). */
+export const AUTH_API_BASE = BASE;
 const INSTALLATION_KEY = 'top:installation-id';
 
 export interface SendOtpResult {

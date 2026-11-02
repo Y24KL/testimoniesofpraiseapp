@@ -20,7 +20,11 @@ export function ChoirFeatureScreen() {
             {CHOIR_FEATURE_TITLE}
           </Text>
         </LinearGradient>
-        {CHOIR_FEATURE_INTRO ? <Text style={styles.intro}>{CHOIR_FEATURE_INTRO}</Text> : null}
+        <View style={{ gap: 12 }}>
+          {CHOIR_FEATURE_INTRO.map((p) => (
+            <Text key={p} style={styles.intro}>{p}</Text>
+          ))}
+        </View>
         <View style={{ gap: 12 }}>
           <PrimaryButton title="EXPLORE FEATURED CHOIRS" icon="play-circle-outline" onPress={() => nav.navigate('ChoirShowcase')} />
         </View>

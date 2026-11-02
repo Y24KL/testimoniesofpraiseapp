@@ -8,7 +8,7 @@ import { ErrorState } from '../components/ErrorState';
 import { EmptyState } from '../components/EmptyState';
 import { TextField } from '../components/TextField';
 import { useAuth } from '../context/AuthContext';
-import { CHOIR_CONFIRMATION_TEXT, CHOIR_FEATURE_INTRO, CHOIR_FEATURE_TITLE } from '../constants/choirFeature';
+import { CHOIR_CONFIRMATION_TEXT, CHOIR_FEATURE_INTRO, CHOIR_FEATURE_TITLE, CHOIR_FORM_INTRO, CHOIR_FORM_TITLE } from '../constants/choirFeature';
 import { colors, gradients, radius } from '../theme';
 import type { FeaturedChoir } from '../types';
 import { formatDuration } from '../utils/format';
@@ -29,7 +29,11 @@ export function ChoirFeaturePage({ onBack, onNavigate }: PageProps) {
         <div style={{ background: gradients.hero, borderRadius: radius.lg, padding: '22px', minHeight: '140px', display: 'flex', alignItems: 'flex-end' }}>
           <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 800, color: colors.text, lineHeight: 1.25 }}>{CHOIR_FEATURE_TITLE}</h1>
         </div>
-        {CHOIR_FEATURE_INTRO && <p style={{ margin: 0, fontSize: '16px', color: colors.text, lineHeight: 1.5 }}>{CHOIR_FEATURE_INTRO}</p>}
+        {CHOIR_FEATURE_INTRO.map((p) => (
+          <p key={p} style={{ margin: 0, fontSize: '16px', color: colors.text, lineHeight: 1.5 }}>
+            {p}
+          </p>
+        ))}
         <PrimaryButton title="EXPLORE FEATURED CHOIRS" icon={<Play size={18} />} onClick={() => onNavigate('choirShowcase')} />
       </div>
     </div>
@@ -194,6 +198,8 @@ export function ChoirRequestPage({ onBack, onSent }: { onBack: () => void; onSen
       <div
         style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '640px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}
       >
+        <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: colors.text }}>{CHOIR_FORM_TITLE}</h2>
+        <p style={{ margin: 0, fontSize: '15px', color: colors.textMuted, lineHeight: 1.5 }}>{CHOIR_FORM_INTRO}</p>
         <TextField label="Group name" value={values.groupName} onChange={set('groupName')} error={errors.groupName} maxLength={CHOIR_LIMITS.groupName} />
         <TextField label="Church zone" value={values.churchZone} onChange={set('churchZone')} error={errors.churchZone} maxLength={CHOIR_LIMITS.churchZone} />
         <TextField

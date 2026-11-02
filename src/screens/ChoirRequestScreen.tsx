@@ -7,7 +7,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { TopBar } from '@/components/TopBar';
-import { CHOIR_FEATURE_TITLE } from '@/constants/choirFeature';
+import { CHOIR_FEATURE_TITLE, CHOIR_FORM_INTRO, CHOIR_FORM_TITLE } from '@/constants/choirFeature';
 import { colors, type as t } from '@/constants/theme';
 import { CHOIR_LIMITS, validateChoirRequest, type ChoirRequestErrors } from '@/utils/choirRequest';
 import { messageFor } from '@/utils/errors';
@@ -62,6 +62,10 @@ export function ChoirRequestScreen() {
       <TopBar title={CHOIR_FEATURE_TITLE} onBack={() => nav.goBack()} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <View style={{ gap: 6 }}>
+            <Text style={styles.formTitle} accessibilityRole="header">{CHOIR_FORM_TITLE}</Text>
+            <Text style={styles.formIntro}>{CHOIR_FORM_INTRO}</Text>
+          </View>
           <TextField
             label="Group name"
             value={values.groupName}
@@ -131,4 +135,6 @@ const styles = StyleSheet.create({
   content: { padding: 16, gap: 16, paddingBottom: 40 },
   serverError: { ...t.body, color: colors.danger, textAlign: 'center' },
   note: { ...t.caption, color: colors.textSubtle, textAlign: 'center' },
+  formTitle: { ...t.h2, fontSize: 20, color: colors.text },
+  formIntro: { ...t.body, color: colors.textMuted },
 });

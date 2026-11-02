@@ -58,7 +58,7 @@ export function WelcomePage({ onGetStarted, onSignIn }: Props) {
           <button type="button" className="btn btn-gold btn-block" onClick={onGetStarted}>
             Get started <ArrowRight size={18} />
           </button>
-          <button type="button" className="btn btn-white btn-block" onClick={handleKingsChat} disabled={kingsChatBusy} aria-busy={kingsChatBusy}>
+          <button type="button" className="kc-btn" onClick={handleKingsChat} disabled={kingsChatBusy} aria-busy={kingsChatBusy}>
             {kingsChatBusy ? <span className="spinner light" /> : null}
             Continue with KingsChat
           </button>

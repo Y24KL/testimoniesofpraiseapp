@@ -169,7 +169,7 @@ export function EmailAuthPage({ mode, onModeChange, onBack, onForgotPassword }: 
         </form>
 
         <div className="divider">or</div>
-        <button type="button" className="btn btn-white btn-block" onClick={kingsChat} disabled={kingsChatBusy} aria-busy={kingsChatBusy}>
+        <button type="button" className="kc-btn" onClick={kingsChat} disabled={kingsChatBusy} aria-busy={kingsChatBusy}>
           {kingsChatBusy ? <span className="spinner light" /> : null}
           Continue with KingsChat
         </button>

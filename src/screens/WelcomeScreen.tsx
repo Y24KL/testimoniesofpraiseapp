@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KingsChatSignInError, signInWithKingsChat } from '@/auth/kingschat';
@@ -71,7 +71,18 @@ export function WelcomeScreen() {
 
           <Animated.View style={[styles.actions, rise]}>
             <PrimaryButton title="Get started" icon="arrow-forward" onPress={() => nav.navigate('EmailAuth', { mode: 'signup' })} accessibilityHint="Create a free account" />
-            <PrimaryButton title="Continue with KingsChat" variant="secondary" onPress={kingsChat} loading={kingsChatBusy} disabled={kingsChatBusy} accessibilityHint="Sign in with your KingsChat account" />
+            <Pressable
+              onPress={kingsChat}
+              disabled={kingsChatBusy}
+              accessibilityRole="button"
+              accessibilityLabel="Continue with KingsChat"
+              accessibilityHint="Sign in with your KingsChat account"
+              accessibilityState={{ disabled: kingsChatBusy, busy: kingsChatBusy }}
+              style={({ pressed }) => [styles.kingsChat, (pressed || kingsChatBusy) && { opacity: 0.85 }]}
+            >
+              {kingsChatBusy ? <ActivityIndicator color="#fff" /> : null}
+              <Text style={styles.kingsChatText}>Continue with KingsChat</Text>
+            </Pressable>
             <Pressable onPress={() => nav.navigate('EmailAuth', { mode: 'signin' })} style={styles.signIn} accessibilityRole="button" accessibilityLabel="I already have an account. Sign in">
               <Text style={styles.signInText}>
                 Already have an account? <Text style={styles.signInLink}>Sign in</Text>
@@ -104,6 +115,9 @@ const styles = StyleSheet.create({
   chipText: { ...t.small, fontSize: 12, color: colors.text, fontWeight: '600' },
   actions: { gap: 12 },
   signIn: { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 12 },
+  // KingsChat's own button colours (kingschat-web-sdk stylesheet): #2F92E5 with white text, 4px corners.
+  kingsChat: { minHeight: 48, borderRadius: 4, backgroundColor: '#2F92E5', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: 16 },
+  kingsChatText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
   signInText: { ...t.body, color: colors.textMuted },
   signInLink: { color: colors.accent, fontWeight: '800' },
   error: { ...t.body, color: colors.danger, textAlign: 'center' },

@@ -9,6 +9,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   writeBatch,
 } from 'firebase/firestore';
@@ -35,7 +36,15 @@ interface SingersVideo {
 const dateInput = (ts?: Timestamp | null) => (ts ? ts.toDate().toISOString().slice(0, 10) : '');
 
 /** Admin editor and list for the LoveWorld Singers library. Unpublished videos stay hidden from the app. */
+/** Default background video; the app and website use it until an admin saves another link. */
+const DEFAULT_HERO_VIDEO = 'https://topappstorage.b-cdn.net/LWS%20playout/ELI-J%2029.mp4';
+
 export function LoveworldSingers() {
+  const heroRef = doc(db, 'settings', 'loveworldSingers');
+  const [heroVideoUrl, setHeroVideoUrl] = useState(DEFAULT_HERO_VIDEO);
+  const [heroBusy, setHeroBusy] = useState(false);
+  const [heroErr, setHeroErr] = useState('');
+  const [heroOk, setHeroOk] = useState('');
   const [videos, setVideos] = useState<SingersVideo[] | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
@@ -198,10 +207,50 @@ export function LoveworldSingers() {
     }
   };
 
+  useEffect(() => {
+    return onSnapshot(heroRef, (snap) => {
+      const url = snap.exists() ? (snap.data() as { heroVideoUrl?: string }).heroVideoUrl : undefined;
+      if (url) setHeroVideoUrl(url);
+    }, (e) => setHeroErr(e.message));
+  }, []);
+
+  const saveHeroVideo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setHeroErr('');
+    setHeroOk('');
+    if (!isHttpUrl(heroVideoUrl)) return setHeroErr('Please provide a valid https:// video link.');
+    setHeroBusy(true);
+    try {
+      await setDoc(heroRef, { heroVideoUrl: heroVideoUrl.trim(), updatedAt: serverTimestamp() }, { merge: true });
+      setHeroOk('Saved. The page uses this video from now on.');
+    } catch (err) {
+      setHeroErr((err as Error).message);
+    } finally {
+      setHeroBusy(false);
+    }
+  };
+
   return (
     <div>
       <h1>LoveWorld Singers</h1>
       <p className="muted">The “Worship with your LoveWorld Singers” library. Published videos appear in the app and on the web straight away.</p>
+
+      <form className="card" onSubmit={saveHeroVideo}>
+        <h2>Page video</h2>
+        <p className="small muted">The background video at the top of the LoveWorld Singers page in the app and on the web.</p>
+        <Field label="Video link (https://, MP4)">
+          <input type="url" value={heroVideoUrl} onChange={(e) => setHeroVideoUrl(e.target.value)} placeholder="https://..." />
+        </Field>
+        {heroVideoUrl ? (
+          <video src={heroVideoUrl} controls muted style={{ width: '100%', maxHeight: 200, borderRadius: 6, backgroundColor: '#000', marginTop: 10 }} />
+        ) : null}
+        {heroErr ? <Message kind="err">{heroErr}</Message> : null}
+        {heroOk ? <Message kind="ok">{heroOk}</Message> : null}
+        <div className="row between" style={{ marginTop: 12 }}>
+          <button type="button" className="btn ghost" onClick={() => setHeroVideoUrl(DEFAULT_HERO_VIDEO)}>Reset to default</button>
+          <button type="submit" className="btn primary" disabled={heroBusy}>{heroBusy ? 'Saving…' : 'Save page video'}</button>
+        </div>
+      </form>
 
       <div className="card">
         <h2>{editingId ? 'Edit video' : 'New video'}</h2>

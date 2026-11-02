@@ -153,6 +153,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // LoveWorld Singers page: background video link (set from the admin portal).
+    match /settings/loveworldSingers {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Audio testimonies library.
     match /audioTestimonies/{id} {
       // Allow anyone to listen to published audio

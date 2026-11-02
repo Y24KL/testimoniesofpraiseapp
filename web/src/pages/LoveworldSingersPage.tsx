@@ -1,6 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Search, X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Play, Search, X } from 'lucide-react';
 import { repo } from '../api/repository';
+import { LOVEWORLD_EYEBROW, LOVEWORLD_HERO_VIDEO, LOVEWORLD_TITLE } from '../constants/loveworldSingers';
+import { getLoveworldHeroVideo } from '../api/loveworldSingersConfig';
+import { PrimaryButton } from '../components/PrimaryButton';
 import { TopBar } from '../components/TopBar';
 import { ErrorState } from '../components/ErrorState';
 import { EmptyState } from '../components/EmptyState';
@@ -20,6 +23,12 @@ export function LoveworldSingersPage({ onBack, onSelect }: Props) {
   const [items, setItems] = useState<LoveworldSingersVideo[] | null>(null);
   const [error, setError] = useState(false);
   const [search, setSearch] = useState('');
+  const [heroVideo, setHeroVideo] = useState(LOVEWORLD_HERO_VIDEO);
+  const libraryRef = useRef<HTMLLabelElement | null>(null);
+
+  useEffect(() => {
+    void getLoveworldHeroVideo().then(setHeroVideo);
+  }, []);
 
   const load = () => {
     setError(false);
@@ -67,12 +76,21 @@ export function LoveworldSingersPage({ onBack, onSelect }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', background: colors.bg }}>
       <TopBar title="LoveWorld Singers" onBack={onBack} />
-      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '900px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
-        <div style={{ background: gradients.hero, borderRadius: radius.lg, padding: '22px', minHeight: '120px', display: 'flex', alignItems: 'flex-end' }}>
-          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 800, color: colors.text, lineHeight: 1.25 }}>Worship with your LoveWorld Singers</h1>
+      <div style={{ position: 'relative', width: '100%', height: 'min(70vh, 560px)', minHeight: 360, overflow: 'hidden', background: 'linear-gradient(180deg, #4B006E 0%, #2E0044 50%, #12001C 100%)' }}>
+        {heroVideo ? (
+          <video src={heroVideo} autoPlay loop muted playsInline aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : null}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(18,0,28,0.1) 0%, rgba(18,0,28,0.9) 75%)' }} />
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0 24px 32px', maxWidth: 680, boxSizing: 'border-box' }}>
+          <span style={{ display: 'block', color: '#F5C542', fontSize: 13, fontWeight: 700, letterSpacing: 1.5 }}>{LOVEWORLD_EYEBROW}</span>
+          <h1 style={{ margin: '12px 0 0', fontSize: 'clamp(28px, 6vw, 44px)', fontWeight: 800, color: '#fff', lineHeight: 1.15 }}>{LOVEWORLD_TITLE}</h1>
+          <div style={{ marginTop: 24 }}>
+            <PrimaryButton title="BROWSE VIDEOS" icon={<Play size={18} />} onClick={() => libraryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
+          </div>
         </div>
-
-        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', height: '46px', padding: '0 14px', borderRadius: radius.pill, background: colors.surface, border: `1px solid ${colors.border}` }}>
+      </div>
+      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '900px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+        <label ref={libraryRef} style={{ display: 'flex', alignItems: 'center', gap: '10px', height: '46px', padding: '0 14px', borderRadius: radius.pill, background: colors.surface, border: `1px solid ${colors.border}` }}>
           <Search size={18} color={colors.textSubtle} aria-hidden="true" />
           <input
             value={search}

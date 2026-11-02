@@ -1,10 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
+import { useEvent } from 'expo';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { repo } from '@/api';
+import { PrimaryButton } from '@/components/PrimaryButton';
+import { LOVEWORLD_EYEBROW, LOVEWORLD_HERO_VIDEO, LOVEWORLD_TITLE } from '@/constants/loveworldSingers';
+import { getLoveworldHeroVideo } from '@/api/loveworldSingersConfig';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Screen } from '@/components/Screen';
@@ -27,6 +32,19 @@ export function LoveworldSingersScreen() {
   const [error, setError] = useState<unknown>(null);
   const [search, setSearch] = useState('');
   const busy = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const [libraryY, setLibraryY] = useState(0);
+  const [heroVideo, setHeroVideo] = useState(LOVEWORLD_HERO_VIDEO);
+  const player = useVideoPlayer(heroVideo || null, (p) => {
+    p.loop = true;
+    p.muted = true;
+    p.play();
+  });
+
+  useEffect(() => {
+    void getLoveworldHeroVideo().then(setHeroVideo);
+  }, []);
+  const { status } = useEvent(player, 'statusChange', { status: player.status });
 
   const load = useCallback(async (mode: 'initial' | 'refresh') => {
     if (busy.current) return;
@@ -76,17 +94,29 @@ export function LoveworldSingersScreen() {
         <ErrorState message={messageFor(error)} onRetry={() => void load('initial')} />
       ) : (
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load('refresh')} tintColor={colors.accent} />}
         >
-          <LinearGradient colors={gradients.hero} style={styles.banner}>
-            <Text style={styles.bannerTitle} accessibilityRole="header">
-              Worship with your LoveWorld Singers
-            </Text>
-          </LinearGradient>
+          <View style={styles.hero}>
+            <LinearGradient colors={['#4B006E', '#2E0044', '#12001C']} style={StyleSheet.absoluteFill} />
+            {heroVideo ? (
+              <VideoView player={player} style={[StyleSheet.absoluteFill, status !== 'readyToPlay' && { opacity: 0 }]} contentFit="cover" nativeControls={false} allowsFullscreen={false} allowsPictureInPicture={false} />
+            ) : null}
+            <LinearGradient colors={['rgba(18,0,28,0.1)', 'rgba(18,0,28,0.9)']} style={StyleSheet.absoluteFill} />
+            <View style={styles.heroCopy}>
+              <Text style={styles.eyebrow}>{LOVEWORLD_EYEBROW}</Text>
+              <Text style={styles.heroTitle} accessibilityRole="header">
+                {LOVEWORLD_TITLE}
+              </Text>
+              <View style={{ marginTop: 20 }}>
+                <PrimaryButton title="BROWSE VIDEOS" icon="play-circle-outline" onPress={() => scrollRef.current?.scrollTo({ y: libraryY, animated: true })} />
+              </View>
+            </View>
+          </View>
 
-          <View style={styles.searchBox}>
+          <View style={styles.searchBox} onLayout={(e) => setLibraryY(e.nativeEvent.layout.y)}>
             <Ionicons name="search" size={18} color={colors.textSubtle} />
             <TextInput
               value={search}
@@ -184,8 +214,10 @@ function VideoRow({ video, onPress }: { video: LoveworldSingersVideo; onPress: (
 
 const styles = StyleSheet.create({
   content: { padding: 16, gap: 16, paddingBottom: 40 },
-  banner: { borderRadius: radius.lg, padding: 20, minHeight: 120, justifyContent: 'flex-end' },
-  bannerTitle: { ...t.h1, fontSize: 24, color: colors.text },
+  hero: { height: 380, borderRadius: radius.lg, overflow: 'hidden', justifyContent: 'flex-end', backgroundColor: '#2E0044' },
+  heroCopy: { padding: 20 },
+  eyebrow: { ...t.caps, color: '#F5C542', letterSpacing: 1.5 },
+  heroTitle: { ...t.display, fontSize: 30, lineHeight: 36, color: '#fff', marginTop: 10 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',

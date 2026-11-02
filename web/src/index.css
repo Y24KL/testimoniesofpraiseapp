@@ -46,7 +46,7 @@
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
-html { overscroll-behavior-y: none; }
+/* Pull-to-refresh is left on: swiping down at the top reloads the page (see hooks/usePullToRefresh.ts). */
 
 /* ---------- App shell ---------- */
 .app-shell { display: flex; min-height: 100dvh; width: 100%; background: var(--bg); }

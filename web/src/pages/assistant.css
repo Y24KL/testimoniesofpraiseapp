@@ -5,6 +5,8 @@
    the space above it. The messages scroll in the middle and the composer stays at the bottom. */
 .ast-layout {
   display: flex;
+  /* 100vh first: iOS versions before 15.4 ignore dvh and would otherwise size the chat to zero. */
+  height: calc(100vh - var(--nav-h, 0px) - env(safe-area-inset-bottom, 0px));
   height: calc(100dvh - var(--nav-h, 0px) - env(safe-area-inset-bottom, 0px));
   overflow: hidden;
 }

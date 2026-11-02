@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
+import { usePullToRefresh } from './hooks/usePullToRefresh';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DownloadsProvider } from './context/DownloadsContext';
 import { AudioPlayerProvider, useAudioPlayer } from './audio/AudioPlayerContext';
@@ -326,6 +327,7 @@ function AppContent() {
 }
 
 export function App() {
+  usePullToRefresh();
   return (
     <AuthProvider>
       <DownloadsProvider>

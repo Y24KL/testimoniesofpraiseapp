@@ -13,11 +13,6 @@ export const CONFIG = {
     messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? '',
     appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID ?? '',
   },
-  google: {
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '',
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '',
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '',
-  },
   collections: {
     testimonies: process.env.EXPO_PUBLIC_COL_TESTIMONIES ?? 'testimonies',
     notifications: process.env.EXPO_PUBLIC_COL_NOTIFICATIONS ?? 'notifications',
@@ -58,9 +53,6 @@ export const CONFIG = {
 export const isCloudinaryConfigured = Boolean(CONFIG.cloudinary.cloudName && CONFIG.cloudinary.uploadPreset);
 
 export const isFirebaseConfigured = Boolean(CONFIG.firebase.apiKey && CONFIG.firebase.projectId);
-export const isGoogleConfigured = Boolean(
-  CONFIG.google.webClientId || CONFIG.google.iosClientId || CONFIG.google.androidClientId,
-);
 
 export const STORAGE_KEYS = {
   downloads: 'top:downloads:v1',

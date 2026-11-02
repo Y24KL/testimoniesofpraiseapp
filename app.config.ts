@@ -11,12 +11,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // Deep-link and OAuth callback schemes:
   // 1. 'testimoniesofpraise': Canonical app deep-linking scheme.
   // 2. 'com.testimoniesofpraise.app': Default Android OAuth callback scheme for expo-auth-session.
-  // 3. 'com.googleusercontent.apps.754997860722-fjfanme5itf82ue8sbch2m8rjkuvqnpq': Reversed iOS client ID for Google OAuth.
-  scheme: [
-    'testimoniesofpraise',
-    'com.testimoniesofpraise.app',
-    'com.googleusercontent.apps.754997860722-fjfanme5itf82ue8sbch2m8rjkuvqnpq',
-  ],
+  scheme: ['testimoniesofpraise', 'com.testimoniesofpraise.app'],
   splash: {
     image: './assets/splash.png',
     resizeMode: 'contain',
@@ -53,11 +48,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // media-playback foreground service + permissions (Android) that expo-video needs to keep
     // playing with the screen locked and to show notification / lock-screen controls.
     ['expo-video', { supportsBackgroundPlayback: true, supportsPictureInPicture: true }],
-    // Native Google account picker (Android + iOS). iosUrlScheme = reversed iOS OAuth client ID.
-    [
-      '@react-native-google-signin/google-signin',
-      { iosUrlScheme: 'com.googleusercontent.apps.754997860722-fjfanme5itf82ue8sbch2m8rjkuvqnpq' },
-    ],
     // Smaller Android release builds: R8 code shrinking/obfuscation + removal of unused resources.
     [
       'expo-build-properties',

@@ -3,11 +3,11 @@ import { AlertCircle, ChevronLeft, CheckCircle, Circle, XCircle } from 'lucide-r
 import { colors, radius } from '../theme';
 import { Logo } from '../components/Logo';
 import { TextField } from '../components/TextField';
-import { GoogleIcon } from '../components/GoogleIcon';
 import { TitlePicker } from '../components/TitlePicker';
 import { validateProfile, type ProfileTitle, type ValidProfile } from '../profile/validation';
 import { useAuth } from '../context/AuthContext';
-import { emailAuthMessage, googleErrorMessage } from '../utils/authErrors';
+import { emailAuthMessage } from '../utils/authErrors';
+import { KingsChatSignInError, signInWithKingsChat } from '../api/kingschatAuth';
 
 interface Props {
   mode: 'signin' | 'signup';
@@ -25,7 +25,7 @@ const PASSWORD_RULES = [
 ];
 
 export function EmailAuthPage({ mode, onModeChange, onBack, onForgotPassword }: Props) {
-  const { signInWithEmail, register, signInWithGoogle } = useAuth();
+  const { signInWithEmail, register } = useAuth();
   const [fullName, setFullName] = useState('');
   const [title, setTitle] = useState('');
   const [zone, setZone] = useState('');
@@ -34,7 +34,7 @@ export function EmailAuthPage({ mode, onModeChange, onBack, onForgotPassword }: 
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
-  const [googleBusy, setGoogleBusy] = useState(false);
+  const [kingsChatBusy, setKingsChatBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
@@ -81,16 +81,15 @@ export function EmailAuthPage({ mode, onModeChange, onBack, onForgotPassword }: 
     }
   };
 
-  const google = async () => {
+  const kingsChat = async () => {
     setError(null);
-    setGoogleBusy(true);
+    setKingsChatBusy(true);
     try {
-      await signInWithGoogle();
+      await signInWithKingsChat();
     } catch (err) {
-      const msg = googleErrorMessage(err);
-      if (msg) setError(msg);
+      setError(err instanceof KingsChatSignInError ? err.message : 'KingsChat sign-in didn’t finish. Try again.');
     } finally {
-      setGoogleBusy(false);
+      setKingsChatBusy(false);
     }
   };
 
@@ -170,9 +169,9 @@ export function EmailAuthPage({ mode, onModeChange, onBack, onForgotPassword }: 
         </form>
 
         <div className="divider">or</div>
-        <button type="button" className="btn btn-white btn-block" onClick={google} disabled={googleBusy} aria-busy={googleBusy}>
-          {googleBusy ? <span className="spinner light" /> : <GoogleIcon />}
-          Continue with Google
+        <button type="button" className="btn btn-white btn-block" onClick={kingsChat} disabled={kingsChatBusy} aria-busy={kingsChatBusy}>
+          {kingsChatBusy ? <span className="spinner light" /> : null}
+          Continue with KingsChat
         </button>
       </div>
     </div>

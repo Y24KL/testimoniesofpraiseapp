@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { OnboardingBackdrop, useOnboardingMedia } from '../components/OnboardingBackdrop';
-import { GoogleIcon } from '../components/GoogleIcon';
-import { useAuth } from '../context/AuthContext';
-import { googleErrorMessage } from '../utils/authErrors';
+import { KingsChatSignInError, signInWithKingsChat } from '../api/kingschatAuth';
 
 interface Props {
   onGetStarted: () => void;
@@ -14,21 +12,21 @@ interface Props {
 const FEATURES = ['Live broadcasts', 'Video testimonies', 'TOP Radio', 'Offline downloads'];
 
 export function WelcomePage({ onGetStarted, onSignIn }: Props) {
-  const { signInWithGoogle } = useAuth();
   const media = useOnboardingMedia();
-  const [googleBusy, setGoogleBusy] = useState(false);
+  const [kingsChatBusy, setKingsChatBusy] = useState(false);
+  const [kingsChatConnected, setKingsChatConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleGoogle = async () => {
+  const handleKingsChat = async () => {
     setError(null);
-    setGoogleBusy(true);
+    setKingsChatBusy(true);
     try {
-      await signInWithGoogle();
+      if (await signInWithKingsChat()) setKingsChatConnected(true);
     } catch (e) {
-      const msg = googleErrorMessage(e);
-      if (msg) setError(msg);
+      if (e instanceof KingsChatSignInError) setError(e.message);
+      else setError('KingsChat sign-in didn’t finish. Try again.');
     } finally {
-      setGoogleBusy(false);
+      setKingsChatBusy(false);
     }
   };
 
@@ -62,10 +60,15 @@ export function WelcomePage({ onGetStarted, onSignIn }: Props) {
           <button type="button" className="btn btn-gold btn-block" onClick={onGetStarted}>
             Get started <ArrowRight size={18} />
           </button>
-          <button type="button" className="btn btn-white btn-block" onClick={handleGoogle} disabled={googleBusy} aria-busy={googleBusy}>
-            {googleBusy ? <span className="spinner light" /> : <GoogleIcon />}
-            Continue with Google
+          <button type="button" className="btn btn-white btn-block" onClick={handleKingsChat} disabled={kingsChatBusy} aria-busy={kingsChatBusy}>
+            {kingsChatBusy ? <span className="spinner light" /> : null}
+            Continue with KingsChat
           </button>
+          {kingsChatConnected ? (
+            <p className="onb-legal" role="status">
+              KingsChat connected. Linking it to a TOP account is not set up yet.
+            </p>
+          ) : null}
           <button type="button" className="onb-signin" onClick={onSignIn}>
             Already have an account? <b>Sign in</b>
           </button>

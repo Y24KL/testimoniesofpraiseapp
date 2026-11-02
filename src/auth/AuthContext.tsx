@@ -1,13 +1,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  GoogleAuthProvider,
   createUserWithEmailAndPassword,
   deleteUser,
-  getAdditionalUserInfo,
   onAuthStateChanged,
   reload,
   sendPasswordResetEmail,
-  signInWithCredential,
   signInWithEmailAndPassword,
   signOut as fbSignOut,
   updateProfile,
@@ -42,7 +39,6 @@ interface AuthValue {
   /** True while a newly registered account still has to complete the profile form. */
   needsProfile: boolean;
   completeProfile(input: ProfileInput): Promise<void>;
-  signInWithGoogleIdToken(idToken: string, accessToken?: string): Promise<void>;
   verifyOtp(code: string): Promise<void>;
   resendOtp(): Promise<void>;
   resetPassword(email: string): Promise<void>;
@@ -192,41 +188,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await applyProfileStatus(uid);
   }, [applyProfileStatus]);
 
-  const signInWithGoogleIdToken = useCallback(async (idToken: string, accessToken?: string) => {
-    const cred = await signInWithCredential(auth, GoogleAuthProvider.credential(idToken, accessToken));
-    setUser({ ...cred.user } as User);
-    setVerificationEmail(cred.user.email);
-
-    if (getAdditionalUserInfo(cred)?.isNewUser) {
-      void markNewAccount(cred.user.uid);
-      setIsNewAccount(true);
-      // New Google account: the profile form must be completed before the app opens. Recorded remotely
-      // so it still appears after a reinstall or on another device.
-      if (profileGateEnabled) {
-        try {
-          await createPendingProfile(cred.user.uid);
-        } catch {
-          /* handled by the local pending flag */
-        }
-      }
-    }
-    if (profileGateEnabled) await applyProfileStatus(cred.user.uid);
-
-    // Google email returning verified does NOT bypass app-level OTP verification
-    try {
-      const trust = await checkDeviceSessionTrust();
-      if (trust.trusted && trust.emailVerified) {
-        setIsSessionVerified(true);
-        return;
-      }
-    } catch {
-      /* proceed to OTP challenge */
-    }
-
-    setIsSessionVerified(false);
-    await sendFirstCode();
-  }, [sendFirstCode]);
-
   const verifyOtp = useCallback(async (code: string) => {
     await verifyEmailCode(code);
     if (auth.currentUser) {
@@ -309,7 +270,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profileChecked,
       needsProfile,
       completeProfile,
-      signInWithGoogleIdToken,
       verifyOtp,
       resendOtp,
       resetPassword,
@@ -333,7 +293,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profileChecked,
       needsProfile,
       completeProfile,
-      signInWithGoogleIdToken,
       verifyOtp,
       resendOtp,
       resetPassword,

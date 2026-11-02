@@ -1,15 +1,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
-  GoogleAuthProvider,
   createUserWithEmailAndPassword,
   deleteUser,
-  getAdditionalUserInfo,
-  getRedirectResult,
   onAuthStateChanged,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
-  signInWithPopup,
-  signInWithRedirect,
   signOut as fbSignOut,
   updateProfile,
   type User,
@@ -25,7 +20,6 @@ interface AuthValue {
   signInWithEmail(email: string, password: string): Promise<void>;
   /** `profile` comes from the sign-up form; without it the account waits for the profile form. */
   register(fullName: string, email: string, password: string, profile?: ValidProfile): Promise<void>;
-  signInWithGoogle(): Promise<void>;
   resetPassword(email: string): Promise<void>;
   signOut(): Promise<void>;
   deleteAccount(): Promise<void>;
@@ -96,20 +90,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!verified) await sendFirstCode();
   }, [sendFirstCode]);
 
-  // Completes a Google sign-in that fell back to the redirect flow (popup blocked) and keeps the
-  // "new account" flag that the popup path sets. Errors are only logged: the Welcome page offers email.
-  useEffect(() => {
-    getRedirectResult(auth)
-      .then((cred) => {
-        if (cred && getAdditionalUserInfo(cred)?.isNewUser) {
-          localStorage.setItem(`top:new-account:${cred.user.uid}`, 'true');
-          setIsNewAccount(true);
-          if (profileGateEnabled) void createPendingProfile(cred.user.uid).catch(() => undefined);
-        }
-      })
-      .catch((e) => console.warn('[auth] redirect sign-in failed', e?.code ?? e));
-  }, []);
-
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
       setUser(u);
@@ -174,28 +154,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await applyProfileStatus(uid);
   }, [applyProfileStatus]);
 
-  const signInWithGoogle = useCallback(async () => {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    try {
-      const cred = await signInWithPopup(auth, provider);
-      if (getAdditionalUserInfo(cred)?.isNewUser) {
-        localStorage.setItem(`top:new-account:${cred.user.uid}`, 'true');
-        setIsNewAccount(true);
-        // New Google account: the profile form must be completed first. Stored remotely so it survives
-        // a reload, another browser, or an interrupted sign-up.
-        if (profileGateEnabled) await createPendingProfile(cred.user.uid).catch(() => undefined);
-      }
-    } catch (err: any) {
-      // In standalone iOS PWA or restrictive popup blockers, fall back to redirect
-      if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
-        await signInWithRedirect(auth, provider);
-      } else {
-        throw err;
-      }
-    }
-  }, []);
-
   const resetPassword = useCallback(async (email: string) => {
     await sendPasswordResetEmail(auth, email.trim());
   }, []);
@@ -239,7 +197,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         initializing,
         signInWithEmail,
         register,
-        signInWithGoogle,
         resetPassword,
         signOut,
         deleteAccount,

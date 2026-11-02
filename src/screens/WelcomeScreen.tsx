@@ -2,11 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { GoogleButton } from '@/components/GoogleButton';
 import { Logo } from '@/components/Logo';
 import { OnboardingBackdrop } from '@/components/OnboardingBackdrop';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { isGoogleConfigured } from '@/constants/config';
 import { colors, type as t } from '@/constants/theme';
 import { useOnboardingMedia } from '@/hooks/useOnboardingMedia';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -59,7 +57,6 @@ export function WelcomeScreen() {
 
           <Animated.View style={[styles.actions, rise]}>
             <PrimaryButton title="Get started" icon="arrow-forward" onPress={() => nav.navigate('EmailAuth', { mode: 'signup' })} accessibilityHint="Create a free account" />
-            {isGoogleConfigured ? <GoogleButton onError={setError} /> : null}
             <Pressable onPress={() => nav.navigate('EmailAuth', { mode: 'signin' })} style={styles.signIn} accessibilityRole="button" accessibilityLabel="I already have an account. Sign in">
               <Text style={styles.signInText}>
                 Already have an account? <Text style={styles.signInLink}>Sign in</Text>

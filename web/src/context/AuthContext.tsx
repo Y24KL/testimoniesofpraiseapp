@@ -117,7 +117,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     redeemKingsChatHandoff(back.handoff)
-      .then((token) => signInWithCustomToken(auth, token))
+      .then(async ({ token, name }) => {
+        const cred = await signInWithCustomToken(auth, token);
+        // Use the KingsChat name unless the account already has one.
+        if (name && !cred.user.displayName) await updateProfile(cred.user, { displayName: name });
+      })
       .catch((e) => setKingsChatMessage(e instanceof KingsChatSignInError ? e.message : KINGSCHAT_MESSAGES.failed));
   }, []);
 

@@ -53,8 +53,14 @@ function makeKv() {
 }
 
 // Stands in for KingsChat: the certificate list, the token endpoint, and a fail-safe for anything else.
-function kingsChatFetch({ accessToken, failExchange = false } = {}) {
+function kingsChatFetch({ accessToken, failExchange = false, failProfile = false } = {}) {
   return async (url, init = {}) => {
+    if (url === 'https://connect.kingsch.at/developer/api/user/profile') {
+      assert.equal(init.headers['api-key'], 'test-api-key');
+      assert.match(init.headers.Authorization, /^Bearer /);
+      if (failProfile) return { ok: false, status: 403, json: async () => ({ error: 'user_not_authorized' }) };
+      return { ok: true, json: async () => ({ profile: { id: 'kc-user-42', name: 'Jane Doe', email: 'jane@example.com' } }) };
+    }
     if (url === 'https://connect.kingsch.at/oauth2/certs') {
       return { ok: true, json: async () => ({ certificates: [{ kid: KC_KID, pem_certificate: kcPem }] }) };
     }
@@ -76,6 +82,7 @@ function env(extra = {}) {
     OTP_PEPPER: PEPPER,
     OTP_KV: makeKv(),
     FIREBASE_SERVICE_ACCOUNT: serviceAccount,
+    KINGSCHAT_API_KEY: 'test-api-key',
     ALLOWED_ORIGINS: `${SITE}, http://localhost:5173`,
     SITE_URL: SITE,
     ...extra,
@@ -118,7 +125,9 @@ assert.ok(!location(res).includes('GOOD-CODE'), 'the code must not appear in the
 const handoffId = handoffMatch[1];
 
 // The custom token is signed by the service account and is for the KingsChat-derived uid.
-const stored = kvOk.OTP_KV.store.get(`kc_handoff:${handoffId}`);
+const storedRecord = JSON.parse(kvOk.OTP_KV.store.get(`kc_handoff:${handoffId}`));
+const stored = storedRecord.token;
+assert.equal(storedRecord.name, 'Jane Doe');
 assert.ok(stored, 'handoff should be stored');
 const [h, p, s] = stored.split('.');
 assert.equal(JSON.parse(Buffer.from(p, 'base64url').toString()).uid, 'kc_kc-user-42');
@@ -137,7 +146,9 @@ const redeemReq = (handoff) =>
   });
 res = await handleKingsChatRedeem(redeemReq(handoffId), kvOk);
 assert.equal(res.status, 200);
-assert.equal((await res.json()).token, stored);
+const redeemed = await res.json();
+assert.equal(redeemed.token, stored);
+assert.equal(redeemed.name, 'Jane Doe');
 assert.equal(res.headers.get('Access-Control-Allow-Origin'), SITE);
 res = await handleKingsChatRedeem(redeemReq(handoffId), kvOk);
 assert.equal(res.status, 404);
@@ -145,6 +156,22 @@ assert.equal(res.status, 404);
 // Redeem refuses malformed IDs.
 res = await handleKingsChatRedeem(redeemReq('../../etc'), env());
 assert.equal(res.status, 400);
+
+// A failed profile lookup does not block sign-in: the handoff is still made, without a name.
+resetCertCache();
+const noNameState = await makeLoginState(PEPPER, NOW);
+const kvNoName = env();
+res = await handleKingsChatCallback(
+  callbackRequest({ code: 'GOOD-CODE', origin: noNameState }),
+  kvNoName,
+  { now: NOW, fetchFn: kingsChatFetch({ accessToken: kingsChatToken(goodClaims()), failProfile: true }) },
+);
+const noNameId = location(res).match(/handoff=([a-f0-9]{32})$/)?.[1];
+assert.ok(noNameId, `expected a handoff: ${location(res)}`);
+res = await handleKingsChatRedeem(redeemReq(noNameId), kvNoName);
+const noName = await res.json();
+assert.ok(noName.token);
+assert.equal(noName.name, null);
 
 // A check value from more than ten minutes ago is refused.
 resetCertCache();

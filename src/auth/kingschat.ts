@@ -1,6 +1,6 @@
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
-import { signInWithCustomToken } from 'firebase/auth';
+import { signInWithCustomToken, updateProfile } from 'firebase/auth';
 import { auth } from '@/api/firebase';
 import { CONFIG } from '@/constants/config';
 
@@ -34,7 +34,7 @@ async function loginCheck(): Promise<string> {
   }
 }
 
-async function redeemHandoff(handoff: string): Promise<string> {
+async function redeemHandoff(handoff: string): Promise<{ token: string; name: string | null }> {
   let res: Response;
   try {
     res = await fetch(`${CONFIG.authApiUrl}/api/auth/kingschat/redeem`, {
@@ -46,7 +46,7 @@ async function redeemHandoff(handoff: string): Promise<string> {
     throw new KingsChatSignInError('No connection. Check your internet and try again.');
   }
   if (!res.ok) throw new KingsChatSignInError('This KingsChat sign-in has expired. Please try again.');
-  return ((await res.json()) as { token: string }).token;
+  return (await res.json()) as { token: string; name: string | null };
 }
 
 /**
@@ -66,6 +66,8 @@ export async function signInWithKingsChat(): Promise<void> {
   const handoff = typeof params.handoff === 'string' ? params.handoff : '';
   if (status !== 'ok' || !handoff) throw new KingsChatSignInError(MESSAGES[status] ?? MESSAGES.failed);
 
-  const token = await redeemHandoff(handoff);
-  await signInWithCustomToken(auth, token);
+  const { token, name } = await redeemHandoff(handoff);
+  const cred = await signInWithCustomToken(auth, token);
+  // Use the KingsChat name unless the account already has one.
+  if (name && !cred.user.displayName) await updateProfile(cred.user, { displayName: name });
 }

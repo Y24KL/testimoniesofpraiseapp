@@ -5,7 +5,7 @@ compatibility_date = "2025-01-01"
 
 [vars]
 # Exact origins only (scheme + host [+ port]); no paths or trailing slashes. localhost is always allowed.
-ALLOWED_ORIGINS = "http://localhost:5173,https://testimoniesofpraiseweb.onrender.com,https://top-admin.onrender.com"
+ALLOWED_ORIGINS = "http://localhost:5173,https://testimoniesofpraiseweb.onrender.com,https://top-admin.onrender.com,https://testimoniesofpraiseapp.com,testimoniesofpraiseapp.com"
 BUNNY_CDN_HOSTNAME = "top-media.b-cdn.net"
 BUNNY_STORAGE_ENDPOINT = "storage.bunnycdn.com"
 BUNNY_STORAGE_ZONE_NAME = "top-media-storage"

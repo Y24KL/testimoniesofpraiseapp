@@ -19,6 +19,7 @@ import { mintFirebaseCustomToken } from './firebaseCustomToken.js';
 // Public client ID of the TOP web app in the KingsChat dashboard. It is not a secret.
 export const KINGSCHAT_CLIENT_ID = 'f9f8da46-de8a-4f57-aa96-ab8fb2f83926';
 export const KINGSCHAT_TOKEN_URL = 'https://connect.kingsch.at/developer/api/oauth2/token';
+export const KINGSCHAT_PROFILE_URL = 'https://connect.kingsch.at/developer/api/user/profile';
 export const DEFAULT_SITE_URL = 'https://testimoniesofpraiseapp.com';
 
 const STATE_MAX_AGE_MS = 10 * 60 * 1000;
@@ -121,10 +122,35 @@ export async function handleKingsChatRedeem(request, env) {
   if (!/^[a-f0-9]{32}$/.test(handoff)) return jsonResponse({ error: 'Invalid request.' }, 400, request, env);
 
   const key = `${HANDOFF_PREFIX}${handoff}`;
-  const token = await env.OTP_KV.get(key);
-  if (!token) return jsonResponse({ error: 'This sign-in has expired. Please try again.' }, 404, request, env);
+  const stored = await env.OTP_KV.get(key);
+  if (!stored) return jsonResponse({ error: 'This sign-in has expired. Please try again.' }, 404, request, env);
   await env.OTP_KV.delete(key);
-  return jsonResponse({ token }, 200, request, env);
+  let record;
+  try {
+    record = JSON.parse(stored);
+  } catch {
+    return jsonResponse({ error: 'This sign-in has expired. Please try again.' }, 404, request, env);
+  }
+  return jsonResponse({ token: record.token, name: record.name ?? null }, 200, request, env);
+}
+
+/**
+ * The person's name from KingsChat's profile endpoint (see the docs: "Making the Request"). Returns null on any
+ * problem, so a missing name never blocks sign-in.
+ */
+export async function fetchKingsChatName(accessToken, apiKey, fetchFn = fetch) {
+  if (!apiKey) return null;
+  try {
+    const res = await fetchFn(KINGSCHAT_PROFILE_URL, {
+      headers: { Accept: 'application/json', 'api-key': apiKey, Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    const payload = await res.json();
+    const name = typeof payload?.profile?.name === 'string' ? payload.profile.name.trim() : '';
+    return name ? name.slice(0, 100) : null;
+  } catch {
+    return null;
+  }
 }
 
 async function exchangeCode(code, fetchFn) {
@@ -181,7 +207,11 @@ export async function handleKingsChatCallback(request, env, deps = {}) {
   }
 
   const customToken = await mintFirebaseCustomToken(env.FIREBASE_SERVICE_ACCOUNT, `kc_${kingsChatUserId}`, now);
+  // The name is optional: sign-in still works without it, and the email is never stored.
+  const name = await fetchKingsChatName(accessToken, env.KINGSCHAT_API_KEY, fetchFn);
   const handoff = randomHex(16);
-  await env.OTP_KV.put(`${HANDOFF_PREFIX}${handoff}`, customToken, { expirationTtl: HANDOFF_TTL_SECONDS });
+  await env.OTP_KV.put(`${HANDOFF_PREFIX}${handoff}`, JSON.stringify({ token: customToken, name }), {
+    expirationTtl: HANDOFF_TTL_SECONDS,
+  });
   return Response.redirect(siteRedirect('ok', site, handoff, target), 303);
 }

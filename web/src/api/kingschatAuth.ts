@@ -30,8 +30,11 @@ export async function startKingsChatLogin(): Promise<void> {
   );
 }
 
-/** Exchanges the one-time handoff ID from the Worker for a Firebase custom token. The ID works once. */
-export async function redeemKingsChatHandoff(handoff: string): Promise<string> {
+/**
+ * Exchanges the one-time handoff ID from the Worker for a Firebase custom token and the person's KingsChat name
+ * (null when KingsChat did not give one). The ID works once.
+ */
+export async function redeemKingsChatHandoff(handoff: string): Promise<{ token: string; name: string | null }> {
   let res: Response;
   try {
     res = await fetch(`${AUTH_API_BASE}/api/auth/kingschat/redeem`, {
@@ -43,7 +46,7 @@ export async function redeemKingsChatHandoff(handoff: string): Promise<string> {
     throw new KingsChatSignInError('No connection. Check your internet and try again.');
   }
   if (!res.ok) throw new KingsChatSignInError('This KingsChat sign-in has expired. Please try again.');
-  return ((await res.json()) as { token: string }).token;
+  return (await res.json()) as { token: string; name: string | null };
 }
 
 /**

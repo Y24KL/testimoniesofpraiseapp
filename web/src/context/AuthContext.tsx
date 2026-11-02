@@ -129,7 +129,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return onAuthStateChanged(auth, async (u) => {
       setUser(u);
       if (u) {
-        const isNew = localStorage.getItem(`top:new-account:${u.uid}`) === 'true';
+        // KingsChat accounts are never "new": they skip the profile form and the first-time welcome.
+        const isNew = !isKingsChatUid(u.uid) && localStorage.getItem(`top:new-account:${u.uid}`) === 'true';
         setIsNewAccount(isNew);
         await checkSession(u.uid);
         await applyProfileStatus(u.uid);
@@ -224,9 +225,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Existing accounts never see the form: only a remote 'pending' profile, or a new-account flag on this
   // browser while the remote status is missing or unreachable, requires it.
   const profileChecked = !user || (profileStatus !== null && sessionVerified !== null);
+  // KingsChat sign-ins never see the profile form: the form is only for accounts created with the sign-up form.
   const needsProfile =
     profileGateEnabled &&
     !!user &&
+    !isKingsChatUid(user.uid) &&
     (profileStatus === 'pending' || ((profileStatus === 'none' || profileStatus === 'unknown') && isNewAccount));
 
   return (

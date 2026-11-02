@@ -119,7 +119,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         await applyProfileStatus(u.uid);
         try {
-          setIsNewAccount(await isNewAccountPending(u.uid));
+          // KingsChat accounts are never "new": they skip the profile form and the first-time welcome.
+          setIsNewAccount(!isKingsChatUid(u.uid) && (await isNewAccountPending(u.uid)));
         } catch {
           setIsNewAccount(false);
         }
@@ -264,9 +265,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // The profile form applies only to accounts that are new (remote 'pending', or a new-account flag on
   // this device while the remote status is missing or unreachable). Existing accounts never see it.
   const profileChecked = !user || profileStatus !== null;
+  // KingsChat sign-ins never see the profile form: the form is only for accounts created with the sign-up form.
   const needsProfile =
     profileGateEnabled &&
     !!user &&
+    !isKingsChatUid(user.uid) &&
     (profileStatus === 'pending' || ((profileStatus === 'none' || profileStatus === 'unknown') && isNewAccount));
   const value = useMemo(
     () => ({

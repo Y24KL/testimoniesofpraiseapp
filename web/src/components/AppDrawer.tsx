@@ -16,8 +16,11 @@ import {
   LogOut,
   ChevronRight,
   Sparkles,
+  Music,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { navigate } from '../router';
 import { Logo } from './Logo';
 import { colors, radius } from '../theme';
 
@@ -155,6 +158,30 @@ export function AppDrawer({
       action: onSponsor,
     },
     {
+      id: 'singers',
+      title: 'Worship with your LoveWorld Singers',
+      subtitle: 'Praise videos & downloads',
+      icon: <Music size={18} color={colors.accent} />,
+      iconBg: 'rgba(245, 197, 66, 0.15)',
+      action: () => navigate({ name: 'singers' }),
+    },
+    {
+      id: 'choir',
+      title: 'FEATURE YOUR CHOIR/GROUP ON T.O.P',
+      subtitle: 'Showcase & submit your group',
+      icon: <Users size={18} color={colors.primaryLight} />,
+      iconBg: 'rgba(186, 104, 200, 0.2)',
+      action: () => navigate({ name: 'choir' }),
+    },
+    {
+      id: 'share',
+      title: 'Share Testimony',
+      subtitle: 'Submit your praise report',
+      icon: <FileText size={18} color={colors.primaryLight} />,
+      iconBg: 'rgba(186, 104, 200, 0.2)',
+      action: onShareTestimony,
+    },
+    {
       id: 'assistant',
       title: 'T.O.P AI Assistant',
       subtitle: 'Ask questions and find testimonies',
@@ -177,14 +204,6 @@ export function AppDrawer({
       icon: <Tag size={18} color={colors.accent} />,
       iconBg: 'rgba(245, 197, 66, 0.15)',
       action: onGoToPromotions,
-    },
-    {
-      id: 'share',
-      title: 'Share Testimony',
-      subtitle: 'Submit your praise report',
-      icon: <FileText size={18} color={colors.primaryLight} />,
-      iconBg: 'rgba(186, 104, 200, 0.2)',
-      action: onShareTestimony,
     },
     {
       id: 'downloads',

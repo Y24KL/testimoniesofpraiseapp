@@ -9,7 +9,7 @@ import type { DownloadItem } from '../types';
 interface Props {
   onNotifications: () => void;
   onProfile: () => void;
-  onSelectTestimony: (id: string) => void;
+  onSelectTestimony: (id: string, kind?: 'testimony' | 'singers') => void;
 }
 
 function formatBytes(bytes?: number): string {
@@ -68,7 +68,7 @@ export function DownloadsPage({ onNotifications, onProfile, onSelectTestimony }:
               >
                 {/* Thumbnail */}
                 <div
-                  onClick={() => onSelectTestimony(item.id)}
+                  onClick={() => onSelectTestimony(item.id, item.kind)}
                   style={{
                     width: '84px',
                     height: '60px',
@@ -94,7 +94,7 @@ export function DownloadsPage({ onNotifications, onProfile, onSelectTestimony }:
 
                 {/* Details */}
                 <div
-                  onClick={() => onSelectTestimony(item.id)}
+                  onClick={() => onSelectTestimony(item.id, item.kind)}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}
                 >
                   <h4

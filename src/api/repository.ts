@@ -1,5 +1,7 @@
 import type {
   AdotopocConfig,
+  FeaturedChoir,
+  LoveworldSingersVideo,
   AppNotification,
   Article,
   AudioTestimony,
@@ -23,6 +25,13 @@ export interface SubmissionInput {
   testimony: string;
   userId?: string;
   userEmail?: string | null;
+}
+
+export interface ChoirRequestInput {
+  groupName: string;
+  churchZone: string;
+  ministrationUrl: string;
+  songTitle: string;
 }
 
 export interface CreateArticleInput {
@@ -61,4 +70,15 @@ export interface ContentRepository {
   getWrittenTestimonies(opts: PageOptions): Promise<Page<WrittenTestimony>>;
   /** One published written testimony, or null when it is unpublished / removed. */
   getWrittenTestimony(id: string): Promise<WrittenTestimony | null>;
+
+  /** Published "Worship with your LoveWorld Singers" videos, in the admin's order. */
+  getLoveworldSingersVideos(limit?: number): Promise<LoveworldSingersVideo[]>;
+  /** One published singers video, or null when it is unpublished / removed. */
+  getLoveworldSingersVideo(id: string): Promise<LoveworldSingersVideo | null>;
+  /** Published featured choir/group videos, in the admin's order. */
+  getFeaturedChoirs(limit?: number): Promise<FeaturedChoir[]>;
+  /** One published featured choir video, or null when it is unpublished / removed. */
+  getFeaturedChoir(id: string): Promise<FeaturedChoir | null>;
+  /** Saves a "Feature your choir/group" request as pending review. Never publishes anything. */
+  submitChoirFeatureRequest(input: ChoirRequestInput, submittedBy: string): Promise<void>;
 }

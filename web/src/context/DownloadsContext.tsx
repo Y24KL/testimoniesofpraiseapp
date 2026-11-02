@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { openDB, type IDBPDatabase } from 'idb';
-import type { DownloadItem, Testimony } from '../types';
+import type { DownloadItem, VideoSnapshot } from '../types';
 import { isHls } from '../api/repository';
 import { track } from '../api/analytics';
 
@@ -23,7 +23,7 @@ interface DownloadsValue {
   ready: boolean;
   get(id: string): DownloadItem | undefined;
   getLocalVideoUrl(id: string): string | undefined;
-  start(data: Testimony): Promise<void>;
+  start(data: VideoSnapshot, kind?: 'testimony' | 'singers'): Promise<void>;
   remove(id: string): Promise<void>;
   cancel(id: string): Promise<void>;
 }
@@ -61,7 +61,7 @@ export function DownloadsProvider({ children }: { children: React.ReactNode }) {
     reloadItems();
   }, [reloadItems]);
 
-  const start = useCallback(async (data: Testimony) => {
+  const start = useCallback(async (data: VideoSnapshot, kind: 'testimony' | 'singers' = 'testimony') => {
     const id = data.id;
     if (isHls(data.videoUrl)) {
       alert('Live streams and HLS (.m3u8) feeds cannot be saved for offline viewing.');
@@ -72,8 +72,9 @@ export function DownloadsProvider({ children }: { children: React.ReactNode }) {
     setActiveControllers((prev) => ({ ...prev, [id]: controller }));
 
     const initialItem: DownloadItem = {
-      key: `testimony:${id}`,
+      key: `${kind}:${id}`,
       id,
+      kind,
       title: data.title,
       thumbnail: data.thumbnail,
       remoteUrl: data.videoUrl,
@@ -130,7 +131,7 @@ export function DownloadsProvider({ children }: { children: React.ReactNode }) {
 
       await db.put(STORE_NAME, completedItem);
       await reloadItems();
-      track('download_complete', { kind: 'testimony', contentId: id });
+      track('download_complete', { kind, contentId: id });
     } catch (err: any) {
       if (err.name === 'AbortError') return;
       const failedItem: DownloadItem = {

@@ -1,4 +1,8 @@
 import type {
+  ChoirFeatureRequest,
+  ChoirRequestStatus,
+  FeaturedChoir,
+  LoveworldSingersVideo,
   WrittenTestimony,
   PreLiveMedia,
   AdotopocConfig,
@@ -233,5 +237,54 @@ export function normalizeAdotopoc(r: Raw | undefined | null): AdotopocConfig {
         'https://res.cloudinary.com/duw6xrnpn/video/upload/v1792135475/ADOTOP_LOGO_OUTRO_m1awjk.mp4',
     ),
     introEnabled: pick(r ?? {}, ['introEnabled']) !== false,
+  };
+}
+
+export function normalizeLoveworldSingersVideo(id: string, r: Raw): LoveworldSingersVideo {
+  return {
+    id,
+    title: String(pick(r, ['title']) ?? 'Untitled video'),
+    description: String(pick(r, ['description']) ?? ''),
+    videoUrl: String(pick(r, ['videoUrl', 'url']) ?? ''),
+    thumbnail: pick(r, ['thumbnailUrl', 'thumbnail']) || undefined,
+    duration: toSeconds(pick(r, ['duration'])),
+    isFeatured: r.isFeatured === true,
+    order: typeof r.order === 'number' ? r.order : 0,
+    isDownloadable: r.isDownloadable === true,
+    isPublished: r.isPublished === true,
+    publishedAt: toIso(pick(r, ['publishedAt'])),
+    createdAt: toIso(pick(r, ['createdAt'])),
+  };
+}
+
+export function normalizeFeaturedChoir(id: string, r: Raw): FeaturedChoir {
+  return {
+    id,
+    groupName: String(pick(r, ['groupName']) ?? 'Choir'),
+    songTitle: String(pick(r, ['songTitle']) ?? ''),
+    videoUrl: String(pick(r, ['videoUrl', 'url']) ?? ''),
+    thumbnail: pick(r, ['thumbnailUrl', 'thumbnail']) || undefined,
+    duration: toSeconds(pick(r, ['duration'])),
+    order: typeof r.order === 'number' ? r.order : 0,
+    isPublished: r.isPublished === true,
+    createdAt: toIso(pick(r, ['createdAt'])),
+  };
+}
+
+const CHOIR_STATUSES: ChoirRequestStatus[] = ['pending', 'reviewed', 'approved', 'rejected'];
+
+export function normalizeChoirFeatureRequest(id: string, r: Raw): ChoirFeatureRequest {
+  const status = CHOIR_STATUSES.includes(r.status) ? (r.status as ChoirRequestStatus) : 'pending';
+  return {
+    id,
+    groupName: String(pick(r, ['groupName']) ?? ''),
+    churchZone: String(pick(r, ['churchZone']) ?? ''),
+    ministrationUrl: String(pick(r, ['ministrationUrl']) ?? ''),
+    songTitle: String(pick(r, ['songTitle']) ?? ''),
+    submittedBy: String(pick(r, ['submittedBy']) ?? ''),
+    status,
+    submittedAt: toIso(pick(r, ['submittedAt'])),
+    reviewedAt: toIso(pick(r, ['reviewedAt'])),
+    reviewedBy: pick(r, ['reviewedBy']) || null,
   };
 }

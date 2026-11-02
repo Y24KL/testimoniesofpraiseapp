@@ -48,6 +48,13 @@ const PromotionsPage = named(() => import('./pages/PromotionsPage'), 'Promotions
 const ArticlesPage = named(() => import('./pages/ArticlesPage'), 'ArticlesPage');
 const ArticleDetailPage = named(() => import('./pages/ArticleDetailPage'), 'ArticleDetailPage');
 const AdotopocPage = named(() => import('./pages/AdotopocPage'), 'AdotopocPage');
+const LoveworldSingersPage = named(() => import('./pages/LoveworldSingersPage'), 'LoveworldSingersPage');
+const LoveworldSingerVideoPage = named(() => import('./pages/LoveworldSingerVideoPage'), 'LoveworldSingerVideoPage');
+const ChoirFeaturePage = named(() => import('./pages/ChoirFeaturePages'), 'ChoirFeaturePage');
+const FeaturedChoirsPage = named(() => import('./pages/ChoirFeaturePages'), 'FeaturedChoirsPage');
+const FeaturedChoirPage = named(() => import('./pages/ChoirFeaturePages'), 'FeaturedChoirPage');
+const ChoirRequestPage = named(() => import('./pages/ChoirFeaturePages'), 'ChoirRequestPage');
+const ChoirRequestSentPage = named(() => import('./pages/ChoirFeaturePages'), 'ChoirRequestSentPage');
 
 function Splash() {
   return (
@@ -145,7 +152,13 @@ function Shell({ route }: { route: Route }) {
       page = <ListenPage onMenu={openDrawer} />;
       break;
     case 'downloads':
-      page = <DownloadsPage onNotifications={go({ name: 'notifications' })} onProfile={openDrawer} onSelectTestimony={(id: string) => navigate({ name: 'testimony', id })} />;
+      page = (
+        <DownloadsPage
+          onNotifications={go({ name: 'notifications' })}
+          onProfile={openDrawer}
+          onSelectTestimony={(id: string, kind?: 'testimony' | 'singers') => navigate(kind === 'singers' ? { name: 'singer', id } : { name: 'testimony', id })}
+        />
+      );
       break;
     case 'testimony':
       page = <TestimonyDetailPage key={`${route.id}:${route.startAt ?? ''}`} id={route.id} onBack={back} startAt={route.startAt} />;
@@ -207,6 +220,27 @@ function Shell({ route }: { route: Route }) {
       break;
     case 'adotopoc':
       page = <AdotopocPage onBack={back} />;
+      break;
+    case 'singers':
+      page = <LoveworldSingersPage onBack={back} onSelect={(id: string) => navigate({ name: 'singer', id })} />;
+      break;
+    case 'singer':
+      page = <LoveworldSingerVideoPage key={route.id} id={route.id} onBack={() => goBack({ name: 'singers' })} />;
+      break;
+    case 'choir':
+      page = <ChoirFeaturePage onBack={back} onNavigate={(r: 'choirShowcase' | 'choirRequest' | 'choirRequestSent') => navigate({ name: r })} />;
+      break;
+    case 'choirShowcase':
+      page = <FeaturedChoirsPage onBack={() => goBack({ name: 'choir' })} onNavigate={(r: 'choirShowcase' | 'choirRequest' | 'choirRequestSent') => navigate({ name: r })} onSelectChoir={(id: string) => navigate({ name: 'featuredChoir', id })} />;
+      break;
+    case 'featuredChoir':
+      page = <FeaturedChoirPage key={route.id} id={route.id} onBack={() => goBack({ name: 'choirShowcase' })} />;
+      break;
+    case 'choirRequest':
+      page = <ChoirRequestPage onBack={back} onSent={() => navigate({ name: 'choirRequestSent' }, { replace: true })} />;
+      break;
+    case 'choirRequestSent':
+      page = <ChoirRequestSentPage onHome={() => navigate({ name: 'home' }, { replace: true })} />;
       break;
     default:
       page = <HomePage onMenu={openDrawer} onOpenPromotion={openPromotion} />;

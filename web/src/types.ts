@@ -67,9 +67,22 @@ export interface Page<T> {
 export type DownloadStatus = 'downloading' | 'done' | 'failed';
 export type DownloadFailure = 'network' | 'storage' | 'http' | 'unsupported' | 'unknown';
 
+/** The fields of a video the Downloads manager needs to save it and play it offline. */
+export interface VideoSnapshot {
+  id: string;
+  title: string;
+  description?: string;
+  videoUrl: string;
+  thumbnail?: string;
+  duration?: number;
+  isDownloadable?: boolean;
+}
+
 export interface DownloadItem {
   key: string;
   id: string;
+  /** Which library the video came from; decides where a tap on the Downloads list opens. */
+  kind?: 'testimony' | 'singers';
   title: string;
   thumbnail?: string;
   remoteUrl: string;
@@ -79,7 +92,54 @@ export interface DownloadItem {
   sizeBytes?: number;
   failure?: DownloadFailure;
   createdAt: number;
-  data: Testimony;
+  data: VideoSnapshot;
+}
+
+/** A video in the "Worship with your LoveWorld Singers" library (Firestore: loveworldSingersVideos). */
+export interface LoveworldSingersVideo {
+  id: string;
+  title: string;
+  description: string;
+  videoUrl: string;
+  thumbnail?: string;
+  /** seconds */
+  duration?: number;
+  isFeatured: boolean;
+  order: number;
+  isDownloadable: boolean;
+  isPublished: boolean;
+  publishedAt: string | null;
+  createdAt: string | null;
+}
+
+/** A group video in the "Featured choirs" showcase (Firestore: featuredChoirs). */
+export interface FeaturedChoir {
+  id: string;
+  groupName: string;
+  songTitle: string;
+  videoUrl: string;
+  thumbnail?: string;
+  /** seconds */
+  duration?: number;
+  order: number;
+  isPublished: boolean;
+  createdAt: string | null;
+}
+
+export type ChoirRequestStatus = 'pending' | 'reviewed' | 'approved' | 'rejected';
+
+/** A "Feature your choir/group" submission (Firestore: choirFeatureRequests). Never shown publicly. */
+export interface ChoirFeatureRequest {
+  id: string;
+  groupName: string;
+  churchZone: string;
+  ministrationUrl: string;
+  songTitle: string;
+  submittedBy: string;
+  status: ChoirRequestStatus;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
 }
 
 export interface ChatMessage {

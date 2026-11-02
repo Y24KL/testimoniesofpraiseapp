@@ -15,6 +15,13 @@ export type Route =
   | { name: 'audio'; id: string }
   | { name: 'written' }
   | { name: 'writtenTestimony'; id: string }
+  | { name: 'singers' }
+  | { name: 'singer'; id: string }
+  | { name: 'choir' }
+  | { name: 'choirShowcase' }
+  | { name: 'featuredChoir'; id: string }
+  | { name: 'choirRequest' }
+  | { name: 'choirRequestSent' }
   | { name: 'share' }
   | { name: 'sponsor' }
   | { name: 'notifications' }
@@ -51,6 +58,11 @@ const STATIC: Record<string, Route> = {
   articles: { name: 'articles' },
   written: { name: 'written' },
   adotopoc: { name: 'adotopoc' },
+  singers: { name: 'singers' },
+  choir: { name: 'choir' },
+  'choir/showcase': { name: 'choirShowcase' },
+  'choir/request': { name: 'choirRequest' },
+  'choir/sent': { name: 'choirRequestSent' },
   assistant: { name: 'assistant' },
   signin: { name: 'signin' },
   signup: { name: 'signup' },
@@ -64,6 +76,10 @@ export function parseHash(hash: string): Route {
   if (path in STATIC) return STATIC[path];
   const w = path.match(/^written\/([^/?#]+)$/);
   if (w) return { name: 'writtenTestimony', id: w[1] };
+  const s = path.match(/^singers\/([^/?#]+)$/);
+  if (s) return { name: 'singer', id: s[1] };
+  const c = path.match(/^choir\/([^/?#]+)$/);
+  if (c) return { name: 'featuredChoir', id: c[1] };
   const m = path.match(/^(testimony|audio|article)\/([^/?#]+)$/);
   if (m) {
     if (m[1] !== 'testimony') return m[1] === 'audio' ? { name: 'audio', id: m[2] } : { name: 'article', id: m[2] };
@@ -83,6 +99,16 @@ export function pathFor(route: Route): string {
       return `/audio/${encodeURIComponent(route.id)}`;
     case 'writtenTestimony':
       return `/written/${encodeURIComponent(route.id)}`;
+    case 'singer':
+      return `/singers/${encodeURIComponent(route.id)}`;
+    case 'featuredChoir':
+      return `/choir/${encodeURIComponent(route.id)}`;
+    case 'choirShowcase':
+      return '/choir/showcase';
+    case 'choirRequest':
+      return '/choir/request';
+    case 'choirRequestSent':
+      return '/choir/sent';
     case 'article':
       return `/article/${encodeURIComponent(route.id)}`;
     case 'notificationSettings':

@@ -3,14 +3,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, radius, type as t } from '@/constants/theme';
 import { downloadKey, useDownloads } from '@/downloads/DownloadsContext';
-import type { Testimony } from '@/types';
+import type { DownloadKind, DownloadSnapshot } from '@/types';
 import { MESSAGES } from '@/utils/errors';
-import { formatBytes } from '@/utils/format';
+import { formatBytes, isHls } from '@/utils/format';
 import { PrimaryButton } from './PrimaryButton';
 
 interface Props {
-  kind: 'testimony';
-  data: Testimony;
+  kind: DownloadKind;
+  data: DownloadSnapshot;
 }
 
 /** Renders nothing unless the Admin Portal allowed downloads (isDownloadable). */
@@ -20,7 +20,8 @@ export function DownloadButton({ kind, data }: Props) {
   const item = dl.get(key);
   const go = () => void dl.start({ kind, data });
 
-  if (!data.isDownloadable && !item) return null;
+  // Never offer a button that cannot work: HLS streams cannot be saved as one file.
+  if ((!data.isDownloadable || isHls(data.videoUrl)) && !item) return null;
 
   if (item?.status === 'downloading') {
     const pct = Math.round(item.progress * 100);

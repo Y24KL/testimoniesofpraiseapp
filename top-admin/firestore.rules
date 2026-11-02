@@ -350,6 +350,63 @@ service cloud.firestore {
       allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
     }
 
+    // WORSHIP WITH YOUR LOVEWORLD SINGERS: video library. Admins manage every video; signed-in users
+    // only see published ones (unpublished videos are never returned to the app or the web).
+    function validSingersVideo() {
+      let d = request.resource.data;
+      return d.title is string && d.title.size() > 0 && d.title.size() <= 200
+        && d.videoUrl is string && d.videoUrl.size() > 0 && d.videoUrl.size() <= 1000
+        && d.isPublished is bool
+        && (!('description' in d) || (d.description is string && d.description.size() <= 2000))
+        && (!('thumbnailUrl' in d) || (d.thumbnailUrl is string && d.thumbnailUrl.size() <= 1000))
+        && (!('duration' in d) || (d.duration is number && d.duration >= 0))
+        && (!('order' in d) || d.order is number)
+        && (!('isFeatured' in d) || d.isFeatured is bool)
+        && (!('isDownloadable' in d) || d.isDownloadable is bool);
+    }
+    match /loveworldSingersVideos/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
+      allow create, update: if isAdmin() && validSingersVideo();
+      allow delete: if isAdmin();
+    }
+
+    // FEATURED CHOIRS / GROUPS showcase. Admins add entries; signed-in users see the published ones.
+    match /featuredChoirs/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
+      allow create, update: if isAdmin()
+        && request.resource.data.groupName is string && request.resource.data.groupName.size() > 0 && request.resource.data.groupName.size() <= 120
+        && request.resource.data.videoUrl is string && request.resource.data.videoUrl.size() > 0 && request.resource.data.videoUrl.size() <= 1000
+        && request.resource.data.isPublished is bool;
+      allow delete: if isAdmin();
+    }
+
+    // "FEATURE YOUR CHOIR/GROUP ON T.O.P" requests. Anyone signed in can send one (always pending, always
+    // under their own uid). Nobody can read them from the app: only admins review them. Requests are kept:
+    // nobody can delete them, and admins can only change the review fields.
+    function validChoirRequest() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['groupName', 'churchZone', 'ministrationUrl', 'songTitle', 'submittedBy', 'submittedAt', 'status'])
+        && d.keys().hasAll(['groupName', 'churchZone', 'ministrationUrl', 'songTitle', 'submittedBy', 'submittedAt', 'status'])
+        && d.groupName is string && d.groupName.size() > 0 && d.groupName.size() <= 120
+        && d.churchZone is string && d.churchZone.size() > 0 && d.churchZone.size() <= 160
+        && d.songTitle is string && d.songTitle.size() > 0 && d.songTitle.size() <= 200
+        && d.ministrationUrl is string && d.ministrationUrl.size() > 0 && d.ministrationUrl.size() <= 500
+        && d.ministrationUrl.matches('^https://(www[.]|m[.])?(youtube[.]com|youtu[.]be|facebook[.]com|fb[.]watch|vimeo[.]com)/.+')
+        && d.submittedBy == request.auth.uid
+        && d.submittedAt == request.time
+        && d.status == 'pending';
+    }
+    match /choirFeatureRequests/{id} {
+      allow read: if isAdmin();
+      allow create: if signedIn() && validChoirRequest();
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt', 'reviewedBy'])
+        && request.resource.data.status in ['pending', 'reviewed', 'approved', 'rejected']
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.reviewedAt == request.time;
+      allow delete: if false;
+    }
+
     // Admin dashboard: one collection-group query across every comments collection.
     match /{path=**}/comments/{commentId} {
       allow read: if isAdmin();

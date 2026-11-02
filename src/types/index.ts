@@ -66,8 +66,19 @@ export interface Page<T> {
   hasMore: boolean;
 }
 
-export type DownloadKind = 'testimony';
+export type DownloadKind = 'testimony' | 'singers';
 export type DownloadStatus = 'downloading' | 'done' | 'failed';
+
+/** The fields of a video the Downloads manager needs to save it and show it offline. */
+export interface DownloadSnapshot {
+  id: string;
+  title: string;
+  description?: string;
+  videoUrl: string;
+  thumbnail?: string;
+  duration?: number;
+  isDownloadable?: boolean;
+}
 export type DownloadFailure = 'network' | 'storage' | 'http' | 'unsupported' | 'unknown';
 
 export interface DownloadItem {
@@ -84,7 +95,56 @@ export interface DownloadItem {
   sizeBytes?: number;
   failure?: DownloadFailure;
   createdAt: number;
-  data: Testimony; // snapshot so details work offline
+  data: DownloadSnapshot; // snapshot so details work offline
+}
+
+/** A video in the "Worship with your LoveWorld Singers" library (Firestore: loveworldSingersVideos). */
+export interface LoveworldSingersVideo {
+  id: string;
+  title: string;
+  description: string;
+  videoUrl: string;
+  thumbnail?: string;
+  /** seconds */
+  duration?: number;
+  /** Shown first in the library. */
+  isFeatured: boolean;
+  /** Admin-set position in the library (lower first). */
+  order: number;
+  isDownloadable: boolean;
+  isPublished: boolean;
+  publishedAt: string | null;
+  createdAt: string | null;
+}
+
+/** A group video in the "Featured choirs" showcase (Firestore: featuredChoirs). */
+export interface FeaturedChoir {
+  id: string;
+  groupName: string;
+  songTitle: string;
+  videoUrl: string;
+  thumbnail?: string;
+  /** seconds */
+  duration?: number;
+  order: number;
+  isPublished: boolean;
+  createdAt: string | null;
+}
+
+export type ChoirRequestStatus = 'pending' | 'reviewed' | 'approved' | 'rejected';
+
+/** A "Feature your choir/group" submission (Firestore: choirFeatureRequests). Never shown publicly. */
+export interface ChoirFeatureRequest {
+  id: string;
+  groupName: string;
+  churchZone: string;
+  ministrationUrl: string;
+  songTitle: string;
+  submittedBy: string;
+  status: ChoirRequestStatus;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
 }
 
 export type SponsorshipStatus = 'pending' | 'approved' | 'rejected';

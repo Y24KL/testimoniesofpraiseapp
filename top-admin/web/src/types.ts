@@ -129,6 +129,9 @@ export type Route =
   | { name: 'media' }
   | { name: 'comments' }
   | { name: 'written' }
+  | { name: 'singers' }
+  | { name: 'featuredChoirs' }
+  | { name: 'choirRequests' }
   | { name: 'writtenEditor'; id?: string; prefill?: import('./pages/WrittenTestimonyEditor').WrittenPrefill }
   | { name: 'data' };
 

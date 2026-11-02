@@ -4,14 +4,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FS from 'expo-file-system/legacy';
 import { STORAGE_KEYS } from '@/constants/config';
 import { track } from '@/analytics';
-import type { DownloadFailure, DownloadItem, Testimony } from '@/types';
+import type { DownloadFailure, DownloadItem, DownloadKind, DownloadSnapshot } from '@/types';
 import { extensionOf, isHls, safeId } from '@/utils/format';
 
 const DIR = `${FS.documentDirectory}downloads/`;
 
 export interface DownloadRequest {
-  kind: 'testimony';
-  data: Testimony;
+  kind: DownloadKind;
+  data: DownloadSnapshot;
 }
 
 interface DownloadsValue {
@@ -25,7 +25,7 @@ interface DownloadsValue {
 }
 
 const Ctx = createContext<DownloadsValue | null>(null);
-export const downloadKey = (kind: 'testimony', id: string) => `${kind}:${id}`;
+export const downloadKey = (kind: DownloadKind, id: string) => `${kind}:${id}`;
 
 export function DownloadsProvider({ children }: { children: React.ReactNode }) {
   const [map, setMap] = useState<Record<string, DownloadItem>>({});

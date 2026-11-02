@@ -8,6 +8,9 @@ export const CHOIR_FEATURE_INTRO: string[] = [
   'Click below to explore choirs and groups that have previously been featured on our programme.',
 ];
 
+/** Background video for the landing page (plays muted and looping, like ADOTOPOC). Empty means no video. */
+export const CHOIR_HERO_VIDEO = 'https://topappstorage.b-cdn.net/video/36%20-%20Mashup%20Lz2.mp4';
+
 export const CHOIR_FEATURE_TITLE = 'FEATURE YOUR CHOIR/GROUP ON T.O.P';
 export const CHOIR_FORM_TITLE = 'Submit Your Choir/Group for a T.O.P Feature';
 export const CHOIR_FORM_INTRO =

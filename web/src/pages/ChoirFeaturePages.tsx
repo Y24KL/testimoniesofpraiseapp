@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, Users, Play, ArrowLeft } from 'lucide-react';
+import { Plus, Users, Play, ArrowLeft, X } from 'lucide-react';
 import { repo } from '../api/repository';
 import { TopBar } from '../components/TopBar';
 import { VideoPlayer } from '../components/VideoPlayer';
@@ -8,7 +8,7 @@ import { ErrorState } from '../components/ErrorState';
 import { EmptyState } from '../components/EmptyState';
 import { TextField } from '../components/TextField';
 import { useAuth } from '../context/AuthContext';
-import { CHOIR_CONFIRMATION_TEXT, CHOIR_FEATURE_INTRO, CHOIR_FEATURE_TITLE, CHOIR_FORM_INTRO, CHOIR_FORM_TITLE } from '../constants/choirFeature';
+import { CHOIR_CONFIRMATION_TEXT, CHOIR_FEATURE_INTRO, CHOIR_FEATURE_TITLE, CHOIR_FORM_INTRO, CHOIR_FORM_TITLE, CHOIR_HERO_VIDEO } from '../constants/choirFeature';
 import { colors, gradients, radius } from '../theme';
 import type { FeaturedChoir } from '../types';
 import { formatDuration } from '../utils/format';
@@ -20,21 +20,34 @@ interface PageProps {
   onSelectChoir?: (id: string) => void;
 }
 
-/** Landing page: intro text, then the showcase of featured groups. */
+/** Landing page, laid out like ADOTOPOC: full-bleed hero, intro text over it, then the showcase of featured groups. */
 export function ChoirFeaturePage({ onBack, onNavigate }: PageProps) {
+  const [headline, ...details] = CHOIR_FEATURE_INTRO;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', background: colors.bg }}>
-      <TopBar title="Feature your choir" onBack={onBack} />
-      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '900px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
-        <div style={{ background: gradients.hero, borderRadius: radius.lg, padding: '22px', minHeight: '140px', display: 'flex', alignItems: 'flex-end' }}>
-          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 800, color: colors.text, lineHeight: 1.25 }}>{CHOIR_FEATURE_TITLE}</h1>
-        </div>
-        {CHOIR_FEATURE_INTRO.map((p) => (
-          <p key={p} style={{ margin: 0, fontSize: '16px', color: colors.text, lineHeight: 1.5 }}>
+    <div style={{ position: 'relative', width: '100%', minHeight: '100dvh', overflow: 'hidden', background: 'linear-gradient(180deg, #4B006E 0%, #2E0044 50%, #12001C 100%)' }}>
+      {CHOIR_HERO_VIDEO ? (
+        <video src={CHOIR_HERO_VIDEO} autoPlay loop muted playsInline aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+      ) : null}
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(18,0,28,0.1) 0%, rgba(18,0,28,0.9) 75%)' }} />
+      <button
+        type="button"
+        onClick={onBack}
+        aria-label="Back"
+        style={{ position: 'absolute', top: 20, left: 20, width: 44, height: 44, borderRadius: 22, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(18,0,28,0.45)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+      >
+        <X size={22} />
+      </button>
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '0 24px 48px', maxWidth: 680, boxSizing: 'border-box' }}>
+        <span style={{ display: 'block', color: '#F5C542', fontSize: 13, fontWeight: 700, letterSpacing: 1.5 }}>{CHOIR_FEATURE_TITLE}</span>
+        <h1 style={{ margin: '12px 0 0', fontSize: 'clamp(28px, 6vw, 44px)', fontWeight: 800, color: '#fff', lineHeight: 1.15 }}>{headline}</h1>
+        {details.map((p) => (
+          <p key={p} style={{ margin: '14px 0 0', fontSize: 16, color: 'rgba(255,255,255,0.85)', lineHeight: 1.5 }}>
             {p}
           </p>
         ))}
-        <PrimaryButton title="EXPLORE FEATURED CHOIRS" icon={<Play size={18} />} onClick={() => onNavigate('choirShowcase')} />
+        <div style={{ marginTop: 24 }}>
+          <PrimaryButton title="EXPLORE FEATURED CHOIRS" icon={<Play size={18} />} onClick={() => onNavigate('choirShowcase')} />
+        </div>
       </div>
     </div>
   );

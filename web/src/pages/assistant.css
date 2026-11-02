@@ -4,6 +4,9 @@
 /* On phones the app's fixed bottom tab bar sits over the bottom of the screen, so the chat is sized to
    the space above it. The messages scroll in the middle and the composer stays at the bottom. */
 .ast-layout {
+  /* The app shell's column gives its children flex: 1, which would ignore the height below and let the
+     message box slide under the bottom tab bar on phones. */
+  flex: none;
   display: flex;
   /* 100vh first: iOS versions before 15.4 ignore dvh and would otherwise size the chat to zero. */
   height: calc(100vh - var(--nav-h, 0px) - env(safe-area-inset-bottom, 0px));

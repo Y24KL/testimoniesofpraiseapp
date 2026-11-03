@@ -125,6 +125,13 @@ export const restRepository: ContentRepository = {
   async submitChoirFeatureRequest() {
     throw new AppError('unknown', 'Choir requests are not available in REST mode');
   },
+  // Lyrical analyses live in Firestore only.
+  async getLyricalAnalyses() {
+    return { items: [], cursor: undefined, hasMore: false };
+  },
+  async getLyricalAnalysis() {
+    return null;
+  },
   async getArticle() {
     return null;
   },

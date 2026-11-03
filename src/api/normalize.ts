@@ -1,5 +1,7 @@
 import type {
   ChoirFeatureRequest,
+  LyricalAnalysis,
+  LyricalAnalysisStatus,
   ChoirRequestStatus,
   FeaturedChoir,
   LoveworldSingersVideo,
@@ -286,5 +288,24 @@ export function normalizeChoirFeatureRequest(id: string, r: Raw): ChoirFeatureRe
     submittedAt: toIso(pick(r, ['submittedAt'])),
     reviewedAt: toIso(pick(r, ['reviewedAt'])),
     reviewedBy: pick(r, ['reviewedBy']) || null,
+  };
+}
+
+export function normalizeLyricalAnalysis(id: string, r: Raw): LyricalAnalysis {
+  const status: LyricalAnalysisStatus = ['draft', 'published', 'unpublished'].includes(r.status) ? r.status : 'draft';
+  return {
+    id,
+    title: String(pick(r, ['title']) ?? 'Lyrical analysis'),
+    songTitle: String(pick(r, ['songTitle']) ?? ''),
+    artistName: pick(r, ['artistName']) || undefined,
+    description: String(pick(r, ['description']) ?? ''),
+    videoUrl: String(pick(r, ['videoUrl']) ?? ''),
+    thumbnailUrl: pick(r, ['thumbnailUrl']) || undefined,
+    duration: toSeconds(pick(r, ['duration'])),
+    publicationDate: toIso(pick(r, ['publicationDate'])),
+    status,
+    displayOrder: typeof r.displayOrder === 'number' ? r.displayOrder : 0,
+    createdAt: toIso(pick(r, ['createdAt'])),
+    updatedAt: toIso(pick(r, ['updatedAt'])),
   };
 }

@@ -46,6 +46,9 @@ export type RootStackParamList = {
   FeaturedChoir: { id: string };
   ChoirRequest: undefined;
   ChoirRequestSent: undefined;
+  // Lyrical Analysis
+  LyricalAnalysis: undefined;
+  LyricalAnalysisVideo: { id: string };
 };
 
 declare global {

@@ -22,6 +22,8 @@ export type Route =
   | { name: 'featuredChoir'; id: string }
   | { name: 'choirRequest' }
   | { name: 'choirRequestSent' }
+  | { name: 'lyrical' }
+  | { name: 'lyricalVideo'; id: string }
   | { name: 'share' }
   | { name: 'sponsor' }
   | { name: 'notifications' }
@@ -63,6 +65,7 @@ const STATIC: Record<string, Route> = {
   'choir/showcase': { name: 'choirShowcase' },
   'choir/request': { name: 'choirRequest' },
   'choir/sent': { name: 'choirRequestSent' },
+  lyrical: { name: 'lyrical' },
   assistant: { name: 'assistant' },
   signin: { name: 'signin' },
   signup: { name: 'signup' },
@@ -78,6 +81,8 @@ export function parseHash(hash: string): Route {
   if (w) return { name: 'writtenTestimony', id: w[1] };
   const s = path.match(/^singers\/([^/?#]+)$/);
   if (s) return { name: 'singer', id: s[1] };
+  const ly = path.match(/^lyrical\/([^/?#]+)$/);
+  if (ly) return { name: 'lyricalVideo', id: ly[1] };
   const c = path.match(/^choir\/([^/?#]+)$/);
   if (c) return { name: 'featuredChoir', id: c[1] };
   const m = path.match(/^(testimony|audio|article)\/([^/?#]+)$/);
@@ -109,6 +114,8 @@ export function pathFor(route: Route): string {
       return '/choir/request';
     case 'choirRequestSent':
       return '/choir/sent';
+    case 'lyricalVideo':
+      return `/lyrical/${encodeURIComponent(route.id)}`;
     case 'article':
       return `/article/${encodeURIComponent(route.id)}`;
     case 'notificationSettings':

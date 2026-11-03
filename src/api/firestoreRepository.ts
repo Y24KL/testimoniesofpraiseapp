@@ -19,10 +19,11 @@ import {
 } from 'firebase/firestore';
 import { Platform } from 'react-native';
 import { CONFIG } from '@/constants/config';
-import type { Page } from '@/types';
+import type { LyricalAnalysis, Page } from '@/types';
 import { db } from './firebase';
 import {
   normalizeAdotopoc,
+  normalizeLyricalAnalysis,
   normalizeChoirFeatureRequest,
   normalizeFeaturedChoir,
   normalizeLoveworldSingersVideo,
@@ -78,6 +79,36 @@ async function getOne<T>(col: string, id: string, map: (id: string, d: DocumentD
 }
 
 const tokenDocId = (t: string) => t.replace(/\//g, '_');
+
+// Lyrical analyses are "published" by status; drafts and unpublished videos never leave Firestore.
+async function getStatusPage({ limit, cursor }: PageOptions): Promise<Page<LyricalAnalysis>> {
+  try {
+    const c: QueryConstraint[] = [where('status', '==', 'published'), orderBy('displayOrder', 'asc')];
+    if (cursor) c.push(startAfter(cursor as QueryDocumentSnapshot));
+    c.push(qLimit(limit));
+    const snap = await getDocs(query(collection(db, CONFIG.collections.lyricalAnalyses), ...c));
+    return {
+      items: snap.docs.map((d) => normalizeLyricalAnalysis(d.id, d.data())),
+      cursor: snap.docs[snap.docs.length - 1],
+      hasMore: snap.docs.length === limit,
+    };
+  } catch (e) {
+    if ((e as { code?: string })?.code === 'permission-denied') return { items: [], cursor: undefined, hasMore: false };
+    throw e;
+  }
+}
+
+async function getLyricalOne(id: string): Promise<LyricalAnalysis | null> {
+  try {
+    const s = await getDoc(doc(db, CONFIG.collections.lyricalAnalyses, id));
+    if (!s.exists()) return null;
+    const item = normalizeLyricalAnalysis(s.id, s.data());
+    return item.status === 'published' ? item : null;
+  } catch (e) {
+    if ((e as { code?: string })?.code === 'permission-denied') return null;
+    throw e;
+  }
+}
 
 export const firestoreRepository: ContentRepository = {
   getTestimonies: (o) => getPage(CONFIG.collections.testimonies, normalizeTestimony, o),
@@ -378,6 +409,9 @@ export const firestoreRepository: ContentRepository = {
       submittedAt: serverTimestamp(),
     });
   },
+
+  getLyricalAnalyses: (o) => getStatusPage(o),
+  getLyricalAnalysis: (id) => getLyricalOne(id),
 
   async getAdotopocConfig() {
     try {

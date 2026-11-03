@@ -18,6 +18,7 @@ import {
   Sparkles,
   Music,
   Users,
+  Mic,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { navigate } from '../router';
@@ -180,6 +181,14 @@ export function AppDrawer({
       icon: <FileText size={18} color={colors.primaryLight} />,
       iconBg: 'rgba(186, 104, 200, 0.2)',
       action: onShareTestimony,
+    },
+    {
+      id: 'lyrical',
+      title: 'Lyrical Analysis',
+      subtitle: 'Meaning behind the songs',
+      icon: <Mic size={18} color={colors.accent} />,
+      iconBg: 'rgba(245, 197, 66, 0.15)',
+      action: () => navigate({ name: 'lyrical' }),
     },
     {
       id: 'assistant',

@@ -27,6 +27,7 @@ export const CONFIG = {
     loveworldSingersVideos: 'loveworldSingersVideos',
     featuredChoirs: 'featuredChoirs',
     choirFeatureRequests: 'choirFeatureRequests',
+    lyricalAnalyses: 'lyricalAnalyses',
     radioDoc: process.env.EXPO_PUBLIC_DOC_RADIO ?? 'settings/radio',
     adotopocDoc: process.env.EXPO_PUBLIC_DOC_ADOTOPOC ?? 'settings/adotopoc',
   },

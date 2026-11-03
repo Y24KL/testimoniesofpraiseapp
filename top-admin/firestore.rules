@@ -413,6 +413,29 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // LYRICAL ANALYSIS: pre-produced analysis videos of LoveWorld songs, managed by admins.
+    // Ordinary signed-in users only read PUBLISHED items; drafts and unpublished items stay admin-only.
+    // Publishing needs a video link. Admins can change content, status and order.
+    function validLyricalAnalysis() {
+      let d = request.resource.data;
+      return d.title is string && d.title.size() > 0 && d.title.size() <= 200
+        && d.songTitle is string && d.songTitle.size() > 0 && d.songTitle.size() <= 200
+        && (!('artistName' in d) || (d.artistName is string && d.artistName.size() <= 200))
+        && (!('description' in d) || (d.description is string && d.description.size() <= 5000))
+        && d.videoUrl is string && d.videoUrl.size() <= 1000
+        && (!('thumbnailUrl' in d) || (d.thumbnailUrl is string && d.thumbnailUrl.size() <= 1000))
+        && (!('duration' in d) || (d.duration is number && d.duration >= 0))
+        && d.status in ['draft', 'published', 'unpublished']
+        && (d.status != 'published' || d.videoUrl.size() > 0)
+        && d.displayOrder is number;
+    }
+    match /lyricalAnalyses/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.status == 'published');
+      allow create: if isAdmin() && validLyricalAnalysis() && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isAdmin() && validLyricalAnalysis();
+      allow delete: if isAdmin();
+    }
+
     // Admin dashboard: one collection-group query across every comments collection.
     match /{path=**}/comments/{commentId} {
       allow read: if isAdmin();

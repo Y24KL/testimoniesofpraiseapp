@@ -10,6 +10,7 @@ const NAV: { name: Route['name']; label: string }[] = [
   { name: 'singers', label: 'LoveWorld Singers' },
   { name: 'featuredChoirs', label: 'Featured choirs' },
   { name: 'choirRequests', label: 'Choir requests' },
+  { name: 'lyrical', label: 'Lyrical Analysis' },
   { name: 'live', label: 'Live stream' },
   { name: 'radio', label: 'TOP Radio' },
   { name: 'articles', label: 'Articles & Updates' },

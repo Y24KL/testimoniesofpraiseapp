@@ -32,6 +32,8 @@ import { FeaturedChoirsScreen } from '@/screens/FeaturedChoirsScreen';
 import { FeaturedChoirScreen } from '@/screens/FeaturedChoirScreen';
 import { ChoirRequestScreen } from '@/screens/ChoirRequestScreen';
 import { ChoirRequestSentScreen } from '@/screens/ChoirRequestSentScreen';
+import { LyricalAnalysisScreen } from '@/screens/LyricalAnalysisScreen';
+import { LyricalAnalysisVideoScreen } from '@/screens/LyricalAnalysisVideoScreen';
 import { TabNavigator } from './TabNavigator';
 import type { RootStackParamList } from './types';
 
@@ -113,6 +115,8 @@ export function RootNavigator() {
           <Stack.Screen name="ChoirShowcase" component={FeaturedChoirsScreen} />
           <Stack.Screen name="FeaturedChoir" component={FeaturedChoirScreen} />
           <Stack.Screen name="ChoirRequest" component={ChoirRequestScreen} />
+          <Stack.Screen name="LyricalAnalysis" component={LyricalAnalysisScreen} />
+          <Stack.Screen name="LyricalAnalysisVideo" component={LyricalAnalysisVideoScreen} />
           <Stack.Screen name="ChoirRequestSent" component={ChoirRequestSentScreen} options={{ gestureEnabled: false }} />
         </Stack.Group>
       )}

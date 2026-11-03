@@ -1,5 +1,6 @@
 import type {
   AdotopocConfig,
+  LyricalAnalysis,
   FeaturedChoir,
   LoveworldSingersVideo,
   AppNotification,
@@ -70,6 +71,11 @@ export interface ContentRepository {
   getWrittenTestimonies(opts: PageOptions): Promise<Page<WrittenTestimony>>;
   /** One published written testimony, or null when it is unpublished / removed. */
   getWrittenTestimony(id: string): Promise<WrittenTestimony | null>;
+
+  /** Published lyrical analyses, in the admin's display order (paged). */
+  getLyricalAnalyses(opts: PageOptions): Promise<Page<LyricalAnalysis>>;
+  /** One published lyrical analysis, or null when it is unpublished / removed. */
+  getLyricalAnalysis(id: string): Promise<LyricalAnalysis | null>;
 
   /** Published "Worship with your LoveWorld Singers" videos, in the admin's order. */
   getLoveworldSingersVideos(limit?: number): Promise<LoveworldSingersVideo[]>;

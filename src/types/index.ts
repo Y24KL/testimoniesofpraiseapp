@@ -245,3 +245,23 @@ export interface TestimonyComment {
   createdAt: string | null;
   updatedAt: string | null;
 }
+
+/** "Lyrical Analysis": pre-produced analysis videos of LoveWorld songs (Firestore: lyricalAnalyses). */
+export type LyricalAnalysisStatus = 'draft' | 'published' | 'unpublished';
+
+export interface LyricalAnalysis {
+  id: string;
+  title: string;
+  songTitle: string;
+  artistName?: string;
+  description: string;
+  videoUrl: string;
+  thumbnailUrl?: string;
+  /** seconds */
+  duration?: number;
+  publicationDate: string | null;
+  status: LyricalAnalysisStatus;
+  displayOrder: number;
+  createdAt: string | null;
+  updatedAt: string | null;
+}

@@ -56,6 +56,8 @@ const FeaturedChoirsPage = named(() => import('./pages/ChoirFeaturePages'), 'Fea
 const FeaturedChoirPage = named(() => import('./pages/ChoirFeaturePages'), 'FeaturedChoirPage');
 const ChoirRequestPage = named(() => import('./pages/ChoirFeaturePages'), 'ChoirRequestPage');
 const ChoirRequestSentPage = named(() => import('./pages/ChoirFeaturePages'), 'ChoirRequestSentPage');
+const LyricalAnalysisPage = named(() => import('./pages/LyricalAnalysisPage'), 'LyricalAnalysisPage');
+const LyricalAnalysisVideoPage = named(() => import('./pages/LyricalAnalysisVideoPage'), 'LyricalAnalysisVideoPage');
 
 function Splash() {
   return (
@@ -239,6 +241,12 @@ function Shell({ route }: { route: Route }) {
       break;
     case 'choirRequest':
       page = <ChoirRequestPage onBack={back} onSent={() => navigate({ name: 'choirRequestSent' }, { replace: true })} />;
+      break;
+    case 'lyrical':
+      page = <LyricalAnalysisPage onBack={back} onSelect={(id: string) => navigate({ name: 'lyricalVideo', id })} />;
+      break;
+    case 'lyricalVideo':
+      page = <LyricalAnalysisVideoPage key={route.id} id={route.id} onBack={() => goBack({ name: 'lyrical' })} />;
       break;
     case 'choirRequestSent':
       page = <ChoirRequestSentPage onHome={() => navigate({ name: 'home' }, { replace: true })} />;

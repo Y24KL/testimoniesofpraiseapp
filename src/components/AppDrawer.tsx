@@ -187,6 +187,15 @@ export function AppDrawer() {
       onPress: () => nav.navigate('ShareTestimony'),
     },
     {
+      id: 'lyrical',
+      title: 'Lyrical Analysis',
+      subtitle: 'Meaning behind the songs',
+      icon: 'musical-note-outline',
+      iconColor: colors.accent,
+      iconBg: 'rgba(245, 197, 66, 0.15)',
+      onPress: () => nav.navigate('LyricalAnalysis'),
+    },
+    {
       id: 'articles',
       title: 'Articles & Insights',
       subtitle: 'Publications & Study',

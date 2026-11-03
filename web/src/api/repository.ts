@@ -20,6 +20,8 @@ import {
 import { db } from './firebase';
 import type {
   ChoirFeatureRequest,
+  LyricalAnalysis,
+  LyricalAnalysisStatus,
   ChoirRequestStatus,
   FeaturedChoir,
   LoveworldSingersVideo,
@@ -315,7 +317,52 @@ export function normalizeChoirFeatureRequest(id: string, r: Raw): ChoirFeatureRe
   };
 }
 
+const LYRICAL_STATUSES: LyricalAnalysisStatus[] = ['draft', 'published', 'unpublished'];
+
+export function normalizeLyricalAnalysis(id: string, r: Raw): LyricalAnalysis {
+  return {
+    id,
+    title: String(pick(r, ['title']) ?? 'Lyrical analysis'),
+    songTitle: String(pick(r, ['songTitle']) ?? ''),
+    artistName: pick(r, ['artistName']) || undefined,
+    description: String(pick(r, ['description']) ?? ''),
+    videoUrl: String(pick(r, ['videoUrl']) ?? ''),
+    thumbnailUrl: pick(r, ['thumbnailUrl']) || undefined,
+    duration: typeof r.duration === 'number' ? r.duration : undefined,
+    publicationDate: toIso(pick(r, ['publicationDate'])),
+    status: LYRICAL_STATUSES.includes(r.status) ? (r.status as LyricalAnalysisStatus) : 'draft',
+    displayOrder: typeof r.displayOrder === 'number' ? r.displayOrder : 0,
+    createdAt: toIso(pick(r, ['createdAt'])),
+    updatedAt: toIso(pick(r, ['updatedAt'])),
+  };
+}
+
 export const repo = {
+  /** Published lyrical analyses in display order, one page at a time. Drafts and unpublished never leave Firestore. */
+  async getLyricalAnalyses({ limit, cursor }: PageOptions): Promise<Page<LyricalAnalysis>> {
+    const c: QueryConstraint[] = [where('status', '==', 'published'), orderBy('displayOrder', 'asc')];
+    if (cursor) c.push(startAfter(cursor as QueryDocumentSnapshot));
+    c.push(qLimit(limit));
+    const snap = await getDocs(query(collection(db, 'lyricalAnalyses'), ...c));
+    return {
+      items: snap.docs.map((d) => normalizeLyricalAnalysis(d.id, d.data())),
+      cursor: snap.docs[snap.docs.length - 1],
+      hasMore: snap.docs.length === limit,
+    };
+  },
+
+  async getLyricalAnalysis(id: string): Promise<LyricalAnalysis | null> {
+    try {
+      const s = await getDoc(doc(db, 'lyricalAnalyses', id));
+      if (!s.exists()) return null;
+      const item = normalizeLyricalAnalysis(s.id, s.data());
+      return item.status === 'published' ? item : null;
+    } catch (e: any) {
+      if (e?.code === 'permission-denied') return null;
+      throw e;
+    }
+  },
+
   async getLoveworldSingersVideos(max = 100): Promise<LoveworldSingersVideo[]> {
     try {
       const snap = await getDocs(

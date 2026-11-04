@@ -388,7 +388,7 @@ export function AssistantPage({ onBack }: { onBack: () => void }) {
 
       <div className="ast-main">
         <TopBar
-          title="Lumina"
+          title="Praxiom"
           onBack={onBack}
           actions={[
             { icon: RotateCw, label: 'Refresh page', onClick: () => window.location.reload() },
@@ -406,7 +406,7 @@ export function AssistantPage({ onBack }: { onBack: () => void }) {
         <div className="ast-thread" aria-live="polite">
           {turns.length === 0 ? (
             <section style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 0' }}>
-              <h2 style={{ margin: 0, fontSize: 26, color: colors.text, fontWeight: 700 }}>Hello! I’m Lumina, your AI assistant here in the Testimonies of Praise app.</h2>
+              <h2 style={{ margin: 0, fontSize: 26, color: colors.text, fontWeight: 700 }}>Hello! I’m Praxiom, your AI assistant here in the Testimonies of Praise app.</h2>
               <p style={{ margin: 0, fontSize: 17, color: colors.text }}>How can I help you today?</p>
               <p style={{ margin: 0, fontSize: 14, color: colors.textMuted }}>{WELCOME_HINT}</p>
               <div className="ast-cards" style={{ marginTop: 6 }}>

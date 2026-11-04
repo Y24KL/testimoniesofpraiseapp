@@ -47,7 +47,7 @@ export class AssistantError extends Error {}
 /** Sends the chat so far and returns the next answer. Pass an AbortSignal to support "Stop". */
 export async function askAssistant(messages: AssistantMessage[], signal?: AbortSignal): Promise<AssistantReply> {
   const user = auth.currentUser;
-  if (!user) throw new AssistantError('Sign in to use Lumina.');
+  if (!user) throw new AssistantError('Sign in to use Praxiom.');
   if (!BASE) throw new AssistantError('The assistant is not configured on this site yet.');
   const token = await user.getIdToken();
 

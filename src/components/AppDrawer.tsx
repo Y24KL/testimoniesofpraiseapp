@@ -233,7 +233,7 @@ export function AppDrawer() {
     },
     {
       id: 'assistant',
-      title: 'Lumina',
+      title: 'Praxiom',
       subtitle: 'Ask questions and find testimonies',
       icon: 'sparkles-outline',
       iconColor: colors.primaryLight,

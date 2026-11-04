@@ -43,10 +43,10 @@ const result = await runAssistant(env, 'Bearer token', 'uid-1', [{ role: 'user',
   searchClips: async () => ({ clips: [] }),
 });
 
-// The system prompt is first, Lumina is named, and the tool result goes back with its call id.
+// The system prompt is first, Praxiom is named, and the tool result goes back with its call id.
 assert.equal(sent[0].messages[0].role, 'system');
-assert.match(sent[0].messages[0].content, /Lumina/);
-assert.match(sent[0].messages[0].content, /Praxiom AI/);
+assert.match(sent[0].messages[0].content, /Praxiom/);
+assert.match(sent[0].messages[0].content, /Praxiom/);
 assert.equal(sent[1].messages.at(-1).role, 'tool');
 assert.equal(sent[1].messages.at(-1).tool_call_id, 'call_1');
 assert.deepEqual(JSON.parse(sent[1].messages.at(-1).content), { testimonies: [{ id: 't1', title: 'Healed at last', description: 'A story of healing.' }] });

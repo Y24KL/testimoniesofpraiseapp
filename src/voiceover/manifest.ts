@@ -128,7 +128,7 @@ Take some time to discover what is available.
 
 Next, let's look at the Downloads section!`),
   'tutorial.read': { ...scripted('tutorial.read', `Read Testimonies lets you read written testimonies in full. Open any story that catches your attention, and when you are ready, leave a comment to share how it encouraged you.`) },
-  'tutorial.ai': { ...scripted('tutorial.ai', `Lumina can help you in a few ways. It can find testimonies by what they are about. It can find a moment inside a video, such as the part where someone prays, and open it for you. It can show you around the app, and answer your questions. Find Lumina in the Assistant tab.`), version: 2, status: 'generated', bundled: true },
+  'tutorial.ai': { ...scripted('tutorial.ai', `Praxiom can help you in a few ways. It can find testimonies by what they are about. It can find a moment inside a video, such as the part where someone prays, and open it for you. It can show you around the app, and answer your questions. Find Praxiom in the Assistant tab.`), version: 3, status: 'generated', bundled: true },
   'tutorial.ending': entry('tutorial.ending'), // silent: the closing step shows its caption only
   'feature.live': entry('feature.live'),
   'feature.radio': entry('feature.radio'),
@@ -139,9 +139,9 @@ Next, let's look at the Downloads section!`),
   'assistant.response': {
     ...scripted(
       'assistant.response',
-      "Hello, I'm Lumina, your AI assistant here in the Testimonies of Praise app. I can help you find a testimony by what it is about, point you to a moment inside a video, show you around the app, and answer your questions. Just ask, and I'll do my best to help.",
+      "Hello, I'm Praxiom, your AI assistant here in the Testimonies of Praise app. I can help you find a testimony by what it is about, point you to a moment inside a video, show you around the app, and answer your questions. Just ask, and I'll do my best to help.",
     ),
-    version: 2,
+    version: 3,
     status: 'generated',
     bundled: true,
   },

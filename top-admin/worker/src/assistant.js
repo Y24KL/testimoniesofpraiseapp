@@ -1,5 +1,5 @@
 /**
- * Lumina, the AI assistant for Testimonies of Praise, powered by Praxiom AI. The model never touches the database directly.
+ * Praxiom, the AI assistant for Testimonies of Praise. The model never touches the database directly.
  *  - Chat turns use Praxiom tool calling with three allow-listed tools.
  *  - search_testimonies runs with the signed-in user's own Firebase token (so Firestore rules apply).
  *  - search_clips runs the moment search with the same token.
@@ -18,7 +18,7 @@ const MAX_REPLY_CHARS = 2000;
 /** Screens the assistant may point people to. The app repeats this list and refuses anything else. */
 export const ASSISTANT_SCREENS = ['live', 'radio', 'adotopoc', 'written', 'testimonies', 'sponsor', 'downloads'];
 
-const SYSTEM_PROMPT = `You are Lumina, the AI assistant for the Testimonies of Praise app and website, powered by Praxiom AI.
+const SYSTEM_PROMPT = `You are Praxiom, the AI assistant for the Testimonies of Praise app and website.
 Help people use the app, find testimonies, and answer general questions. Be friendly, patient, respectful and encouraging. Be brief and accurate. This is a Christian testimony-sharing platform, so keep a respectful tone when discussing faith.
 
 What the app offers (use these exact names when you refer to them):

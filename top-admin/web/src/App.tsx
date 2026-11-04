@@ -71,7 +71,7 @@ export default function App() {
 
   return (
     <Layout route={route} go={setRoute}>
-      {route.name === 'dashboard' && <Dashboard />}
+      {route.name === 'dashboard' && <Dashboard go={setRoute} />}
       {route.name === 'testimonies' && <Testimonies go={setRoute} />}
       {route.name === 'editor' && <TestimonyEditor key={route.id ?? 'new'} id={route.id} prefill={route.prefill} go={setRoute} />}
       {route.name === 'live' && <Live />}

@@ -83,10 +83,12 @@ export function validateMessages(value) {
     if (typeof item.content !== 'string' || !item.content.trim()) {
       throw new AIEndpointError(400, 'invalid_messages', 'Messages cannot be empty.');
     }
-    if (item.content.length > MAX_MESSAGE_CHARS) {
+    const content = item.content.trim();
+    // A person's own question is limited. Earlier answers in the history are trimmed, not rejected.
+    if (item.role === 'user' && content.length > MAX_MESSAGE_CHARS) {
       throw new AIEndpointError(400, 'message_too_long', `Keep each message under ${MAX_MESSAGE_CHARS} characters.`);
     }
-    return { role: item.role, content: item.content.trim() };
+    return { role: item.role, content: content.slice(0, MAX_MESSAGE_CHARS) };
   });
 }
 

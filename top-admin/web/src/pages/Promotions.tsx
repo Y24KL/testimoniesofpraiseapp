@@ -13,6 +13,7 @@ import {
 import { db } from '../firebase';
 import { uploadToCloudinary, uploadsEnabled } from '../uploads';
 import { isHttpUrl } from '../lib';
+import { pushEnabled, sendPush } from '../push';
 import type { Promotion } from '../types';
 import { Check, Field, Message } from '../components/Field';
 
@@ -29,6 +30,7 @@ export function Promotions() {
   const [target, setTarget] = useState<'internal' | 'external'>('external');
   const [order, setOrder] = useState(0);
   const [isPublished, setIsPublished] = useState(true);
+  const [sendPushOn, setSendPushOn] = useState(true);
 
   // Upload & UI state
   const [uploading, setUploading] = useState(false);
@@ -118,11 +120,16 @@ export function Promotions() {
         await updateDoc(doc(db, 'promotions', editingId), payload);
         setOk('Promotion updated successfully.');
       } else {
-        await addDoc(collection(db, 'promotions'), {
+        const created = await addDoc(collection(db, 'promotions'), {
           ...payload,
           createdAt: serverTimestamp(),
         });
         setOk('Promotion published successfully.');
+        if (isPublished && sendPushOn && pushEnabled) {
+          if (!confirm('This sends a push notification to app users who chose Promotions. Continue?')) return;
+          const r = await sendPush({ pref: 'promotions', title: title.trim(), body: (description.trim() || title.trim()).slice(0, 300), data: { type: 'promotion', contentId: created.id } });
+          setOk(r.ok ? `Promotion published. Push sent to ${r.sent} device${r.sent === 1 ? '' : 's'}.` : `Promotion published, but the push failed: ${r.error}`);
+        }
       }
       resetForm();
     } catch (ex: any) {
@@ -258,6 +265,7 @@ export function Promotions() {
             checked={isPublished}
             onChange={setIsPublished}
           />
+          {!editingId ? <Check label="Send a push notification now" checked={sendPushOn} onChange={setSendPushOn} /> : null}
 
           <div className="row gap">
             {editingId ? (

@@ -58,6 +58,7 @@ export interface NotificationPrefs {
   testimonies: boolean;
   live: boolean;
   announcements: boolean;
+  promotions: boolean;
 }
 
 export interface Page<T> {

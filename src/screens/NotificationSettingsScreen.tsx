@@ -15,6 +15,7 @@ const ROWS: { key: keyof NotificationPrefs; label: string; hint: string }[] = [
   { key: 'testimonies', label: 'New Testimonies', hint: 'When a new testimony is published' },
   { key: 'live', label: 'Live Notifications', hint: 'When a live stream is starting' },
   { key: 'announcements', label: 'Important Announcements', hint: 'Featured content and church updates' },
+  { key: 'promotions', label: 'Promotions', hint: 'New offers and upcoming programmes' },
 ];
 
 export function NotificationSettingsScreen() {

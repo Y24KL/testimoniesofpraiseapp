@@ -59,7 +59,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     voice: 'tutorial.ai',
     title: 'AI features',
-    caption: 'The T.O.P AI Assistant finds testimonies and moments in videos, and answers your questions.',
+    caption: 'Lumina finds testimonies and moments in videos, and answers your questions.',
     route: { kind: 'tab', screen: 'Assistant' },
   },
   {

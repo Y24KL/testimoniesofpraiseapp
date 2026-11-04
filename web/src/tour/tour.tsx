@@ -19,7 +19,7 @@ const STEPS: { title: string; caption: string; route: Route; audio: string }[] =
   { title: 'Watch Testimonies', caption: 'Browse and watch video testimonies from the Testimonies page.', route: { name: 'testimonies' }, audio: 'tutorial.testimonies.v2.mp3' },
   { title: 'Read Testimonies', caption: 'Read written testimonies in full and leave a comment.', route: { name: 'written' }, audio: 'tutorial.read.v1.mp3' },
   { title: 'ADOTOPOC Resource Center', caption: 'Materials for hosting outreaches and crusades.', route: { name: 'adotopoc' }, audio: 'tutorial.resources.v1.mp3' },
-  { title: 'AI features', caption: 'The T.O.P AI Assistant finds testimonies and moments in videos, and answers your questions.', route: { name: 'assistant' }, audio: 'tutorial.ai.v1.mp3' },
+  { title: 'AI features', caption: 'Lumina finds testimonies and moments in videos, and answers your questions.', route: { name: 'assistant' }, audio: 'tutorial.ai.v1.mp3' },
   { title: 'Home', caption: 'That is the tour. You can replay it from the menu.', route: { name: 'home' }, audio: '' },
 ];
 

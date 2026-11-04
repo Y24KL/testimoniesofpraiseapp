@@ -233,7 +233,7 @@ export function AppDrawer() {
     },
     {
       id: 'assistant',
-      title: 'T.O.P AI Assistant',
+      title: 'Lumina',
       subtitle: 'Ask questions and find testimonies',
       icon: 'sparkles-outline',
       iconColor: colors.primaryLight,

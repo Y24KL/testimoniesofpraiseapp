@@ -300,7 +300,7 @@ export function AssistantScreen() {
 
   const welcome = (
     <View style={styles.welcome}>
-      <Text style={styles.hello}>Hello! I’m your TOP AI Assistant.</Text>
+      <Text style={styles.hello}>Hello! I’m Lumina, your AI assistant here in the Testimonies of Praise app.</Text>
       <Text style={styles.howCan}>How can I help you today?</Text>
       <Text style={styles.hint}>{WELCOME_HINT}</Text>
       <View style={styles.grid}>
@@ -425,7 +425,7 @@ export function AssistantScreen() {
   return (
     <Screen>
       <TopBar
-        title="T.O.P AI Assistant"
+        title="Lumina"
         onBack={() => nav.goBack()}
         right={
           <View style={styles.headerActions}>

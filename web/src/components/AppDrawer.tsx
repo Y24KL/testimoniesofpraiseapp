@@ -192,7 +192,7 @@ export function AppDrawer({
     },
     {
       id: 'assistant',
-      title: 'T.O.P AI Assistant',
+      title: 'Lumina',
       subtitle: 'Ask questions and find testimonies',
       icon: <Sparkles size={18} color={colors.primaryLight} />,
       iconBg: 'rgba(186, 104, 200, 0.2)',

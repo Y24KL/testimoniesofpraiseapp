@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createEmbeddings, normalizeSearchSources, validateSearchQuery, deepSeekSearch, enforceAiRateLimit, semanticSearch } from './src/ai.js';
+import { createEmbeddings, normalizeSearchSources, validateSearchQuery, enforceAiRateLimit, semanticSearch } from './src/ai.js';
 
 assert.equal(validateSearchQuery('  healing testimonies  '), 'healing testimonies');
 assert.throws(() => validateSearchQuery('   '), /Enter a search question/);
@@ -31,25 +31,6 @@ const embedded = await createEmbeddings({ AI: { async run(model, { text }) {
 assert.equal(embedded.embeddings.length, 2);
 assert.equal(embedded.dimensions, 1024);
 await assert.rejects(() => createEmbeddings({ AI: { async run() { return { data: [Array(20).fill(0.1)] }; } } }, ['one']), (e) => e.code === 'embedding_model_changed');
-
-const originalFetch = globalThis.fetch;
-let callIndex = 0;
-globalThis.fetch = async (url, init) => {
-  callIndex += 1;
-  assert.match(String(url), /^https:\/\/api\.deepseek\.com\//);
-  const payload = JSON.parse(init.body);
-  if (String(url).includes('/v1/tools/search')) {
-    assert.equal(payload.count, 5);
-    return new Response(JSON.stringify({ results: [{ title: 'Source', url: 'https://example.org/article', snippet: 'Grounded source', summary: 'A source summary', site_name: 'Example' }] }), { status: 200 });
-  }
-  assert.equal(payload.model, 'deepseek-flash');
-  return new Response(JSON.stringify({ choices: [{ message: { content: 'This answer is supported by the source.' } }] }), { status: 200 });
-};
-const answer = await deepSeekSearch({ DEEPSEEK_API_KEY: 'test-only' }, 'a current question');
-assert.match(answer.answer, /supported by the source/);
-assert.equal(answer.sources.length, 1);
-assert.equal(callIndex, 2);
-globalThis.fetch = originalFetch;
 
 // Verify the Standard Firestore REST findNearest query uses the caller token and a 1024-d vector.
 {
@@ -90,4 +71,4 @@ globalThis.fetch = originalFetch;
   }
 }
 
-console.log('DeepSeek AI module unit tests passed.');
+console.log('AI module unit tests passed.');

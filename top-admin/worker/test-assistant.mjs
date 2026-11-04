@@ -16,8 +16,7 @@ assert.deepEqual(validateToolCall('search_testimonies', { query: '  healing  ' }
 assert.equal(validateToolCall('search_testimonies', { query: '' }).ok, false);
 assert.equal(validateToolCall('search_testimonies', { query: 'q'.repeat(201) }).ok, false);
 assert.equal(validateToolCall('search_testimonies', undefined).ok, false);
-assert.deepEqual(validateToolCall('search_web', { query: ' latest news ' }), { ok: true, name: 'search_web', args: { query: 'latest news' } });
-assert.equal(validateToolCall('search_web', { query: '' }).ok, false);
+assert.equal(validateToolCall('search_web', { query: 'latest news' }).reason, 'unknown_tool', 'web search is removed');
 assert.deepEqual(validateToolCall('open_screen', { screen: 'sponsor' }), { ok: true, name: 'open_screen', args: { screen: 'sponsor' } });
 assert.equal(validateToolCall('open_screen', { screen: 'admin' }).reason, 'unknown_screen', 'admin screens are never offered');
 assert.equal(validateToolCall('delete_everything', {}).reason, 'unknown_tool');

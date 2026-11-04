@@ -14,6 +14,8 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { notifyLoveworldPublished } from '../notify';
+import { pushEnabled } from '../push';
 import { uploadToCloudinary, uploadVideo, uploadsEnabled } from '../uploads';
 import { fmtDuration, isHls, isHttpUrl, parseDuration } from '../lib';
 import { Check, Field, Message } from '../components/Field';
@@ -55,6 +57,7 @@ export function LoveworldSingers() {
   const [publishDate, setPublishDate] = useState(new Date().toISOString().slice(0, 10));
   const [isFeatured, setIsFeatured] = useState(false);
   const [isDownloadable, setIsDownloadable] = useState(true);
+  const [sendPushOn, setSendPushOn] = useState(true);
   const [isPublished, setIsPublished] = useState(false);
   const [uploadPct, setUploadPct] = useState<number | null>(null);
   const [thumbPct, setThumbPct] = useState<number | null>(null);
@@ -158,8 +161,13 @@ export function LoveworldSingers() {
       } else {
         // New videos go to the end of the library.
         const nextOrder = videos && videos.length ? Math.max(...videos.map((v) => v.order)) + 1 : 0;
-        await addDoc(collection(db, 'loveworldSingersVideos'), { ...data, order: nextOrder, createdAt: serverTimestamp() });
+        const created = await addDoc(collection(db, 'loveworldSingersVideos'), { ...data, order: nextOrder, createdAt: serverTimestamp() });
         setOk(isPublished ? 'Published. It is now visible in the app and on the web.' : 'Saved as a draft. It is hidden from users until you publish it.');
+        if (isPublished && sendPushOn && pushEnabled) {
+          if (!confirm('This sends a push notification to app users who chose LoveWorld Singers. Continue?')) return;
+          const r = await notifyLoveworldPublished(created.id, title.trim());
+          setOk(r.status === 'failed' ? `Published, but the push failed: ${r.message}` : 'Published and notification sent.');
+        }
       }
       resetForm();
     } catch (e) {
@@ -278,6 +286,7 @@ export function LoveworldSingers() {
           <Field label="Publish date" style={{ flex: 1, minWidth: 160 }}><input type="date" value={publishDate} onChange={(e) => setPublishDate(e.target.value)} /></Field>
         </div>
         <Check checked={isPublished} onChange={setIsPublished} label="Published (visible to app users)" hint="Unpublished videos are hidden from users." />
+        {!editingId ? <Check checked={sendPushOn} onChange={setSendPushOn} label="Send a push notification now" /> : null}
         <Check checked={isFeatured} onChange={setIsFeatured} label="Featured (shown first in the library)" />
         <Check checked={isDownloadable} onChange={setIsDownloadable} label="Allow downloads in the Downloads section" hint="Needs an MP4 link." />
         {err ? <Message kind="err">{err}</Message> : null}

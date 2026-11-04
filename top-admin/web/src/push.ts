@@ -8,7 +8,7 @@ const URL_ = clean(import.meta.env.VITE_PUSH_URL as string | undefined) || clean
 export const pushEnabled = /^https?:\/\//i.test(URL_);
 
 export interface PushRequest {
-  pref: 'testimonies' | 'live' | 'announcements' | 'promotions';
+  pref: 'testimonies' | 'live' | 'announcements' | 'promotions' | 'choirs' | 'loveworld' | 'articles';
   title: string;
   body: string;
   data: { type: string; contentId?: string };

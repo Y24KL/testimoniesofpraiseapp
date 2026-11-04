@@ -13,6 +13,8 @@ const ICON: Record<AppNotification['type'], React.ComponentProps<typeof Ionicons
   featured: 'star',
   article: 'document-text',
   promotion: 'megaphone-outline',
+  choir: 'people',
+  loveworld: 'musical-notes-outline',
   radio: 'musical-notes',
   written: 'reader',
 };

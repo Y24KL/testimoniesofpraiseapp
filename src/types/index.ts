@@ -42,7 +42,7 @@ export interface PreLiveMedia {
   thumbnail?: string;
 }
 
-export type NotificationType = 'testimony' | 'resource' | 'live' | 'announcement' | 'featured' | 'article' | 'promotion' | 'radio' | 'written';
+export type NotificationType = 'testimony' | 'resource' | 'live' | 'announcement' | 'featured' | 'article' | 'promotion' | 'radio' | 'written' | 'choir' | 'loveworld';
 
 export interface AppNotification {
   id: string;
@@ -59,6 +59,9 @@ export interface NotificationPrefs {
   live: boolean;
   announcements: boolean;
   promotions: boolean;
+  choirs: boolean;
+  loveworld: boolean;
+  articles: boolean;
 }
 
 export interface Page<T> {

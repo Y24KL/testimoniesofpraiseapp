@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
+import { notifyChoirFeatured } from '../notify';
+import { pushEnabled } from '../push';
 import { uploadToCloudinary, uploadVideo, uploadsEnabled } from '../uploads';
 import { fmtDuration, isHls, isHttpUrl, parseDuration } from '../lib';
 import { Check, Field, Message } from '../components/Field';
@@ -27,6 +29,7 @@ export function FeaturedChoirs() {
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [durationText, setDurationText] = useState('');
   const [isPublished, setIsPublished] = useState(true);
+  const [sendPushOn, setSendPushOn] = useState(true);
   const [uploadPct, setUploadPct] = useState<number | null>(null);
   const [thumbPct, setThumbPct] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -115,8 +118,13 @@ export function FeaturedChoirs() {
         setOk('Saved.');
       } else {
         const nextOrder = entries && entries.length ? Math.max(...entries.map((c) => c.order)) + 1 : 0;
-        await addDoc(collection(db, 'featuredChoirs'), { ...data, order: nextOrder, createdAt: serverTimestamp() });
+        const created = await addDoc(collection(db, 'featuredChoirs'), { ...data, order: nextOrder, createdAt: serverTimestamp() });
         setOk('Added to the showcase.');
+        if (isPublished && sendPushOn && pushEnabled) {
+          if (!confirm('This sends a push notification to app users who chose Featured Choirs. Continue?')) return;
+          const r = await notifyChoirFeatured(created.id, groupName.trim());
+          setOk(r.status === 'failed' ? `Added to the showcase, but the push failed: ${r.message}` : 'Added to the showcase and notification sent.');
+        }
       }
       resetForm();
     } catch (e) {
@@ -176,6 +184,7 @@ export function FeaturedChoirs() {
         {thumbnailUrl && isHttpUrl(thumbnailUrl) ? <img src={thumbnailUrl} alt="Thumbnail preview" style={{ maxWidth: 260, borderRadius: 10 }} /> : null}
         <Field label="Duration (m:ss or h:mm:ss)"><input value={durationText} onChange={(e) => setDurationText(e.target.value)} placeholder="6:10" /></Field>
         <Check checked={isPublished} onChange={setIsPublished} label="Published (visible in the showcase)" />
+        {!editingId ? <Check checked={sendPushOn} onChange={setSendPushOn} label="Send a push notification now" /> : null}
         {err ? <Message kind="err">{err}</Message> : null}
         {ok ? <Message kind="ok">{ok}</Message> : null}
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>

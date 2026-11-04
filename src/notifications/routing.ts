@@ -35,6 +35,13 @@ export function openTarget({ type, contentId }: NotificationTarget): void {
     case 'resource':
       navigationRef.navigate('Adotopoc');
       break;
+    case 'choir':
+      navigationRef.navigate('ChoirShowcase');
+      break;
+    case 'loveworld':
+      if (contentId) navigationRef.navigate('LoveworldSingerVideo', { id: contentId });
+      else navigationRef.navigate('LoveworldSingers');
+      break;
     case 'announcement':
       // Announcements are read in the in-app list.
       navigationRef.navigate('Notifications');

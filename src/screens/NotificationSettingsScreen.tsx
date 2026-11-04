@@ -16,6 +16,9 @@ const ROWS: { key: keyof NotificationPrefs; label: string; hint: string }[] = [
   { key: 'live', label: 'Live Notifications', hint: 'When a live stream is starting' },
   { key: 'announcements', label: 'Important Announcements', hint: 'Featured content and church updates' },
   { key: 'promotions', label: 'Promotions', hint: 'New offers and upcoming programmes' },
+  { key: 'choirs', label: 'Featured Choirs', hint: 'When a choir or group is featured' },
+  { key: 'loveworld', label: 'LoveWorld Singers', hint: 'New LoveWorld Singers videos' },
+  { key: 'articles', label: 'Articles', hint: 'New articles and updates' },
 ];
 
 export function NotificationSettingsScreen() {

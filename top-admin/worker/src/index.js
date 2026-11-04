@@ -17,8 +17,8 @@ import { runAssistant } from './assistant.js';
 import { searchClips } from './clips.js';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
-const PREFS = new Set(['testimonies', 'live', 'announcements', 'promotions']);
-const TYPES = new Set(['testimony', 'written', 'live', 'announcement', 'featured', 'article', 'promotion', 'radio', 'resource']);
+const PREFS = new Set(['testimonies', 'live', 'announcements', 'promotions', 'choirs', 'loveworld', 'articles']);
+const TYPES = new Set(['testimony', 'written', 'live', 'announcement', 'featured', 'article', 'promotion', 'radio', 'resource', 'choir', 'loveworld']);
 const MAX_DEVICES = 5000;
 export const WORKER_VERSION = '2.4.0';
 

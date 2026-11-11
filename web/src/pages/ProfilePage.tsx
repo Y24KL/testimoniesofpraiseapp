@@ -179,6 +179,32 @@ export function ProfilePage({
           </span>
         </div>
 
+        {/* Get the app from the LoveWorld App Store */}
+        <a
+          href="https://web.lwappstore.com/share/lW-APP-Y26-PJ8225"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px',
+            minHeight: '54px',
+            padding: '0 16px',
+            borderRadius: radius.pill,
+            background: 'linear-gradient(135deg, #ffe08a 0%, #f5c542 50%, #d99a1e 100%)',
+            color: colors.onAccent,
+            fontSize: '15px',
+            fontWeight: '800',
+            letterSpacing: '0.04em',
+            textDecoration: 'none',
+            boxSizing: 'border-box',
+          }}
+        >
+          <Download size={20} aria-hidden="true" />
+          <span>DOWNLOAD FROM LOVEWORLD APP STORE</span>
+        </a>
+
         {/* Links Rows */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <button

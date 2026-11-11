@@ -1,0 +1,293 @@
+/* Public download landing page (/#/download). Colours from the TOP brand: #4B006E, #2E0044, #7A1FA2, #F5C542. */
+
+.dl-page {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  color: #ffffff;
+  background: #2e0044;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* Background: the video fills the viewport without distortion; the gradient is the fallback. */
+.dl-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.dl-bg--fallback {
+  background: linear-gradient(160deg, #7a1fa2 0%, #4b006e 40%, #2e0044 70%, #f5c542 140%);
+  animation: dl-drift 18s ease-in-out infinite alternate;
+  background-size: 180% 180%;
+}
+.dl-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* Readability overlay: darker on the left where the text sits. Adjust the opacity here. */
+.dl-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(46, 0, 68, 0.88) 0%, rgba(46, 0, 68, 0.55) 55%, rgba(46, 0, 68, 0.3) 100%);
+}
+
+/* Decorations sit above the background and below the content. */
+.dl-decor {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.dl-balloon {
+  position: absolute;
+  width: 34px;
+  height: 44px;
+  border-radius: 50% 50% 48% 48%;
+  opacity: 0.85;
+  animation: dl-float ease-in-out infinite alternate;
+  box-shadow: inset -6px -8px 0 rgba(0, 0, 0, 0.12);
+}
+.dl-balloon::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 1px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.4);
+}
+.dl-balloon--pink { background: #ff8fc7; }
+.dl-balloon--purple { background: #a55bd6; }
+.dl-balloon--gold { background: #f5c542; }
+.dl-balloon--yellow { background: #ffe66d; }
+.dl-balloon--green { background: #7ed99a; }
+.dl-balloon--orange { background: #ff9f43; }
+.dl-note {
+  position: absolute;
+  bottom: -40px;
+  font-size: 28px;
+  color: rgba(245, 197, 66, 0.8);
+  animation: dl-rise 14s linear infinite;
+}
+
+.dl-main {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(24px, 4vw, 72px);
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(24px, 5vh, 64px) clamp(20px, 5vw, 64px);
+}
+
+/* Left: logo and brand statement. */
+.dl-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+.dl-logo {
+  width: min(360px, 60vw);
+  height: auto;
+  filter: drop-shadow(0 12px 36px rgba(0, 0, 0, 0.45));
+}
+.dl-brand-name {
+  margin: 0;
+  font-size: clamp(14px, 1.6vw, 20px);
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: #f5c542;
+}
+.dl-brand-line {
+  margin: 0;
+  max-width: 420px;
+  font-size: clamp(15px, 1.5vw, 18px);
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Right: the promotional message and the two calls to action. */
+.dl-promo {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
+}
+.dl-new {
+  margin: 0;
+  font-size: clamp(16px, 1.8vw, 22px);
+  font-weight: 700;
+  color: #f5c542;
+}
+.dl-title {
+  margin: 0;
+  font-size: clamp(36px, 5.4vw, 72px);
+  line-height: 1.02;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  text-shadow: 0 6px 30px rgba(0, 0, 0, 0.35);
+}
+.dl-copy {
+  margin: 0;
+  max-width: 520px;
+  font-size: clamp(16px, 1.6vw, 20px);
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.92);
+}
+.dl-ctas {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(100%, 480px);
+  margin-top: 8px;
+}
+.dl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 16px 28px;
+  border-radius: 999px;
+  font-size: clamp(14px, 1.3vw, 17px);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.dl-btn:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 3px;
+}
+/* Primary: the strongest call to action, gold with purple text. */
+.dl-btn--primary {
+  color: #2e0044;
+  background: linear-gradient(135deg, #ffe08a 0%, #f5c542 50%, #d99a1e 100%);
+  box-shadow: 0 12px 32px rgba(245, 197, 66, 0.45);
+}
+/* Secondary: clearly visible but less prominent. */
+.dl-btn--secondary {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.7);
+}
+@media (hover: hover) {
+  .dl-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+  }
+}
+.dl-btn:active {
+  transform: scale(0.97);
+}
+
+/* Sound toggle, top right, only when the video plays. */
+.dl-sound {
+  position: absolute;
+  z-index: 3;
+  top: max(16px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(46, 0, 68, 0.6);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+.dl-sound:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 3px;
+}
+
+/* Phones and tablets: stack everything, both buttons full width. */
+@media (max-width: 860px) {
+  .dl-main {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    align-content: center;
+    overflow-y: auto;
+  }
+  .dl-brand {
+    align-items: center;
+  }
+  .dl-logo {
+    width: min(240px, 58vw);
+  }
+  .dl-promo {
+    align-items: center;
+  }
+  .dl-copy {
+    margin: 0 auto;
+  }
+  .dl-ctas {
+    width: 100%;
+    max-width: 440px;
+  }
+  .dl-overlay {
+    background: linear-gradient(180deg, rgba(46, 0, 68, 0.55) 0%, rgba(46, 0, 68, 0.78) 60%, rgba(46, 0, 68, 0.92) 100%);
+  }
+}
+
+/* Reduced motion: no balloons, notes or drifting background. */
+@media (prefers-reduced-motion: reduce) {
+  .dl-balloon,
+  .dl-note,
+  .dl-bg--fallback {
+    animation: none;
+  }
+  .dl-note {
+    display: none;
+  }
+}
+
+@keyframes dl-float {
+  from {
+    transform: translate3d(0, 0, 0) rotate(-3deg);
+  }
+  to {
+    transform: translate3d(14px, -22px, 0) rotate(3deg);
+  }
+}
+
+@keyframes dl-rise {
+  from {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-110vh);
+    opacity: 0;
+  }
+}
+
+@keyframes dl-drift {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 100% 50%;
+  }
+}

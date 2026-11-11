@@ -19,6 +19,7 @@ import { colors, gradients } from './theme';
 // code-split and fetched on first visit.
 import { HomePage } from './pages/HomePage';
 import { WelcomePage } from './pages/WelcomePage';
+import { DownloadLandingPage } from './pages/DownloadLandingPage';
 import { ProfileCompletionPage } from './pages/ProfileCompletionPage';
 import { VerifyCodePage } from './pages/VerifyCodePage';
 import { TourOverlay, TourProvider, useTour } from './tour/tour';
@@ -315,6 +316,8 @@ function AppContent() {
     navigate(target && !isAuthRoute(target) ? target : { name: 'home' }, { replace: true });
   }, [user, route]);
 
+  // The download landing page is public and never waits for sign-in.
+  if (route.name === 'download') return <DownloadLandingPage />;
   // Wait for the signed-in user's profile status too, so the app never flashes before the form.
   if (initializing || !profileChecked) return <Splash />;
 

@@ -38,7 +38,8 @@ export type Route =
   // signed-out only
   | { name: 'signin' }
   | { name: 'signup' }
-  | { name: 'forgot' };
+  | { name: 'forgot' }
+  | { name: 'download' };
 
 export const TAB_ROUTES = new Set<Route['name']>(['home', 'testimonies', 'live', 'listen', 'assistant', 'downloads']);
 
@@ -70,6 +71,7 @@ const STATIC: Record<string, Route> = {
   signin: { name: 'signin' },
   signup: { name: 'signup' },
   forgot: { name: 'forgot' },
+  download: { name: 'download' },
 };
 
 export function parseHash(hash: string): Route {

@@ -27,6 +27,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       FeaturedChoir: 'choir/:id',
       LyricalAnalysis: 'lyrical',
       LyricalAnalysisVideo: 'lyrical/:id',
+      Feedback: 'feedback',
     },
   },
 };

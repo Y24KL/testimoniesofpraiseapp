@@ -13,11 +13,14 @@ import {
   setDoc,
   deleteDoc,
   serverTimestamp,
+  writeBatch,
   type DocumentData,
   type QueryConstraint,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { APP_VERSION } from '../constants/appVersion';
+import { buildFeedbackPayload, type FeedbackInput } from '../utils/feedback';
 import type {
   ChoirFeatureRequest,
   LyricalAnalysis,
@@ -423,6 +426,21 @@ export const repo = {
       status: 'pending',
       submittedAt: serverTimestamp(),
     });
+  },
+
+  /**
+   * Saves "Feedback & Suggestions" under the signed-in uid; resolves only once the server confirms.
+   * Rules accept exactly these fields and status 'new', and require the feedbackRate/{uid} stamp in the
+   * same batch (at most one feedback every 15 seconds).
+   */
+  async submitFeedback(input: FeedbackInput, userId: string): Promise<void> {
+    const batch = writeBatch(db);
+    batch.set(doc(collection(db, 'appFeedback')), {
+      ...buildFeedbackPayload(input, { userId, platform: 'web', appVersion: APP_VERSION }),
+      createdAt: serverTimestamp(),
+    });
+    batch.set(doc(db, 'feedbackRate', userId), { lastAt: serverTimestamp() });
+    await batch.commit();
   },
 
   async getTestimonies({ limit, cursor, featuredOnly }: PageOptions): Promise<Page<Testimony>> {

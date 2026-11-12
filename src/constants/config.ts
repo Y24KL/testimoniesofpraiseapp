@@ -28,6 +28,7 @@ export const CONFIG = {
     featuredChoirs: 'featuredChoirs',
     choirFeatureRequests: 'choirFeatureRequests',
     lyricalAnalyses: 'lyricalAnalyses',
+    appFeedback: 'appFeedback',
     radioDoc: process.env.EXPO_PUBLIC_DOC_RADIO ?? 'settings/radio',
     adotopocDoc: process.env.EXPO_PUBLIC_DOC_ADOTOPOC ?? 'settings/adotopoc',
   },

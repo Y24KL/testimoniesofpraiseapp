@@ -13,6 +13,7 @@ import type {
   Testimony,
   WrittenTestimony,
 } from '@/types';
+import type { FeedbackInput } from '@/utils/feedback';
 
 export interface PageOptions {
   limit: number;
@@ -87,4 +88,6 @@ export interface ContentRepository {
   getFeaturedChoir(id: string): Promise<FeaturedChoir | null>;
   /** Saves a "Feature your choir/group" request as pending review. Never publishes anything. */
   submitChoirFeatureRequest(input: ChoirRequestInput, submittedBy: string): Promise<void>;
+  /** Saves "Feedback & Suggestions" under the signed-in user's uid. Resolves only once the server confirms. */
+  submitFeedback(input: FeedbackInput, userId: string): Promise<void>;
 }

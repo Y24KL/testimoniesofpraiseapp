@@ -26,6 +26,7 @@ import { LoveworldSingers } from './pages/LoveworldSingers';
 import { FeaturedChoirs } from './pages/FeaturedChoirs';
 import { ChoirRequests } from './pages/ChoirRequests';
 import { LyricalAnalysis } from './pages/LyricalAnalysis';
+import { UserFeedback } from './pages/UserFeedback';
 
 type Gate = { state: 'loading' } | { state: 'out' } | { state: 'denied'; user: User } | { state: 'admin'; user: User };
 
@@ -89,6 +90,7 @@ export default function App() {
       {route.name === 'featuredChoirs' && <FeaturedChoirs />}
       {route.name === 'choirRequests' && <ChoirRequests go={setRoute} />}
       {route.name === 'lyrical' && <LyricalAnalysis />}
+      {route.name === 'userFeedback' && <UserFeedback />}
       {route.name === 'announcements' && <Announcements />}
       {route.name === 'sponsorships' && <Sponsorships />}
       {route.name === 'data' && <DataSettings />}

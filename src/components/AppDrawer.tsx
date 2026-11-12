@@ -249,6 +249,15 @@ export function AppDrawer() {
       iconBg: 'rgba(255, 255, 255, 0.08)',
       onPress: () => nav.navigate('NotificationSettings'),
     },
+    {
+      id: 'feedback',
+      title: 'Feedback & Suggestions',
+      subtitle: 'Tell us how we can improve',
+      icon: 'chatbubble-ellipses-outline',
+      iconColor: colors.accent,
+      iconBg: 'rgba(245, 197, 66, 0.15)',
+      onPress: () => nav.navigate('Feedback'),
+    },
 
   ];
 

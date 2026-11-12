@@ -59,6 +59,7 @@ const ChoirRequestPage = named(() => import('./pages/ChoirFeaturePages'), 'Choir
 const ChoirRequestSentPage = named(() => import('./pages/ChoirFeaturePages'), 'ChoirRequestSentPage');
 const LyricalAnalysisPage = named(() => import('./pages/LyricalAnalysisPage'), 'LyricalAnalysisPage');
 const LyricalAnalysisVideoPage = named(() => import('./pages/LyricalAnalysisVideoPage'), 'LyricalAnalysisVideoPage');
+const FeedbackPage = named(() => import('./pages/FeedbackPage'), 'FeedbackPage');
 
 function Splash() {
   return (
@@ -199,6 +200,7 @@ function Shell({ route }: { route: Route }) {
           onGoToDownloads={go({ name: 'downloads' })}
           onGoToShare={go({ name: 'share' })}
           onGoToSponsor={go({ name: 'sponsor' })}
+          onGoToFeedback={go({ name: 'feedback' })}
         />
       );
       break;
@@ -252,6 +254,9 @@ function Shell({ route }: { route: Route }) {
     case 'choirRequestSent':
       page = <ChoirRequestSentPage onHome={() => navigate({ name: 'home' }, { replace: true })} />;
       break;
+    case 'feedback':
+      page = <FeedbackPage onBack={back} />;
+      break;
     default:
       page = <HomePage onMenu={openDrawer} onOpenPromotion={openPromotion} />;
   }
@@ -285,6 +290,7 @@ function Shell({ route }: { route: Route }) {
         onGoToDownloads={go({ name: 'downloads' })}
         onNotifications={go({ name: 'notifications' })}
         onNotificationSettings={go({ name: 'notificationSettings' })}
+        onFeedback={go({ name: 'feedback' })}
       />
     </div>
   );

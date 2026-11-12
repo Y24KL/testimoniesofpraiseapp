@@ -28,6 +28,7 @@ const SECTIONS: { title: string; items: { name: Route['name']; label: string }[]
       { name: 'featuredChoirs', label: 'Featured choirs' },
       { name: 'choirRequests', label: 'Choir requests' },
       { name: 'comments', label: 'Comments' },
+      { name: 'userFeedback', label: 'User Feedback' },
       { name: 'sponsorships', label: 'Sponsorships' },
     ],
   },

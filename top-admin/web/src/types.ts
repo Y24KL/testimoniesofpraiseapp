@@ -133,6 +133,7 @@ export type Route =
   | { name: 'featuredChoirs' }
   | { name: 'choirRequests' }
   | { name: 'lyrical' }
+  | { name: 'userFeedback' }
   | { name: 'writtenEditor'; id?: string; prefill?: import('./pages/WrittenTestimonyEditor').WrittenPrefill }
   | { name: 'data' };
 

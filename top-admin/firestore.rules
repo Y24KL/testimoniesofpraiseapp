@@ -413,6 +413,47 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // "FEEDBACK & SUGGESTIONS" (appFeedback). A signed-in user can send feedback under their own uid,
+    // always with status 'new'. Nobody can read it from the app (not even the sender), edit it or delete
+    // it. Admins read everything and may only change the status. Abuse limit: every create must be written
+    // in the same batch as feedbackRate/{uid}, which accepts one write per 15 seconds.
+    function validFeedback() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['userId', 'feedbackType', 'subject', 'message', 'rating', 'platform', 'appVersion', 'status', 'createdAt'])
+        && d.keys().hasAll(['userId', 'feedbackType', 'message', 'platform', 'appVersion', 'status', 'createdAt'])
+        && d.userId == request.auth.uid
+        && d.feedbackType in ['general', 'suggestion', 'problem', 'experience', 'other']
+        && d.message is string && d.message.size() <= 2000 && d.message.trim().size() > 0
+        && (!('subject' in d) || (d.subject is string && d.subject.size() > 0 && d.subject.size() <= 120))
+        && (!('rating' in d) || (d.rating is int && d.rating >= 1 && d.rating <= 5))
+        && d.platform in ['android', 'ios', 'web']
+        && d.appVersion is string && d.appVersion.size() > 0 && d.appVersion.size() <= 20
+        && d.status == 'new'
+        && d.createdAt == request.time;
+    }
+    match /appFeedback/{id} {
+      allow read: if isAdmin();
+      allow create: if signedIn() && validFeedback()
+        && getAfter(/databases/$(database)/documents/feedbackRate/$(request.auth.uid)).data.lastAt == request.time;
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt', 'reviewedBy'])
+        && request.resource.data.status in ['new', 'reviewed', 'resolved']
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.reviewedAt == request.time;
+      allow delete: if false;
+    }
+
+    // Per-user feedback rate limit stamp (see above). Only the user, only "now", at most every 15 s.
+    match /feedbackRate/{uid} {
+      allow read: if false;
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['lastAt']) && request.resource.data.lastAt == request.time;
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['lastAt']) && request.resource.data.lastAt == request.time
+        && request.time > resource.data.lastAt + duration.value(15, 's');
+      allow delete: if false;
+    }
+
     // LYRICAL ANALYSIS: pre-produced analysis videos of LoveWorld songs, managed by admins.
     // Ordinary signed-in users only read PUBLISHED items; drafts and unpublished items stay admin-only.
     // Publishing needs a video link. Admins can change content, status and order.

@@ -8,6 +8,7 @@ import {
   ChevronRight,
   LogOut,
   Trash2,
+  MessageSquare,
 } from 'lucide-react';
 import { colors, radius } from '../theme';
 import { TopBar } from '../components/TopBar';
@@ -21,6 +22,7 @@ interface Props {
   onGoToDownloads: () => void;
   onGoToShare: () => void;
   onGoToSponsor: () => void;
+  onGoToFeedback: () => void;
 }
 
 function getInitials(name?: string | null): string {
@@ -39,6 +41,7 @@ export function ProfilePage({
   onGoToDownloads,
   onGoToShare,
   onGoToSponsor,
+  onGoToFeedback,
 }: Props) {
   const { user, signOut, deleteAccount, updatePhoto } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -300,6 +303,30 @@ export function ProfilePage({
           >
             <Gift size={20} color={colors.accent} />
             <span style={{ flex: 1 }}>Sponsor Testimonies of Praise</span>
+            <ChevronRight size={18} color={colors.textMuted} />
+          </button>
+
+          <button
+            type="button"
+            onClick={onGoToFeedback}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              minHeight: '54px',
+              padding: '0 16px',
+              borderRadius: radius.md,
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              color: colors.text,
+              cursor: 'pointer',
+              fontSize: '15px',
+              fontWeight: '600',
+              textAlign: 'left',
+            }}
+          >
+            <MessageSquare size={20} color={colors.accent} />
+            <span style={{ flex: 1 }}>Feedback & Suggestions</span>
             <ChevronRight size={18} color={colors.textMuted} />
           </button>
         </div>

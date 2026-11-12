@@ -19,6 +19,7 @@ import {
   Music,
   Users,
   Mic,
+  MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { navigate } from '../router';
@@ -42,6 +43,7 @@ interface Props {
   onGoToDownloads: () => void;
   onNotifications: () => void;
   onNotificationSettings: () => void;
+  onFeedback: () => void;
 }
 
 export function AppDrawer({
@@ -61,6 +63,7 @@ export function AppDrawer({
   onGoToDownloads,
   onNotifications,
   onNotificationSettings,
+  onFeedback,
 }: Props) {
   const { user, signOut } = useAuth();
 
@@ -237,6 +240,14 @@ export function AppDrawer({
       icon: <Settings size={18} color={colors.textMuted} />,
       iconBg: 'rgba(255, 255, 255, 0.08)',
       action: onNotificationSettings,
+    },
+    {
+      id: 'feedback',
+      title: 'Feedback & Suggestions',
+      subtitle: 'Tell us how we can improve',
+      icon: <MessageSquare size={18} color={colors.accent} />,
+      iconBg: 'rgba(245, 197, 66, 0.15)',
+      action: onFeedback,
     },
 
   ];

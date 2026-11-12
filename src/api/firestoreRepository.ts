@@ -13,12 +13,15 @@ import {
   setDoc,
   startAfter,
   where,
+  writeBatch,
   type DocumentData,
   type QueryConstraint,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { CONFIG } from '@/constants/config';
+import { buildFeedbackPayload, type FeedbackInput } from '@/utils/feedback';
 import type { LyricalAnalysis, Page } from '@/types';
 import { db } from './firebase';
 import {
@@ -408,6 +411,20 @@ export const firestoreRepository: ContentRepository = {
       status: 'pending',
       submittedAt: serverTimestamp(),
     });
+  },
+
+  async submitFeedback(input: FeedbackInput, userId: string) {
+    // Rules accept exactly these fields, status 'new' and the signed-in user's own uid, and require
+    // the feedbackRate/{uid} stamp in the same batch (at most one feedback every 15 seconds).
+    const platform = Platform.OS === 'ios' ? 'ios' : 'android';
+    const appVersion = Constants.expoConfig?.version ?? 'unknown';
+    const batch = writeBatch(db);
+    batch.set(doc(collection(db, CONFIG.collections.appFeedback)), {
+      ...buildFeedbackPayload(input, { userId, platform, appVersion }),
+      createdAt: serverTimestamp(),
+    });
+    batch.set(doc(db, 'feedbackRate', userId), { lastAt: serverTimestamp() });
+    await batch.commit();
   },
 
   getLyricalAnalyses: (o) => getStatusPage(o),

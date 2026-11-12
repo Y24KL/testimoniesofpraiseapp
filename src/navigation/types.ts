@@ -49,6 +49,8 @@ export type RootStackParamList = {
   // Lyrical Analysis
   LyricalAnalysis: undefined;
   LyricalAnalysisVideo: { id: string };
+  // Feedback & Suggestions
+  Feedback: undefined;
 };
 
 declare global {

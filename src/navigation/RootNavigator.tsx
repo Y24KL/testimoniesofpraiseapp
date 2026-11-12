@@ -34,6 +34,7 @@ import { ChoirRequestScreen } from '@/screens/ChoirRequestScreen';
 import { ChoirRequestSentScreen } from '@/screens/ChoirRequestSentScreen';
 import { LyricalAnalysisScreen } from '@/screens/LyricalAnalysisScreen';
 import { LyricalAnalysisVideoScreen } from '@/screens/LyricalAnalysisVideoScreen';
+import { FeedbackScreen } from '@/screens/FeedbackScreen';
 import { TabNavigator } from './TabNavigator';
 import type { RootStackParamList } from './types';
 
@@ -118,6 +119,7 @@ export function RootNavigator() {
           <Stack.Screen name="LyricalAnalysis" component={LyricalAnalysisScreen} />
           <Stack.Screen name="LyricalAnalysisVideo" component={LyricalAnalysisVideoScreen} />
           <Stack.Screen name="ChoirRequestSent" component={ChoirRequestSentScreen} options={{ gestureEnabled: false }} />
+          <Stack.Screen name="Feedback" component={FeedbackScreen} />
         </Stack.Group>
       )}
     </Stack.Navigator>

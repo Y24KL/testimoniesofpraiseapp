@@ -4,7 +4,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Testimonies of Praise',
   slug: 'testimonies-of-praise',
-  version: '1.0.9',
+  version: '2.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'dark',
@@ -38,7 +38,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#0a0a0a',
     },
     package: 'com.testimoniesofpraise.app',
-    versionCode: 11,
+    versionCode: 200,
     googleServicesFile: process.env.GOOGLE_SERVICES_JSON || './google-services.json',
     // Required for expo-notifications foreground banners on Android 13+
     permissions: ['android.permission.POST_NOTIFICATIONS', 'android.permission.VIBRATE'],
@@ -51,7 +51,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // Smaller Android release builds: R8 code shrinking/obfuscation + removal of unused resources.
     [
       'expo-build-properties',
-      { android: { enableMinifyInReleaseBuilds: true, enableShrinkResourcesInReleaseBuilds: true } },
+      {
+        android: {
+          enableMinifyInReleaseBuilds: true,
+          enableShrinkResourcesInReleaseBuilds: true,
+          // 64-bit ARM only: every phone sold since about 2019 has it. This removes the 32-bit ARM, x86 and
+          // x86_64 native libraries, which is the largest part of the size. 32-bit-only phones cannot install.
+          buildArchs: ['arm64-v8a'],
+        },
+      },
     ],
     [
       'expo-notifications',

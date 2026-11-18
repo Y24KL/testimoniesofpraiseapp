@@ -9,8 +9,8 @@ Nothing here has been deployed. Tests run locally, and the Firestore rules run a
 
 | Item | Where | Tests |
 |---|---|---|
-| Push-token rules (S2): allowlisted fields, Expo token format, typed preferences, bounded timezone and UTC offset, server timestamp | `top-admin/firestore.rules` (`validPushToken`) | `tests/notifications.rules.test.mjs` (14 cases) |
-| Analytics rules (S3): snake_case event name, bounded params, own uid or null, server timestamp, no client reads | `top-admin/firestore.rules` (`analyticsEvents`) | `tests/notifications.rules.test.mjs` (8 cases) |
+| Push-token rules (S2): allowlisted fields, Expo token format, typed preferences, bounded timezone and UTC offset, server timestamp | `top-admin/firestore.rules` (`validPushToken`) | `tests/notifications.rules.test.mjs` (13 cases) |
+| Analytics rules (S3): snake_case event name, bounded params, own uid or null, server timestamp, no client reads | `top-admin/firestore.rules` (`analyticsEvents`) | `tests/notifications.rules.test.mjs` (9 cases) |
 | App sends only the seven known preference keys, so a stray stored key cannot make token registration fail silently | `src/storage/prefs.ts` (`pushPrefsPayload`), `src/notifications/push.ts` | `npm run typecheck` |
 | Praxiom account-wide concurrency gate (2 chats in progress), as a Durable Object, with lease expiry | `top-admin/worker/src/praxiomGate.js`, `wrangler.toml` | `test-engine.mjs` |
 | Praxiom bounded retries (429 concurrency and rate limits, 429 capacity, 503), honouring `Retry-After`, never on 402, 401, timeouts or our own gate | `top-admin/worker/src/praxiomPolicy.js`, `src/praxiom.js` | `test-engine.mjs`, `test-praxiom.mjs` |

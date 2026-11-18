@@ -15,6 +15,21 @@ service cloud.firestore {
       allow list, write: if false;
     }
 
+    // Server-controlled records (from the backend rules). Only the Admin SDK on the server reads or writes
+    // these; clients are denied. Trusted devices and OTP state are also kept in the Worker today.
+    match /emailVerifications/{uid} {
+      allow read, write: if false;
+    }
+    match /deviceTrust/{id} {
+      allow read, write: if false;
+    }
+
+    // Profile metadata: the owner and admins read it; only admins write it.
+    match /userProfiles/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
     // Testimonies: the app only sees published ones; admins see and manage everything.
     match /testimonies/{id} {
       allow read: if isAdmin() || (signedIn() && (resource.data.isPublished == true || resource.data.published == true));

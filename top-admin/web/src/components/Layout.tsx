@@ -43,6 +43,7 @@ const SECTIONS: { title: string; items: { name: Route['name']; label: string }[]
     title: 'Communication',
     items: [
       { name: 'announcements', label: 'Announcements' },
+      { name: 'notifications', label: 'Notification centre' },
       { name: 'promotions', label: 'Promotions' },
     ],
   },

@@ -15,6 +15,7 @@ import { handleKingsChatCallback, handleKingsChatRedeem, handleKingsChatState } 
 import { AIEndpointError, createEmbeddings, enforceAiRateLimit, semanticSearch, validateSearchQuery } from './ai.js';
 import { runAssistant } from './assistant.js';
 import { searchClips } from './clips.js';
+import { runNotificationEngineFromEnv } from './engine/run.js';
 
 // Durable Object that counts Praxiom chat requests in progress across the whole account (see praxiomGate.js).
 export { PraxiomConcurrencyGate } from './praxiomGate.js';
@@ -83,6 +84,18 @@ export function corsHeaders(origin, allowed) {
 }
 
 export default {
+  /**
+   * Cron trigger (wrangler.toml [triggers]). Runs the notification engine. Each run is independent and
+   * idempotent: a run that finds nothing to do, or is switched off, returns at once. Logs contain counts only.
+   */
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      runNotificationEngineFromEnv(env)
+        .then((summary) => console.log('[engine]', JSON.stringify(summary)))
+        .catch((error) => console.error('[engine] run failed', error?.message || error)),
+    );
+  },
+
   async fetch(request, env) {
     try {
       return await handle(request, env);

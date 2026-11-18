@@ -10,17 +10,17 @@ const MAX_UID_LENGTH = 128;
 
 const enc = new TextEncoder();
 
-function base64UrlFromBytes(bytes) {
+export function base64UrlFromBytes(bytes) {
   let binary = '';
   for (const b of bytes) binary += String.fromCharCode(b);
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-function base64UrlFromJson(value) {
+export function base64UrlFromJson(value) {
   return base64UrlFromBytes(enc.encode(JSON.stringify(value)));
 }
 
-function pkcs8BytesFromPem(pem) {
+export function pkcs8BytesFromPem(pem) {
   const body = pem.replace(/-----BEGIN PRIVATE KEY-----/, '').replace(/-----END PRIVATE KEY-----/, '').replace(/\s+/g, '');
   const binary = atob(body);
   const bytes = new Uint8Array(binary.length);

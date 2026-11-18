@@ -526,5 +526,95 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // =====================================================================
+    // NOTIFICATION ENGINE (T.O.P. 2.0, Phase 1). The engine runs on the Worker with a service identity,
+    // which bypasses these rules, so the engine collections below accept NO client writes except the
+    // admin's approval and kill-switch controls. Admins can read everything the engine writes.
+    // =====================================================================
+
+    // Kill switch and per-category switches. Fails closed: the engine sends nothing unless enabled == true.
+    match /settings/notifications {
+      allow read: if isAdmin();
+      allow write: if isAdmin() && request.resource.data.keys().hasOnly(['enabled', 'categories', 'quietHours', 'maxPerDay', 'perCategoryPerDay', 'updatedAt'])
+        && request.resource.data.enabled is bool
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    // Engine cursors and state: server only.
+    match /settings/notificationEngine {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // The queue. The engine creates entries. An admin may only approve (pending -> approved) or cancel
+    // (pending or approved -> cancelled) an entry, and may not change its content or audience.
+    match /notification_queue/{key} {
+      allow read: if isAdmin();
+      allow create, delete: if false;
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'decidedBy', 'decidedAt'])
+        && ((resource.data.status == 'pending' && request.resource.data.status in ['approved', 'cancelled'])
+          || (resource.data.status == 'approved' && request.resource.data.status == 'cancelled'))
+        && request.resource.data.decidedBy == request.auth.uid
+        && request.resource.data.decidedAt == request.time;
+    }
+
+    // History, delivery events and AI request logs: written by the engine, read by admins only.
+    match /notification_history/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    match /notification_events/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    match /ai_requests/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Per-person send counters used for frequency caps. Server only, never readable by clients.
+    match /notificationCounters/{uid} {
+      allow read, write: if false;
+    }
+
+    // Per-person delivery records (one per entry and person): written by the engine, read by admins.
+    match /notification_deliveries/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // The engine's run lock: server only.
+    match /notificationLocks/{name} {
+      allow read, write: if false;
+    }
+
+    // =====================================================================
+    // PERSONAL DISCOVERY (T.O.P. 2.0, Phase 1). Activity is minimal and per person. It is written by the
+    // app, read by the owner (for "clear my history") and deleted with the account by the server.
+    // =====================================================================
+    match /user_activity/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'type', 'contentType', 'contentId', 'ts', 'source'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.type in ['view', 'play', 'complete', 'save', 'open_notification']
+        && request.resource.data.contentType in ['testimony', 'lyrical', 'article', 'written', 'audio', 'live']
+        && request.resource.data.contentId is string && request.resource.data.contentId.size() > 0 && request.resource.data.contentId.size() <= 100
+        && request.resource.data.source is string && request.resource.data.source.size() <= 20
+        && request.resource.data.ts == request.time;
+      allow read, delete: if signedIn() && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
+    // The owner's interests and discovery settings. Interests are allowlisted tags, never free text.
+    match /users/{uid}/private/discovery {
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['interests', 'optOut', 'updatedAt'])
+        && request.resource.data.interests is list && request.resource.data.interests.size() <= 20
+        && request.resource.data.optOut is bool
+        && request.resource.data.updatedAt == request.time;
+    }
+
   }
 }

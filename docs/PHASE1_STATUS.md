@@ -1,47 +1,81 @@
-# T.O.P. 2.0: Phase 1 status (part 1)
+# T.O.P. 2.0: Phase 1 status
 
-Date: 2026-11-18. Builds on `docs/PHASE0_AUDIT.md`.
+Date: 2026-11-18. Builds on `docs/PHASE0_AUDIT.md`. Nothing here is deployed. Everything below is tested locally.
 
-This records what is implemented and tested now, what is not, and what must happen before anything is deployed.
-Nothing here has been deployed. Tests run locally, and the Firestore rules run against the emulator.
+## Verification (run on 2026-11-18)
 
-## Implemented and tested
+| Suite | Result |
+|---|---|
+| `npm run typecheck` (app) | Passes |
+| `top-admin/web` `tsc --noEmit` | Passes |
+| App unit suites: voiceover, profile validation, comment text, choir request, feedback, discovery | Pass |
+| `npm run test:rules` (Firestore emulator, production rules file) | Passes: comments 20, profile 17, choir 21, lyrical 13, feedback 24, notifications 22, engine 25 |
+| Worker `npm test`: relay, CORS, auth, AI, Praxiom client, Praxiom on Praxiom, engine policy (32), engine end to end (23) | Passes |
+| `wrangler deploy --dry-run` | Builds. Lists the `PRAXIOM_GATE` Durable Object binding and the 15-minute cron trigger |
 
-| Item | Where | Tests |
-|---|---|---|
-| Push-token rules (S2): allowlisted fields, Expo token format, typed preferences, bounded timezone and UTC offset, server timestamp | `top-admin/firestore.rules` (`validPushToken`) | `tests/notifications.rules.test.mjs` (13 cases) |
-| Analytics rules (S3): snake_case event name, bounded params, own uid or null, server timestamp, no client reads | `top-admin/firestore.rules` (`analyticsEvents`) | `tests/notifications.rules.test.mjs` (9 cases) |
-| App sends only the seven known preference keys, so a stray stored key cannot make token registration fail silently | `src/storage/prefs.ts` (`pushPrefsPayload`), `src/notifications/push.ts` | `npm run typecheck` |
-| Praxiom account-wide concurrency gate (2 chats in progress), as a Durable Object, with lease expiry | `top-admin/worker/src/praxiomGate.js`, `wrangler.toml` | `test-engine.mjs` |
-| Praxiom bounded retries (429 concurrency and rate limits, 429 capacity, 503), honouring `Retry-After`, never on 402, 401, timeouts or our own gate | `top-admin/worker/src/praxiomPolicy.js`, `src/praxiom.js` | `test-engine.mjs`, `test-praxiom.mjs` |
-| Optional `Idempotency-Key` per logical chat request | `src/praxiom.js` | `test-engine.mjs` |
-| Validated structured output (schema in code; unknown keys refused; bounded text) | `top-admin/worker/src/structured.js` | `test-engine.mjs` |
-| Engine policy: quiet hours in local time (wrapping midnight), daily and per-category caps, kill switch that fails closed, duplicate keys, enqueue rules | `top-admin/worker/src/engine/policy.js` | `test-engine.mjs` |
-| Audience selection: usable devices only, preference filter, token de-duplication, caps per person, quiet-hours deferral | `top-admin/worker/src/engine/audience.js` | `test-engine.mjs` |
-| AI copy validation: schema, no links or emails, no urgency or overclaims, numbers must come from the facts, must name the content, no shouting | `top-admin/worker/src/engine/copy.js` | `test-engine.mjs` |
+## What is implemented
 
-Results on 2026-11-18:
-- `npm run test:rules`: all suites pass, including the 22 new notification cases.
-- Worker `npm test` (now includes Praxiom and engine tests): passes.
-- Root `npm run typecheck` and the app unit suites: pass.
-- `wrangler deploy --dry-run`: bundles, and lists the `PRAXIOM_GATE` Durable Object binding.
+**Safety and rules**
+- `pushTokens` accepts only known fields, with types and bounds (audit S2). Engine collections accept no client writes, except the admin's approve and cancel on queue entries, and the kill switch.
+- `analyticsEvents` is validated (audit S3).
+- Personal discovery: `user_activity` (owner write, owner read and delete, fixed fields) and `users/{uid}/private/discovery` (owner only, allowlisted tags).
 
-## Not implemented yet (remaining Phase 1)
+**Praxiom client** (`top-admin/worker/src/praxiom.js`, `praxiomGate.js`, `praxiomPolicy.js`)
+- Account-wide concurrency gate: 2 chat requests in progress, held in a Durable Object with lease expiry.
+- Bounded retries for transient failures (429 and 503), honouring `Retry-After`. Never retried: 402, 401, timeouts, and the gate's own busy error.
+- Optional `Idempotency-Key` per logical request.
+- `structured.js`: model output is parsed and checked against a schema in code.
 
-- **Engine wiring.** The cron scan of new content, the queue store with atomic `dedupeKey` writes, the send-time re-check of caps, the sender with bounded retries, receipt polling and invalid-token cleanup, and the Admin Portal kill switch. The pure logic exists and is tested; the Firestore and Worker wiring does not.
-- **Activity and interests** (`user_activity`, `users/{uid}/private/discovery`) and the privacy controls.
-- **Discovery sections** on Home.
-- **Admin AI Control Centre** pages.
-- **Security S1** (hardcoded OTP pepper fallback). Not changed: removing the fallback before the `OTP_PEPPER` secret is set would break sign-in codes.
-- **S4** (two divergent Firestore rules files). Not merged: the deployed file has not been confirmed.
+**Notification engine** (`top-admin/worker/src/engine/`, run by the cron trigger)
+- Detection: new testimonies, articles, lyrical analyses (by status), and live broadcasts (one per session).
+- Queue: every candidate becomes an entry that waits for admin approval. The entry id is the dedupe key, and it is created atomically, so the same event cannot be queued twice.
+- Copy: deterministic templates. AI copy is validated by `copy.js` (no links, no urgency, no overclaims, numbers must come from the source, must name the content) but is **not yet proposed by any code path**.
+- Delivery: one record per person per entry. A person who has been sent, capped, or found without a device is never sent the same entry again. Quiet hours defer; caps are per person per day.
+- Dead tokens are removed on a `DeviceNotRegistered` ticket or receipt.
+- Receipts are read on each run, and a delivery is recorded only once all its tickets have receipts.
+- Kill switch: `settings/notifications.enabled` is read at the start of each run and again before every entry. Missing or false means nothing runs. Each category can be switched off.
+- First run only sets the cursor, so existing content is never announced.
+- A lock document stops overlapping runs.
 
-## Deployment steps (not yet run)
+**Admin Portal**: a Notification centre page (`top-admin/web/src/pages/NotificationCentre.tsx`). It holds the kill switch, quiet hours, daily caps, category switches, the approval queue, and delivery history.
 
-1. Confirm the Firestore rules file in use. Then deploy the rules from `top-admin` with `firebase deploy --only firestore:rules`, after the emulator suite passes.
-2. Deploy the Worker from `top-admin/worker` with `npm test` first, then `npm run deploy`. The first deploy creates the `PraxiomConcurrencyGate` class from the migration tag `praxiom-gate-v1`. No new secrets are needed.
-3. Until the Worker is deployed, the app keeps working: the new token fields are optional and the new rules accept the existing shape.
-4. Verify on a staging project before production: a token registration from a device, an analytics event, and two concurrent assistant questions (the third should get a short "busy" message, not an error page).
+**App**
+- Push registration sends only the seven known preference keys.
+- Viewing a testimony records a minimal `view` event, unless the person has opted out.
+- `src/discovery/` holds the rules, the activity writer, and the interests and opt-out service.
 
-## Decisions still open (from Phase 0)
+## Decisions taken in this build
 
-D1 (engine in the Worker), D4 (admin approval of AI copy), the Wednesday LoveWorld Radio slot, and the Praxiom concurrency-limit support ticket. The engine wiring waits on D1 and D4.
+- **Engine runs on the Worker**, on a 15-minute cron, with no Blaze upgrade (decision D1, recommended).
+- **Admin approval is required for every notification** (decision D4, recommended).
+- **Engine identity changed from Phase 0's recommendation.** Phase 0 proposed a scoped system uid (S6). This build uses the Worker's existing service account, through an OAuth token (`googleAuth.js`). Like the Firebase Admin SDK, it bypasses rules. The reasons: the secret is already in the Worker, a custom-token route would need a Web API key that isn't configured, and all client access to engine collections is still denied by rules. The engine code is the only writer. If you want stricter isolation, a scoped identity can replace it later.
+- **Quiet-hours default** when unset: 22:00 to 07:00 local time. **Daily cap** when unset: 3 per person.
+- **Lyrical analyses** are sent under the `announcements` category.
+
+## Deployment order (not yet run)
+
+1. **Rules.** Confirm which rules file is deployed (audit S4). Then `firebase deploy --only firestore:rules` from `top-admin`.
+2. **Indexes.** `firebase deploy --only firestore:indexes`. The engine needs the two composite indexes added in `firebase.indexes.json`. Queries will fail until they build.
+3. **Worker.** From `top-admin/worker`: `npm test`, then `npm run deploy`. The first deploy creates the `PraxiomConcurrencyGate` class (migration `praxiom-gate-v1`). Check that Durable Objects are available on your Cloudflare plan. No new secrets are needed beyond `FIREBASE_SERVICE_ACCOUNT` and `FIREBASE_PROJECT_ID`, which already exist.
+4. **Stay off until verified.** `settings/notifications` is created with `enabled: false` by the Notification centre. Turn the engine on only after a staging test.
+5. **Staging test.** Publish a test testimony. Confirm it appears in the queue as pending and nothing is sent. Approve it. Confirm delivery to a test device only. Turn the engine off and confirm nothing sends.
+
+The app build with these changes needs a new release. Until it ships, the old app keeps working: the new token fields are optional, and the rules accept the old shape.
+
+## Known limits
+
+- **AI copy is not wired.** The validator exists and is tested. No call to Praxiom is made from the engine yet, so every message uses the template.
+- **Scale.** Each entry loads all devices in its category (up to 5,000) and writes one record per person. This is fine at current size. It will need paging and batching before the audience grows much larger.
+- **Lock is not atomic.** Expiry takeover is a read-then-write. Two runs starting at the same instant could both proceed. Per-person records still prevent duplicate sends, but the lock should become a transaction later.
+- **Counters are read in full** each run (users with a send in the last 24 hours).
+- **Receipts** are read in batches of 300 per run.
+- **No retention job yet.** Queue, delivery and activity records are kept indefinitely. The Phase 0 retention policy still needs a scheduled cleanup.
+- **Personalisation UI is not built.** There are no Home discovery sections, no interests screen, and no opt-out or "clear my history" control in the app. The services and rules for these exist.
+- **Wednesday LoveWorld Radio** is not in the repo. It needs your confirmed schedule.
+
+## Still open from Phase 0
+
+- **S1**: the hardcoded OTP pepper fallback is unchanged. Set the `OTP_PEPPER` secret first, then remove the fallback.
+- **S4**: the two rules files still differ. Confirm the deployed one before merging.
+- **Praxiom**: live checks of the tool-call shape, `json_schema`, and streaming with tools still need a test key.
+- **Praxiom concurrency limit**: the support request must come from the account owner.

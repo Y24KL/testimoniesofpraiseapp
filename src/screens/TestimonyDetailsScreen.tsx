@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { repo } from '@/api';
+import { recordActivity } from '@/discovery/activity';
 import { CommentsSection } from '@/components/CommentsSection';
 import { DownloadButton } from '@/components/DownloadButton';
 import { ErrorState } from '@/components/ErrorState';
@@ -37,7 +38,10 @@ export function TestimonyDetailsScreen() {
       .then((t) => {
         if (cancelled) return;
         if (!t) setNotFound(true); // unpublished / removed by the Admin Portal
-        else setItem(t);
+        else {
+          setItem(t);
+          recordActivity({ type: 'view', contentType: 'testimony', contentId: id, source: 'testimonies' });
+        }
       })
       .catch((e) => {
         if (cancelled) return;

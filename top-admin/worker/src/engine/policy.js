@@ -5,6 +5,7 @@
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
 export const MINUTE_MS = 60 * 1000;
+export const DEFAULT_MAX_PER_DAY = 3; // notifications per person per day, unless the settings document says otherwise
 export const DEFAULT_OFFSET_MINUTES = 60; // West Africa Time (UTC+1), used only when a device has no timezone
 
 /** Minute of the day (0-1439) at a fixed UTC offset in minutes. */

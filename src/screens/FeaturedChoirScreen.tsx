@@ -5,6 +5,7 @@ import { repo } from '@/api';
 import { ErrorState } from '@/components/ErrorState';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { ReportButton } from '@/community/ReportButton';
 import { Screen } from '@/components/Screen';
 import { TopBar } from '@/components/TopBar';
 import { VideoPlayer } from '@/components/VideoPlayer';
@@ -62,6 +63,7 @@ export function FeaturedChoirScreen() {
             <Text style={styles.song}>{item.songTitle}</Text>
             {item.duration ? <Text style={styles.meta}>{formatDuration(item.duration)}</Text> : null}
           </View>
+          <ReportButton contentType="choir" contentId={item.id} label="Report this choir" />
           <PrimaryButton title="Back to featured choirs" icon="arrow-back" variant="outline" onPress={back} />
         </ScrollView>
       )}

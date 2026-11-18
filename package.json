@@ -17,7 +17,7 @@
     "web:build": "npm --prefix web run build",
     "web:preview": "npm --prefix web run preview",
     "build:android:local": "node scripts/build-android-local.mjs",
-    "test:rules": "npx --yes firebase-tools@latest emulators:exec --only firestore --project demo-top --config top-admin/firebase.json \"node tests/comments.rules.test.mjs && node tests/profile.rules.test.mjs && node tests/choirFeature.rules.test.mjs && node tests/lyricalAnalysis.rules.test.mjs && node tests/feedback.rules.test.mjs && node tests/notifications.rules.test.mjs && node tests/engine.rules.test.mjs && node tests/library.rules.test.mjs\"",
+    "test:rules": "npx --yes firebase-tools@latest emulators:exec --only firestore --project demo-top --config top-admin/firebase.json \"node tests/comments.rules.test.mjs && node tests/profile.rules.test.mjs && node tests/choirFeature.rules.test.mjs && node tests/lyricalAnalysis.rules.test.mjs && node tests/feedback.rules.test.mjs && node tests/notifications.rules.test.mjs && node tests/engine.rules.test.mjs && node tests/library.rules.test.mjs && node tests/community.rules.test.mjs\"",
     "test:voiceover": "node --experimental-strip-types --no-warnings tests/voiceover.test.mjs",
     "test:profile-validation": "node --experimental-strip-types --no-warnings tests/profileValidation.test.mjs",
     "test:comment-text": "node --experimental-strip-types --no-warnings tests/commentText.test.mjs",
@@ -27,7 +27,8 @@
     "voiceovers:generate": "node --experimental-strip-types --no-warnings scripts/generate-voiceovers.ts --generate",
     "test:discovery": "node --experimental-strip-types --no-warnings tests/discovery.test.mjs",
     "test:library": "node --experimental-strip-types --no-warnings tests/library.test.mjs",
-    "test:assistant-cards": "node --experimental-strip-types --no-warnings tests/assistantCards.test.mjs"
+    "test:assistant-cards": "node --experimental-strip-types --no-warnings tests/assistantCards.test.mjs",
+    "test:editorial": "node --experimental-strip-types --no-warnings tests/editorial.test.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

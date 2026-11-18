@@ -116,6 +116,8 @@ export interface AdotopocSettings {
 export type Route =
   | { name: 'dashboard' }
   | { name: 'notifications' }
+  | { name: 'editorial' }
+  | { name: 'reports' }
   | { name: 'testimonies' }
   | { name: 'editor'; id?: string; prefill?: Partial<Testimony> }
   | { name: 'live' }

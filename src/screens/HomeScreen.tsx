@@ -15,6 +15,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { PromotionCard } from '@/components/PromotionCard';
 import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
+import { DailyDiscovery } from '@/components/DailyDiscovery';
 import { Skeleton } from '@/components/SkeletonCard';
 import { IconButton } from '@/components/TopBar';
 import { VideoCard } from '@/components/VideoCard';
@@ -198,6 +199,8 @@ export function HomeScreen() {
             )}
           </Pressable>
         ) : null}
+
+        <DailyDiscovery />
 
         <SectionHeader title="Explore" />
         <View style={styles.grid}>

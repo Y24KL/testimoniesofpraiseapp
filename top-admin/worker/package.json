@@ -5,7 +5,7 @@
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
-    "test": "node test.mjs && node test-auth.mjs && node test-ai.mjs && node test-praxiom.mjs && node test-assistant-praxiom.mjs && node test-engine.mjs && node test-engine-run.mjs"
+    "test": "node test.mjs && node test-auth.mjs && node test-ai.mjs && node test-praxiom.mjs && node test-assistant-praxiom.mjs && node test-engine.mjs && node test-engine-run.mjs && node test-assistant-phase3.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"

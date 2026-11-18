@@ -1,5 +1,6 @@
 import { auth } from '@/api/firebase';
 import { CONFIG } from '@/constants/config';
+import { parseCards, type AssistantCard } from '@/ai/cards';
 
 export interface AssistantMessage {
   role: 'user' | 'assistant';
@@ -35,6 +36,8 @@ export interface AssistantReply {
   sources: AssistantSource[];
   /** A screen the assistant suggested; the app only opens names from its own list. */
   navigate: string | null;
+  /** Verified content cards, built from records the assistant read. See cards.ts. */
+  cards: AssistantCard[];
 }
 
 /** The screens the assistant may open, mapped to real app routes. Anything else is ignored. */
@@ -46,6 +49,8 @@ export const ASSISTANT_TARGETS: Record<string, { route: 'Tabs' | 'Stack'; screen
   testimonies: { route: 'Tabs', screen: 'Testimonies' },
   sponsor: { route: 'Stack', screen: 'Sponsor' },
   downloads: { route: 'Tabs', screen: 'Downloads' },
+  lyrical: { route: 'Stack', screen: 'LyricalAnalysis' },
+  articles: { route: 'Stack', screen: 'Articles' },
 };
 
 export class AssistantError extends Error {}
@@ -79,5 +84,6 @@ export async function askAssistant(messages: AssistantMessage[], signal?: AbortS
     clips: Array.isArray((data as { clips?: unknown }).clips) ? ((data as { clips: AssistantClip[] }).clips) : [],
     sources: Array.isArray(data.sources) ? data.sources : [],
     navigate: typeof data.navigate === 'string' && ASSISTANT_TARGETS[data.navigate] ? data.navigate : null,
+    cards: parseCards((data as { cards?: unknown }).cards),
   };
 }

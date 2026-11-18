@@ -5,12 +5,22 @@ import * as Clipboard from 'expo-clipboard';
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { ASSISTANT_TARGETS, AssistantError, askAssistant, type AssistantMessage } from '@/ai/assistant';
+import { cardTarget, type AssistantCard } from '@/ai/cards';
 import { groupByDate, loadConversations, previewOf, syncConversations, titleFrom, type Conversation, type StoredTurn } from '@/ai/chatHistory';
 import { useAuth } from '@/auth/AuthContext';
 import { Screen } from '@/components/Screen';
 import { TopBar } from '@/components/TopBar';
 import { colors, radius, type as t } from '@/constants/theme';
 import { isWebUrl } from '@/utils/openExternal';
+
+/** Labels for verified cards. Each kind has one label, so the screen never guesses what a card is. */
+const CARD_LABEL: Record<AssistantCard['kind'], string> = {
+  testimony: 'Testimony',
+  clip: 'Moment in a video',
+  lyrical: 'Lyrical analysis',
+  article: 'Article',
+  live: 'Live now',
+};
 
 const MAX_CHARS = 1000;
 /** The Worker accepts at most 12 messages per request, so only the latest ones are sent. */
@@ -21,6 +31,8 @@ type Suggestion = { label: string; icon: string; prompt: string | null };
 const SUGGESTIONS: Suggestion[] = [
   { label: 'Find a testimony', icon: 'search-outline', prompt: 'Help me find a testimony.' },
   { label: 'Explore resources', icon: 'library-outline', prompt: 'What resources can I explore in the app?' },
+  { label: 'What is new this week?', icon: 'sparkles-outline', prompt: 'What is new this week?' },
+  { label: 'Recommend something', icon: 'musical-notes-outline', prompt: 'Recommend something to listen to.' },
   { label: 'Help with my account', icon: 'person-circle-outline', prompt: null },
   { label: 'Where can I watch live?', icon: 'videocam-outline', prompt: 'Where can I watch live?' },
   { label: 'Ask me anything', icon: 'chatbubble-ellipses-outline', prompt: '' },
@@ -211,6 +223,7 @@ export function AssistantScreen() {
         clips: answer.clips,
         sources: answer.sources,
         navigate: answer.navigate,
+        cards: answer.cards,
       };
       commit(withConversation(latest.current, id, titleFrom(question), [...sent, reply], replyAt));
     } catch (e) {
@@ -272,6 +285,15 @@ export function AssistantScreen() {
     if (!target) return;
     if (target.route === 'Tabs') nav.navigate('Tabs', { screen: target.screen });
     else nav.navigate(target.screen);
+  };
+
+  /** Opens a verified card by its kind and id. The link text is never used to navigate. */
+  const openCard = (card: AssistantCard) => {
+    const target = cardTarget(card);
+    if (target.screen === 'Live') nav.navigate('Tabs', { screen: 'Live' });
+    else if (target.screen === 'TestimonyDetails') nav.navigate('TestimonyDetails', target.params);
+    else if (target.screen === 'LyricalAnalysisVideo') nav.navigate('LyricalAnalysisVideo', target.params);
+    else nav.navigate('ArticleDetails', target.params);
   };
 
   const runSuggestion = (prompt: string | null) => {
@@ -376,6 +398,25 @@ export function AssistantScreen() {
                   <Text style={styles.cardTitle} numberOfLines={2}>{c.title}</Text>
                   {c.description ? <Text style={styles.cardText} numberOfLines={2}>{c.description}</Text> : null}
                   <Text style={styles.linkText}>Watch at {c.startLabel}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+
+          {item.cards && item.cards.length > 0 ? (
+            <View style={{ gap: 6, marginTop: 8 }}>
+              <Text style={styles.label}>Found in Testimonies of Praise</Text>
+              {item.cards.map((c) => (
+                <Pressable
+                  key={`${c.kind}-${c.id}-${c.startSec ?? ''}`}
+                  onPress={() => openCard(c)}
+                  style={styles.card}
+                  accessibilityRole="link"
+                  accessibilityLabel={`${CARD_LABEL[c.kind]}: ${c.title}`}
+                >
+                  <Text style={styles.label}>{CARD_LABEL[c.kind]}</Text>
+                  <Text style={styles.cardTitle} numberOfLines={2}>{c.title}</Text>
+                  {c.subtitle ? <Text style={styles.cardText} numberOfLines={1}>{c.subtitle}</Text> : null}
                 </Pressable>
               ))}
             </View>

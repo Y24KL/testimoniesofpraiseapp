@@ -20,6 +20,8 @@ export interface StoredTurn {
   clips?: AssistantReply['clips'];
   sources?: AssistantReply['sources'];
   navigate?: string | null;
+  /** Verified cards from the app's own content. Older saved chats have none. */
+  cards?: AssistantReply['cards'];
 }
 
 export interface Conversation {

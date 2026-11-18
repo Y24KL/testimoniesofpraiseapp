@@ -13,8 +13,8 @@ const env = {
 };
 const json = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-// Tools offered to Praxiom: no web search.
-assert.deepEqual(TOOLS.map((t) => t.function.name).sort(), ['open_screen', 'search_clips', 'search_testimonies']);
+// Tools offered to Praxiom: no web search, and only read tools plus open_screen.
+assert.deepEqual(TOOLS.map((t) => t.function.name).sort(), ['get_live_status', 'list_recent', 'open_screen', 'search_articles', 'search_clips', 'search_lyrical', 'search_testimonies']);
 
 // Turn 1: the model asks to search testimonies. Turn 2: it answers from the results.
 const sent = [];
@@ -49,7 +49,8 @@ assert.match(sent[0].messages[0].content, /Praxiom/);
 assert.match(sent[0].messages[0].content, /Praxiom/);
 assert.equal(sent[1].messages.at(-1).role, 'tool');
 assert.equal(sent[1].messages.at(-1).tool_call_id, 'call_1');
-assert.deepEqual(JSON.parse(sent[1].messages.at(-1).content), { testimonies: [{ id: 't1', title: 'Healed at last', description: 'A story of healing.' }] });
+// The model sees titles and descriptions only. Ids stay with the verified cards, so the model cannot copy them.
+assert.deepEqual(JSON.parse(sent[1].messages.at(-1).content), { testimonies: [{ title: 'Healed at last', description: 'A story of healing.' }] });
 
 assert.equal(result.reply, 'I found one testimony about healing.');
 assert.equal(result.testimonies[0].id, 't1');

@@ -3,7 +3,7 @@ import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { Linking, Platform } from 'react-native';
 import { repo } from '@/api';
-import { loadPrefs } from '@/storage/prefs';
+import { loadPrefs, pushPrefsPayload } from '@/storage/prefs';
 import type { NotificationPrefs } from '@/types';
 
 // NOTE: The global notification handler is set once in App.tsx.
@@ -75,7 +75,7 @@ export async function registerPushToken(uid: string, prefsOverride?: Notificatio
   const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
   currentToken = token;
   const prefs = prefsOverride ?? (await loadPrefs());
-  await repo.registerPushToken({ token, uid, platform: Platform.OS, prefs: { ...prefs } });
+  await repo.registerPushToken({ token, uid, platform: Platform.OS, prefs: pushPrefsPayload(prefs) });
   return token;
 }
 
@@ -143,7 +143,7 @@ export async function diagnosePush(uid: string): Promise<PushCheckStep[]> {
 
   try {
     const prefs = await loadPrefs();
-    await repo.registerPushToken({ token, uid, platform: Platform.OS, prefs: { ...prefs } });
+    await repo.registerPushToken({ token, uid, platform: Platform.OS, prefs: pushPrefsPayload(prefs) });
     const off = Object.entries(prefs).filter(([, v]) => !v).map(([k]) => k);
     add('Saved to the server', true, off.length ? `Saved. Switched off here: ${off.join(', ')}` : 'Saved. All notification types on');
   } catch (e) {

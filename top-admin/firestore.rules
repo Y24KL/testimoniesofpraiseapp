@@ -199,16 +199,49 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
-    // Push tokens: a user manages only their own tokens.
+    // Push tokens: a user manages only their own tokens. Only the fields the app and the
+    // notification engine use are accepted, with types and bounds (audit S2).
+    function validPushPrefs(p) {
+      return p is map && p.keys().hasOnly(['testimonies', 'live', 'announcements', 'promotions', 'choirs', 'loveworld', 'articles'])
+        && (!('testimonies' in p) || p.testimonies is bool)
+        && (!('live' in p) || p.live is bool)
+        && (!('announcements' in p) || p.announcements is bool)
+        && (!('promotions' in p) || p.promotions is bool)
+        && (!('choirs' in p) || p.choirs is bool)
+        && (!('loveworld' in p) || p.loveworld is bool)
+        && (!('articles' in p) || p.articles is bool);
+    }
+    function validPushToken(d) {
+      return d.keys().hasOnly(['token', 'uid', 'platform', 'prefs', 'updatedAt', 'timeZone', 'utcOffsetMinutes', 'appVersion'])
+        && d.token is string && d.token.size() >= 10 && d.token.size() <= 200
+        && d.token.matches('^Expo(nent)?PushToken\\[.+\\]$')
+        && d.uid is string && d.uid == request.auth.uid
+        && d.platform in ['android', 'ios']
+        && validPushPrefs(d.prefs)
+        && d.updatedAt == request.time
+        && (!('timeZone' in d) || (d.timeZone is string && d.timeZone.size() >= 1 && d.timeZone.size() <= 64))
+        && (!('utcOffsetMinutes' in d) || (d.utcOffsetMinutes is int && d.utcOffsetMinutes >= -840 && d.utcOffsetMinutes <= 840))
+        && (!('appVersion' in d) || (d.appVersion is string && d.appVersion.size() <= 30));
+    }
     match /pushTokens/{token} {
-      allow create, update: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow create, update: if signedIn() && validPushToken(request.resource.data);
       allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
       allow read: if isAdmin();
     }
 
     // Analytics: apps write; admins read AND delete (the "reset everything" tool needs this).
+    // Events are validated: a short snake_case name, a bounded params map, the writer's own uid
+    // (or null) and a server timestamp. Free-form documents are refused (audit S3).
     match /analyticsEvents/{id} {
-      allow create: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['event', 'params', 'uid', 'platform', 'ts'])
+        && request.resource.data.event is string
+        && request.resource.data.event.matches('^[a-z][a-z0-9_]{0,47}$')
+        && request.resource.data.params is map
+        && request.resource.data.params.size() <= 12
+        && (request.resource.data.uid == request.auth.uid || request.resource.data.uid == null)
+        && (!('platform' in request.resource.data) || (request.resource.data.platform is string && request.resource.data.platform.size() <= 16))
+        && request.resource.data.ts == request.time;
       allow read, delete: if isAdmin();
       allow update: if false;
     }

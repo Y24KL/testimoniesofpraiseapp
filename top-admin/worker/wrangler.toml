@@ -22,6 +22,16 @@ MAIL_FROM = "Testimonies of Praise <gtrusouth116@gmail.com>"
 [ai]
 binding = "AI"
 
+# Praxiom allows 2 chat requests in progress per account. This Durable Object is the one shared counter
+# for every Worker instance (see src/praxiomGate.js). Deploying it creates the class on first deploy.
+[[durable_objects.bindings]]
+name = "PRAXIOM_GATE"
+class_name = "PraxiomConcurrencyGate"
+
+[[migrations]]
+tag = "praxiom-gate-v1"
+new_sqlite_classes = ["PraxiomConcurrencyGate"]
+
 # EMAIL VERIFICATION (6-digit codes) — see docs/EMAIL_VERIFICATION_WORKER.md
 # Storage for codes and trusted devices (created with: npx wrangler kv namespace create OTP_KV)
 [[kv_namespaces]]

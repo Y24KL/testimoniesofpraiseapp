@@ -606,6 +606,58 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // =====================================================================
+    // MY T.O.P. (Phase 2): saved items, collections and listening history. Private to the owner, and
+    // deleted with the account. Document ids are canonical: "<contentType>_<contentId>".
+    // =====================================================================
+    function validLibraryKey(d) {
+      return d.contentType in ['testimony', 'lyrical']
+        && d.contentId is string && d.contentId.matches('^[A-Za-z0-9_-]{1,100}$');
+    }
+    match /users/{uid}/saved/{id} {
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['contentType', 'contentId', 'title', 'subtitle', 'thumbnail', 'savedAt'])
+        && validLibraryKey(request.resource.data)
+        && id == request.resource.data.contentType + '_' + request.resource.data.contentId
+        && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 200
+        && (!('subtitle' in request.resource.data) || (request.resource.data.subtitle is string && request.resource.data.subtitle.size() <= 200))
+        && (!('thumbnail' in request.resource.data) || (request.resource.data.thumbnail is string && request.resource.data.thumbnail.size() <= 1000))
+        && request.resource.data.savedAt == request.time;
+      allow update: if false;
+    }
+
+    match /users/{uid}/collections/{cid} {
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'itemIds', 'createdAt', 'updatedAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 60
+        && request.resource.data.itemIds is list && request.resource.data.itemIds.size() <= 200
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'itemIds', 'createdAt', 'updatedAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 60
+        && request.resource.data.itemIds is list && request.resource.data.itemIds.size() <= 200
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    // One document per item. positionSec is where the person stopped, and completed marks a finished item.
+    match /users/{uid}/history/{hid} {
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['contentType', 'contentId', 'title', 'thumbnail', 'positionSec', 'durationSec', 'completed', 'updatedAt'])
+        && validLibraryKey(request.resource.data)
+        && hid == request.resource.data.contentType + '_' + request.resource.data.contentId
+        && request.resource.data.title is string && request.resource.data.title.size() <= 200
+        && (!('thumbnail' in request.resource.data) || (request.resource.data.thumbnail is string && request.resource.data.thumbnail.size() <= 1000))
+        && request.resource.data.positionSec is number && request.resource.data.positionSec >= 0 && request.resource.data.positionSec <= 86400
+        && request.resource.data.durationSec is number && request.resource.data.durationSec >= 0 && request.resource.data.durationSec <= 86400
+        && request.resource.data.completed is bool
+        && request.resource.data.updatedAt == request.time;
+    }
+
     // The owner's interests and discovery settings. Interests are allowlisted tags, never free text.
     match /users/{uid}/private/discovery {
       allow read, delete: if signedIn() && request.auth.uid == uid;

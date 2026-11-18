@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } fr
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { repo } from '@/api';
 import { recordActivity } from '@/discovery/activity';
+import { SaveButton } from '@/library/SaveButton';
 import { CommentsSection } from '@/components/CommentsSection';
 import { DownloadButton } from '@/components/DownloadButton';
 import { ErrorState } from '@/components/ErrorState';
@@ -70,7 +71,11 @@ export function TestimonyDetailsScreen() {
       ) : (
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          {uri ? <VideoPlayer uri={uri} contentId={item.id} label={item.title} autoPlay startAt={startAt} /> : <ErrorState compact message={MESSAGES.video} />}
+          {uri ? (
+            <VideoPlayer uri={uri} contentId={item.id} label={item.title} autoPlay startAt={startAt} library={{ kind: 'testimony', id: item.id, title: item.title, subtitle: item.authorName, thumbnail: item.thumbnail }} />
+          ) : (
+            <ErrorState compact message={MESSAGES.video} />
+          )}
           <View style={{ gap: 6 }}>
             {item.category ? <Text style={styles.cat}>{item.category.toUpperCase()}</Text> : null}
             <Text style={styles.title} accessibilityRole="header">{item.title}</Text>
@@ -79,6 +84,7 @@ export function TestimonyDetailsScreen() {
           {item.description ? <Text style={styles.desc}>{item.description}</Text> : null}
           <View style={{ gap: 12 }}>
             <DownloadButton kind="testimony" data={item} />
+            <SaveButton kind="testimony" id={item.id} title={item.title} subtitle={item.authorName} thumbnail={item.thumbnail} />
             <PrimaryButton title="Share" icon="share-social-outline" variant="outline" onPress={() => void shareMediaUrl(item.title, item.videoUrl, 'video')} />
           </View>
           <CommentsSection type="video" mediaId={item.id} mediaTitle={item.title} />

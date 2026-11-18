@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { repo } from '@/api';
+import { SaveButton } from '@/library/SaveButton';
 import { ErrorState } from '@/components/ErrorState';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -58,7 +59,7 @@ export function LyricalAnalysisVideoScreen() {
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
           {item.videoUrl ? (
-            <VideoPlayer uri={item.videoUrl} contentId={item.id} label={item.title} autoPlay />
+            <VideoPlayer uri={item.videoUrl} contentId={item.id} label={item.title} autoPlay library={{ kind: 'lyrical', id: item.id, title: item.title, subtitle: item.artistName, thumbnail: item.thumbnailUrl }} />
           ) : (
             <ErrorState compact message={MESSAGES.video} />
           )}
@@ -69,6 +70,7 @@ export function LyricalAnalysisVideoScreen() {
             {meta ? <Text style={styles.meta}>{meta}</Text> : null}
           </View>
           {item.description ? <Text style={styles.desc}>{item.description}</Text> : null}
+          <SaveButton kind="lyrical" id={item.id} title={item.title} subtitle={item.artistName} thumbnail={item.thumbnailUrl} />
           <PrimaryButton title="Back to Lyrical Analysis" icon="arrow-back" variant="outline" onPress={back} />
         </ScrollView>
       )}

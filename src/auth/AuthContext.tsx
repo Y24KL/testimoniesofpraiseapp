@@ -11,6 +11,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { auth } from '@/api/firebase';
+import { clearPersonalData } from '@/library/service';
 import { isKingsChatUid } from '@/auth/kingschat';
 import { isNewAccountPending, markNewAccount } from '@/onboarding/welcome';
 import { createPendingProfile, profileGateEnabled, readProfileStatus, saveCompleteProfile, type ProfileStatus } from '@/profile/profileService';
@@ -248,6 +249,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteAccount = useCallback(async () => {
+    // 0. My T.O.P. and discovery data are removed while the owner can still delete them (the rules stop
+    //    working once the account is gone). The person has already confirmed deleting the account.
+    const uid = auth.currentUser?.uid;
+    if (uid) await clearPersonalData(uid).catch(() => undefined);
     try {
       // 1. Remove verification codes and trusted devices from the verification service
       await deleteAccountOnServer();

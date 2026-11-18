@@ -118,6 +118,7 @@ export function ProfileScreen() {
         </View>
         <View style={{ gap: 8 }}>
           <Row icon="notifications-outline" label="Notification preferences" onPress={() => nav.navigate('NotificationSettings')} />
+          <Row icon="bookmark-outline" label="My T.O.P." onPress={() => nav.navigate('MyTop')} />
           <Row icon="download-outline" label="Downloads" onPress={() => nav.navigate('Tabs', { screen: 'Downloads' })} />
           <Row icon="heart-outline" label="Share your testimony" onPress={() => nav.navigate('ShareTestimony')} />
           <Row icon="gift-outline" label="Sponsor Testimonies of Praise" onPress={() => nav.navigate('Sponsor')} />

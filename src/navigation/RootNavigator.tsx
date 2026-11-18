@@ -12,6 +12,7 @@ import { ProfileCompletionScreen } from '@/screens/ProfileCompletionScreen';
 import { NotificationSettingsScreen } from '@/screens/NotificationSettingsScreen';
 import { NotificationsScreen } from '@/screens/NotificationsScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
+import { MyTopScreen } from '@/screens/MyTopScreen';
 import { SearchScreen } from '@/screens/SearchScreen';
 import { AssistantScreen } from '@/screens/AssistantScreen';
 import { ShareTestimonyScreen } from '@/screens/ShareTestimonyScreen';
@@ -100,6 +101,7 @@ export function RootNavigator() {
           />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="MyTop" component={MyTopScreen} />
           <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
           <Stack.Screen name="Search" component={SearchScreen} options={{ animation: 'fade' }} />
           <Stack.Screen name="Assistant" component={AssistantScreen} />

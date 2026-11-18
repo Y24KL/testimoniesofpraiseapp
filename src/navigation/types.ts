@@ -26,6 +26,7 @@ export type RootStackParamList = {
   Sponsor: undefined;
   Notifications: undefined;
   Profile: undefined;
+  MyTop: undefined;
   NotificationSettings: undefined;
   Search: undefined;
   Assistant: undefined;

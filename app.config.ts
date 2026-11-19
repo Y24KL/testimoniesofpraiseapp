@@ -1,5 +1,4 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
-
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Testimonies of Praise',
@@ -44,6 +43,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     permissions: ['android.permission.POST_NOTIFICATIONS', 'android.permission.VIBRATE'],
   },
   plugins: [
+    './plugins/withArm64Only.js',
     // Background audio for TOP Radio / audio testimonies: adds UIBackgroundModes=audio (iOS) and the
     // media-playback foreground service + permissions (Android) that expo-video needs to keep
     // playing with the screen locked and to show notification / lock-screen controls.

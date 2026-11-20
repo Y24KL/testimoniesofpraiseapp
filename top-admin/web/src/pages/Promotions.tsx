@@ -13,7 +13,7 @@ import {
 import { db } from '../firebase';
 import { uploadToCloudinary, uploadsEnabled } from '../uploads';
 import { isHttpUrl } from '../lib';
-import { pushEnabled, sendPush } from '../push';
+import { describePush, pushEnabled, sendPush } from '../push';
 import type { Promotion } from '../types';
 import { Check, Field, Message } from '../components/Field';
 import { Icon } from '../components/Icon';
@@ -136,7 +136,7 @@ export function Promotions() {
         setOk('Promotion published successfully.');
         if (willPush) {
           const r = await sendPush({ pref: 'promotions', title: title.trim(), body: (description.trim() || title.trim()).slice(0, 300), data: { type: 'promotion', contentId: created.id } });
-          setOk(r.ok ? `Promotion published. Push sent to ${r.sent} device${r.sent === 1 ? '' : 's'}.` : `Promotion published, but the push failed: ${r.error}`);
+          setOk(r.ok ? `Promotion published. ${describePush(r)}` : `Promotion published, but the push failed: ${r.error}`);
         }
       }
       resetForm();

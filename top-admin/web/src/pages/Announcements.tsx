@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { addDoc, collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { pushEnabled, sendPush } from '../push';
+import { describePush, pushEnabled, sendPush } from '../push';
 import { fmtDate } from '../lib';
 import type { Announcement } from '../types';
 import { Check, Field, Message } from '../components/Field';
@@ -55,7 +55,7 @@ export function Announcements() {
           setBusy(false);
           return;
         }
-        pushNote = ` Push sent to ${r.sent} device${r.sent === 1 ? '' : 's'}.`;
+        pushNote = ` ${describePush(r)}`;
       } else if (sendPush_) {
         pushNote = ' (Push isn’t set up, so it was added to the in-app list only.)';
       }

@@ -18,7 +18,27 @@ export interface PushRequest {
  * Sends a push through the free relay (worker/). The relay checks that the caller is an admin by
  * reading the device list with THEIR sign-in token, so nobody else can trigger notifications.
  */
-export async function sendPush(req: PushRequest): Promise<{ ok: true; sent: number } | { ok: false; error: string }> {
+export interface PushResult {
+  ok: true;
+  sent: number;
+  failed: number;
+  devices: number;
+  reasons?: Record<string, number>;
+  firstError?: string;
+}
+
+/** One-line summary of a relay result for the admin, including why sends failed. */
+export function describePush(r: PushResult): string {
+  if (r.devices === 0) return 'No phones are signed up for this notification type yet, so no push was sent.';
+  let s = `Push sent to ${r.sent} of ${r.devices} device${r.devices === 1 ? '' : 's'}.`;
+  if (r.failed) {
+    const why = Object.entries(r.reasons ?? {}).map(([k, n]) => `${k} ×${n}`).join(', ');
+    s += ` ${r.failed} failed${why ? ` (${why})` : ''}${r.firstError ? `: ${r.firstError}` : ''}.`;
+  }
+  return s;
+}
+
+export async function sendPush(req: PushRequest): Promise<PushResult | { ok: false; error: string }> {
   if (!URL_) return { ok: false, error: 'Push relay is not configured.' };
   try {
     const token = await auth.currentUser?.getIdToken();
@@ -30,7 +50,7 @@ export async function sendPush(req: PushRequest): Promise<{ ok: true; sent: numb
     });
     const j = await res.json().catch(() => ({}));
     if (!res.ok) return { ok: false, error: j.error ?? `Relay error (${res.status}).` };
-    return { ok: true, sent: j.sent ?? 0 };
+    return { ok: true, sent: j.sent ?? 0, failed: j.failed ?? 0, devices: j.devices ?? 0, reasons: j.reasons, firstError: j.firstError };
   } catch {
     return { ok: false, error: 'Could not reach the push relay.' };
   }

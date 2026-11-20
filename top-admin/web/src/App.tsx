@@ -4,6 +4,9 @@ import { doc, getDoc } from 'firebase/firestore';
 import { auth, configured, db } from './firebase';
 import type { Route } from './types';
 import { Layout } from './components/Layout';
+import { FeedbackProvider } from './components/feedback';
+import { Icon } from './components/Icon';
+import { PendingCountsProvider } from './hooks/usePendingCounts';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Testimonies } from './pages/Testimonies';
@@ -54,26 +57,44 @@ export default function App() {
 
   if (!configured) {
     return (
-      <div className="center"><div className="card" style={{ maxWidth: 520 }}>
-        <h2>Firebase isn’t configured</h2>
-        <p className="muted">Copy <code>.env.example</code> to <code>.env</code>, fill in the Firebase web config, then run <code>npm run dev</code> again.</p>
-      </div></div>
+      <div className="auth-screen">
+        <div className="card system-card">
+          <div className="state-ic warn"><Icon name="alert" size={22} /></div>
+          <h2>Firebase isn’t configured</h2>
+          <p className="muted">Copy <code>.env.example</code> to <code>.env</code>, fill in the Firebase web config, then run <code>npm run dev</code> again.</p>
+        </div>
+      </div>
     );
   }
-  if (gate.state === 'loading') return <div className="center muted">Loading…</div>;
+  if (gate.state === 'loading') {
+    return (
+      <div className="auth-screen">
+        <div className="loader" role="status" aria-live="polite">
+          <img src="/logo.png" alt="" />
+          <span className="spin" aria-hidden="true" />
+          <span className="small">Opening the Admin Control Centre…</span>
+        </div>
+      </div>
+    );
+  }
   if (gate.state === 'out') return <Login />;
   if (gate.state === 'denied') {
     return (
-      <div className="center"><div className="card" style={{ maxWidth: 520 }}>
-        <h2>Not authorised</h2>
-        <p className="muted">{gate.user.email} is signed in but isn’t an admin. Ask an existing admin to add your user ID:</p>
-        <p><code>{gate.user.uid}</code></p>
-        <button className="btn ghost" onClick={() => void signOut(auth)}>Sign out</button>
-      </div></div>
+      <div className="auth-screen">
+        <div className="card system-card">
+          <div className="state-ic bad"><Icon name="lock" size={22} /></div>
+          <h2>Not authorised</h2>
+          <p className="muted">{gate.user.email} is signed in but isn’t an admin. Ask an existing admin to add your user ID to the admins list:</p>
+          <p><code className="wrap-anywhere">{gate.user.uid}</code></p>
+          <button className="btn ghost" onClick={() => void signOut(auth)}><Icon name="logOut" size={16} />Sign out</button>
+        </div>
+      </div>
     );
   }
 
   return (
+    <FeedbackProvider>
+    <PendingCountsProvider>
     <Layout route={route} go={setRoute}>
       {route.name === 'dashboard' && <Dashboard go={setRoute} />}
       {route.name === 'testimonies' && <Testimonies go={setRoute} />}
@@ -101,5 +122,7 @@ export default function App() {
       {route.name === 'sponsorships' && <Sponsorships />}
       {route.name === 'data' && <DataSettings />}
     </Layout>
+    </PendingCountsProvider>
+    </FeedbackProvider>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { notifyChoirFeatured } from '../notify';
@@ -6,6 +6,9 @@ import { pushEnabled } from '../push';
 import { uploadToCloudinary, uploadVideo, uploadsEnabled } from '../uploads';
 import { fmtDuration, isHls, isHttpUrl, parseDuration } from '../lib';
 import { Check, Field, Message } from '../components/Field';
+import { Icon } from '../components/Icon';
+import { useConfirm, useToast } from '../components/feedback';
+import { EmptyState, GlassCard, LoadingList, PageHeader, SectionHeader, StatusBadge, UploadProgress } from '../components/ui';
 
 /** One entry in the "Featured choirs" showcase (Firestore: featuredChoirs). */
 interface FeaturedEntry {
@@ -35,6 +38,9 @@ export function FeaturedChoirs() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
+  const formRef = useRef<HTMLDivElement>(null);
+  const confirm = useConfirm();
+  const toast = useToast();
 
   useEffect(() => {
     const q = query(collection(db, 'featuredChoirs'), orderBy('order', 'asc'));
@@ -65,7 +71,7 @@ export function FeaturedChoirs() {
     setIsPublished(c.isPublished);
     setErr('');
     setOk('');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const pickVideo = async (file?: File) => {
@@ -113,6 +119,8 @@ export function FeaturedChoirs() {
         isPublished,
         updatedAt: serverTimestamp(),
       };
+      const willPush = !editingId && isPublished && sendPushOn && pushEnabled;
+      if (willPush && !(await confirm({ title: 'Add and send a push notification?', message: 'App users who chose Featured Choirs are notified straight away.', confirmLabel: 'Add and notify' }))) return;
       if (editingId) {
         await updateDoc(doc(db, 'featuredChoirs', editingId), data);
         setOk('Saved.');
@@ -120,8 +128,7 @@ export function FeaturedChoirs() {
         const nextOrder = entries && entries.length ? Math.max(...entries.map((c) => c.order)) + 1 : 0;
         const created = await addDoc(collection(db, 'featuredChoirs'), { ...data, order: nextOrder, createdAt: serverTimestamp() });
         setOk('Added to the showcase.');
-        if (isPublished && sendPushOn && pushEnabled) {
-          if (!confirm('This sends a push notification to app users who chose Featured Choirs. Continue?')) return;
+        if (willPush) {
           const r = await notifyChoirFeatured(created.id, groupName.trim());
           setOk(r.status === 'failed' ? `Added to the showcase, but the push failed: ${r.message}` : 'Added to the showcase and notification sent.');
         }
@@ -149,7 +156,7 @@ export function FeaturedChoirs() {
   };
 
   const remove = async (c: FeaturedEntry) => {
-    if (!confirm(`Remove “${c.groupName}” from the showcase?`)) return;
+    if (!(await confirm({ title: `Remove “${c.groupName}” from the showcase?`, message: 'It disappears from the app and website straight away.', confirmLabel: 'Remove', danger: true }))) return;
     try {
       await deleteDoc(doc(db, 'featuredChoirs', c.id));
       if (editingId === c.id) resetForm();
@@ -158,61 +165,117 @@ export function FeaturedChoirs() {
     }
   };
 
-  return (
-    <div>
-      <h1>Featured choirs</h1>
-      <p className="muted">Groups shown in the “Featured choirs” showcase on the app and web. Requests from groups are reviewed under “Choir requests”.</p>
+  const toggle = async (c: FeaturedEntry) => {
+    try {
+      await updateDoc(doc(db, 'featuredChoirs', c.id), { isPublished: !c.isPublished, updatedAt: serverTimestamp() });
+      toast.ok(c.isPublished ? `${c.groupName} is hidden from the showcase.` : `${c.groupName} is shown in the showcase.`);
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+  };
 
-      <div className="card">
-        <h2>{editingId ? 'Edit entry' : 'New entry'}</h2>
-        <Field label="Group name"><input value={groupName} onChange={(e) => setGroupName(e.target.value)} /></Field>
-        <Field label="Song title"><input value={songTitle} onChange={(e) => setSongTitle(e.target.value)} /></Field>
-        <Field label="Video link"><input type="url" placeholder="https://" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} /></Field>
-        {uploadsEnabled ? (
-          <Field label="…or upload a video">
-            <input type="file" accept="video/*" disabled={uploadPct !== null} onChange={(e) => void pickVideo(e.target.files?.[0])} />
-          </Field>
-        ) : null}
-        {uploadPct !== null ? <div className="small muted">Uploading video… {uploadPct}%</div> : null}
-        <Field label="Thumbnail link"><input type="url" placeholder="https://" value={thumbnailUrl} onChange={(e) => setThumbnailUrl(e.target.value)} /></Field>
-        {uploadsEnabled ? (
-          <Field label="…or upload a thumbnail image">
-            <input type="file" accept="image/*" disabled={thumbPct !== null} onChange={(e) => void pickThumb(e.target.files?.[0])} />
-          </Field>
-        ) : null}
-        {thumbPct !== null ? <div className="small muted">Uploading image… {thumbPct}%</div> : null}
-        {thumbnailUrl && isHttpUrl(thumbnailUrl) ? <img src={thumbnailUrl} alt="Thumbnail preview" style={{ maxWidth: 260, borderRadius: 10 }} /> : null}
-        <Field label="Duration (m:ss or h:mm:ss)"><input value={durationText} onChange={(e) => setDurationText(e.target.value)} placeholder="6:10" /></Field>
-        <Check checked={isPublished} onChange={setIsPublished} label="Published (visible in the showcase)" />
-        {!editingId ? <Check checked={sendPushOn} onChange={setSendPushOn} label="Send a push notification now" /> : null}
+  return (
+    <>
+      <PageHeader
+        eyebrow="Content Studio"
+        title="Featured Choirs"
+        sub="Groups shown in the “Featured choirs” showcase in the app and on the web. Requests from groups are reviewed under Choir Requests."
+        actions={editingId ? <button type="button" className="btn ghost" onClick={resetForm}><Icon name="plus" size={16} />New entry</button> : undefined}
+      />
+
+      <div ref={formRef} className={`card ${editingId ? 'editing-ring' : ''}`}>
+        <SectionHeader icon={editingId ? 'edit' : 'plus'} title={editingId ? 'Edit entry' : 'Add to the showcase'} hint={editingId ? `Editing “${groupName}”` : 'New entries go to the end of the showcase.'} />
+        <div className="compose" style={{ gridTemplateColumns: 'minmax(0, 1fr) 320px' }}>
+          <div>
+            <div className="two">
+              <Field label="Group name *"><input value={groupName} onChange={(e) => setGroupName(e.target.value)} /></Field>
+              <Field label="Song title *"><input value={songTitle} onChange={(e) => setSongTitle(e.target.value)} /></Field>
+            </div>
+            <Field label="Video link *" hint="A video file or a video page link. Live (.m3u8) streams can’t be used here.">
+              <div className="input-row">
+                <input type="url" placeholder="https://" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} />
+                {uploadsEnabled ? (
+                  <label className={`btn ghost small file-btn ${uploadPct !== null ? 'disabled' : ''}`}>
+                    <Icon name="upload" size={14} />Upload
+                    <input type="file" accept="video/*" disabled={uploadPct !== null} onChange={(e) => void pickVideo(e.target.files?.[0])} />
+                  </label>
+                ) : null}
+              </div>
+            </Field>
+            {uploadPct !== null ? <UploadProgress label="Uploading video" pct={uploadPct} /> : null}
+            <Field label="Thumbnail link">
+              <div className="input-row">
+                <input type="url" placeholder="https://" value={thumbnailUrl} onChange={(e) => setThumbnailUrl(e.target.value)} />
+                {uploadsEnabled ? (
+                  <label className={`btn ghost small file-btn ${thumbPct !== null ? 'disabled' : ''}`}>
+                    <Icon name="upload" size={14} />Upload
+                    <input type="file" accept="image/*" disabled={thumbPct !== null} onChange={(e) => void pickThumb(e.target.files?.[0])} />
+                  </label>
+                ) : null}
+              </div>
+            </Field>
+            {thumbPct !== null ? <UploadProgress label="Uploading thumbnail" pct={thumbPct} /> : null}
+            <div className="form-grid">
+              <Field label="Duration" hint="m:ss or h:mm:ss"><input value={durationText} onChange={(e) => setDurationText(e.target.value)} placeholder="6:10" /></Field>
+            </div>
+          </div>
+          <div className="stack-sm">
+            <span className="small muted">Preview</span>
+            {videoUrl && isHttpUrl(videoUrl) && !isHls(videoUrl) && /\.(mp4|m4v|mov|webm)(\?|$)/i.test(videoUrl) ? (
+              <video className="preview" src={videoUrl} poster={thumbnailUrl && isHttpUrl(thumbnailUrl) ? thumbnailUrl : undefined} controls preload="metadata" />
+            ) : thumbnailUrl && isHttpUrl(thumbnailUrl) ? (
+              <img className="cover-preview" src={thumbnailUrl} alt="Thumbnail preview" />
+            ) : (
+              <div className="cover-empty">Add a thumbnail or a video file to preview it here.</div>
+            )}
+          </div>
+        </div>
+        <div className="form-actions">
+          <div className="checks">
+            <Check checked={isPublished} onChange={setIsPublished} label="Published" hint="Visible in the showcase." />
+            {!editingId ? <Check checked={sendPushOn} onChange={setSendPushOn} label="Send a push notification" disabled={!pushEnabled || !isPublished} hint={!pushEnabled ? 'Push isn’t configured.' : undefined} /> : null}
+          </div>
+          <div className="row">
+            {editingId ? <button type="button" className="btn ghost" onClick={resetForm}>Cancel edit</button> : null}
+            <button type="button" className="btn primary" onClick={() => void save()} disabled={busy || uploadPct !== null || thumbPct !== null}>
+              {busy ? <span className="spin sm" aria-hidden="true" /> : <Icon name="check" size={16} />}{busy ? 'Saving…' : editingId ? 'Save changes' : 'Add to showcase'}
+            </button>
+          </div>
+        </div>
         {err ? <Message kind="err">{err}</Message> : null}
         {ok ? <Message kind="ok">{ok}</Message> : null}
-        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <button className="btn" onClick={() => void save()} disabled={busy}>{busy ? 'Saving…' : editingId ? 'Save changes' : 'Add to showcase'}</button>
-          {editingId ? <button className="btn ghost" onClick={resetForm}>Cancel edit</button> : null}
-        </div>
       </div>
 
-      <div className="card">
-        <h2>Showcase order</h2>
-        {!entries ? <div className="muted">Loading…</div> : null}
-        {entries && entries.length === 0 ? <div className="muted">No entries yet.</div> : null}
-        {entries?.map((c, i) => (
-          <div key={c.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 0', borderTop: '1px solid #3A2253', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <b>{c.groupName}</b>
-              <div className="small muted">{c.songTitle} {c.isPublished ? '' : '• Hidden'}</div>
+      <GlassCard>
+        <SectionHeader icon="layers" title="Showcase order" hint={entries ? `${entries.length} entries · ${entries.filter((c) => c.isPublished).length} shown. The app shows them in this order.` : undefined} />
+        {!entries ? <LoadingList rows={3} /> : null}
+        {entries && entries.length === 0 ? <EmptyState icon="users" title="No entries yet">Add the first group with the form above.</EmptyState> : null}
+        <div className="order-list">
+          {entries?.map((c, i) => (
+            <div key={c.id} className="order-row">
+              <div className="moves">
+                <button type="button" className="icon-btn xs" onClick={() => void move(i, -1)} disabled={i === 0} aria-label={`Move ${c.groupName} up`}><Icon name="arrowUp" size={14} /></button>
+                <button type="button" className="icon-btn xs" onClick={() => void move(i, 1)} disabled={i === entries.length - 1} aria-label={`Move ${c.groupName} down`}><Icon name="arrowDown" size={14} /></button>
+              </div>
+              {c.thumbnailUrl ? <img className="thumb" src={c.thumbnailUrl} alt="" loading="lazy" /> : <div className="thumb center-icon"><Icon name="users" size={18} /></div>}
+              <div className="info">
+                <div className="t" title={c.groupName}>{c.groupName}</div>
+                <div className="tags">
+                  <StatusBadge kind={c.isPublished ? 'ok' : 'draft'}>{c.isPublished ? 'Shown' : 'Hidden'}</StatusBadge>
+                  {c.songTitle ? <span className="tag"><Icon name="music" size={11} />{c.songTitle}</span> : null}
+                  {c.duration ? <span className="tag"><Icon name="clock" size={11} />{fmtDuration(c.duration)}</span> : null}
+                </div>
+              </div>
+              <div className="row-actions">
+                <button type="button" className="btn small ghost" onClick={() => edit(c)}><Icon name="edit" size={14} />Edit</button>
+                <button type="button" className={`btn small ${c.isPublished ? 'ghost' : 'success'}`} onClick={() => void toggle(c)}>{c.isPublished ? 'Hide' : 'Show'}</button>
+                <a className="btn small ghost" href={c.videoUrl} target="_blank" rel="noreferrer" aria-label={`Open ${c.groupName}'s video`}><Icon name="external" size={14} /></a>
+                <button type="button" className="btn small danger" aria-label={`Remove ${c.groupName}`} onClick={() => void remove(c)}><Icon name="trash" size={14} /></button>
+              </div>
             </div>
-            <button className="btn ghost" onClick={() => void move(i, -1)} disabled={i === 0} aria-label={`Move ${c.groupName} up`}>↑</button>
-            <button className="btn ghost" onClick={() => void move(i, 1)} disabled={i === entries.length - 1} aria-label={`Move ${c.groupName} down`}>↓</button>
-            <button className="btn ghost" onClick={() => void updateDoc(doc(db, 'featuredChoirs', c.id), { isPublished: !c.isPublished, updatedAt: serverTimestamp() })}>
-              {c.isPublished ? 'Hide' : 'Show'}
-            </button>
-            <button className="btn ghost" onClick={() => edit(c)}>Edit</button>
-            <button className="btn ghost" onClick={() => void remove(c)}>Remove</button>
-          </div>
-        ))}
-      </div>
-    </div>
+          ))}
+        </div>
+      </GlassCard>
+    </>
   );
 }

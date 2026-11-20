@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Timestamp,
   deleteDoc,
@@ -19,6 +19,10 @@ import { pushEnabled } from '../push';
 import { uploadToCloudinary, uploadVideo, uploadsEnabled } from '../uploads';
 import { fmtDuration, isHls, isHttpUrl, parseDuration } from '../lib';
 import { Check, Field, Message } from '../components/Field';
+import { Icon } from '../components/Icon';
+import { StreamPreview } from '../components/StreamPreview';
+import { useConfirm } from '../components/feedback';
+import { EmptyState, GlassCard, LoadingList, PageHeader, SearchInput, SectionHeader, StatusBadge, UploadProgress } from '../components/ui';
 
 /** "Worship with your LoveWorld Singers" library (Firestore: loveworldSingersVideos). */
 interface SingersVideo {
@@ -64,6 +68,9 @@ export function LoveworldSingers() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
+  const [search, setSearch] = useState('');
+  const formRef = useRef<HTMLDivElement>(null);
+  const confirm = useConfirm();
 
   useEffect(() => {
     const q = query(collection(db, 'loveworldSingersVideos'), orderBy('order', 'asc'));
@@ -100,7 +107,7 @@ export function LoveworldSingers() {
     setIsPublished(v.isPublished);
     setErr('');
     setOk('');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const pickVideo = async (file?: File) => {
@@ -155,6 +162,8 @@ export function LoveworldSingers() {
         isPublished,
         updatedAt: serverTimestamp(),
       };
+      const willPush = !editingId && isPublished && sendPushOn && pushEnabled;
+      if (willPush && !(await confirm({ title: 'Publish and send a push notification?', message: 'App users who chose LoveWorld Singers are notified straight away.', confirmLabel: 'Publish and notify' }))) return;
       if (editingId) {
         await updateDoc(doc(db, 'loveworldSingersVideos', editingId), data);
         setOk('Saved.');
@@ -163,8 +172,7 @@ export function LoveworldSingers() {
         const nextOrder = videos && videos.length ? Math.max(...videos.map((v) => v.order)) + 1 : 0;
         const created = await addDoc(collection(db, 'loveworldSingersVideos'), { ...data, order: nextOrder, createdAt: serverTimestamp() });
         setOk(isPublished ? 'Published. It is now visible in the app and on the web.' : 'Saved as a draft. It is hidden from users until you publish it.');
-        if (isPublished && sendPushOn && pushEnabled) {
-          if (!confirm('This sends a push notification to app users who chose LoveWorld Singers. Continue?')) return;
+        if (willPush) {
           const r = await notifyLoveworldPublished(created.id, title.trim());
           setOk(r.status === 'failed' ? `Published, but the push failed: ${r.message}` : 'Published and notification sent.');
         }
@@ -204,7 +212,7 @@ export function LoveworldSingers() {
   };
 
   const remove = async (v: SingersVideo) => {
-    if (!confirm(`Delete “${v.title}”? The app and web will no longer show it.`)) return;
+    if (!(await confirm({ title: `Delete “${v.title}”?`, message: 'The app and website stop showing it straight away. This can’t be undone.', confirmLabel: 'Delete permanently', danger: true }))) return;
     setErr('');
     try {
       await deleteDoc(doc(db, 'loveworldSingersVideos', v.id));
@@ -238,89 +246,139 @@ export function LoveworldSingers() {
     }
   };
 
+  const needle = search.trim().toLowerCase();
+  const filtering = needle.length > 0;
+  const listed = (videos ?? []).map((v, i) => ({ v, i })).filter(({ v }) => !filtering || [v.title, v.description ?? ''].some((x) => x.toLowerCase().includes(needle)));
+
   return (
-    <div>
-      <h1>LoveWorld Singers</h1>
-      <p className="muted">The “Worship with your LoveWorld Singers” library. Published videos appear in the app and on the web straight away.</p>
+    <>
+      <PageHeader
+        eyebrow="Content Studio"
+        title="LoveWorld Singers"
+        sub="The “Worship with your LoveWorld Singers” library. Published videos appear in the app and on the web straight away."
+        actions={editingId ? <button type="button" className="btn ghost" onClick={resetForm}><Icon name="plus" size={16} />New video</button> : undefined}
+      />
 
-      <form className="card" onSubmit={saveHeroVideo}>
-        <h2>Page video</h2>
-        <p className="small muted">The background video at the top of the LoveWorld Singers page in the app and on the web.</p>
-        <Field label="Video link (https://, MP4)">
-          <input type="url" value={heroVideoUrl} onChange={(e) => setHeroVideoUrl(e.target.value)} placeholder="https://..." />
-        </Field>
-        {heroVideoUrl ? (
-          <video src={heroVideoUrl} controls muted style={{ width: '100%', maxHeight: 200, borderRadius: 6, backgroundColor: '#000', marginTop: 10 }} />
-        ) : null}
-        {heroErr ? <Message kind="err">{heroErr}</Message> : null}
-        {heroOk ? <Message kind="ok">{heroOk}</Message> : null}
-        <div className="row between" style={{ marginTop: 12 }}>
-          <button type="button" className="btn ghost" onClick={() => setHeroVideoUrl(DEFAULT_HERO_VIDEO)}>Reset to default</button>
-          <button type="submit" className="btn primary" disabled={heroBusy}>{heroBusy ? 'Saving…' : 'Save page video'}</button>
+      <div ref={formRef} className={`card ${editingId ? 'editing-ring' : ''}`}>
+        <SectionHeader icon={editingId ? 'edit' : 'plus'} title={editingId ? 'Edit video' : 'Add a video'} hint={editingId ? `Editing “${title}”` : 'New videos go to the end of the library.'} />
+        <div className="compose" style={{ gridTemplateColumns: 'minmax(0, 1fr) 320px' }}>
+          <div>
+            <Field label="Title *"><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Song title" /></Field>
+            <Field label="Description"><textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
+            <Field label="Video link *" hint="MP4 is needed for downloads. Paste a link or upload a file.">
+              <div className="input-row">
+                <input type="url" placeholder="https://" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} />
+                {uploadsEnabled ? (
+                  <label className={`btn ghost small file-btn ${uploadPct !== null ? 'disabled' : ''}`}>
+                    <Icon name="upload" size={14} />Upload
+                    <input type="file" accept="video/*" disabled={uploadPct !== null} onChange={(e) => void pickVideo(e.target.files?.[0])} />
+                  </label>
+                ) : null}
+              </div>
+            </Field>
+            {uploadPct !== null ? <UploadProgress label="Uploading video" pct={uploadPct} /> : null}
+            <Field label="Thumbnail link">
+              <div className="input-row">
+                <input type="url" placeholder="https://" value={thumbnailUrl} onChange={(e) => setThumbnailUrl(e.target.value)} />
+                {uploadsEnabled ? (
+                  <label className={`btn ghost small file-btn ${thumbPct !== null ? 'disabled' : ''}`}>
+                    <Icon name="upload" size={14} />Upload
+                    <input type="file" accept="image/*" disabled={thumbPct !== null} onChange={(e) => void pickThumb(e.target.files?.[0])} />
+                  </label>
+                ) : null}
+              </div>
+            </Field>
+            {thumbPct !== null ? <UploadProgress label="Uploading thumbnail" pct={thumbPct} /> : null}
+            <div className="form-grid">
+              <Field label="Duration" hint="m:ss or h:mm:ss"><input value={durationText} onChange={(e) => setDurationText(e.target.value)} placeholder="4:32" /></Field>
+              <Field label="Publish date"><input type="date" value={publishDate} onChange={(e) => setPublishDate(e.target.value)} /></Field>
+            </div>
+          </div>
+          <div className="stack-sm">
+            <span className="small muted">Preview</span>
+            {videoUrl && isHttpUrl(videoUrl) ? (
+              isHls(videoUrl) ? <StreamPreview url={videoUrl} /> : <video className="preview" src={videoUrl} poster={thumbnailUrl && isHttpUrl(thumbnailUrl) ? thumbnailUrl : undefined} controls preload="metadata" />
+            ) : thumbnailUrl && isHttpUrl(thumbnailUrl) ? (
+              <img className="cover-preview" src={thumbnailUrl} alt="Thumbnail preview" />
+            ) : (
+              <div className="cover-empty">Add a video link or upload a file to preview it here.</div>
+            )}
+          </div>
         </div>
-      </form>
-
-      <div className="card">
-        <h2>{editingId ? 'Edit video' : 'New video'}</h2>
-        <Field label="Title"><input value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
-        <Field label="Description"><textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
-        <Field label="Video link (MP4 is needed for downloads)" hint="Paste a link or upload a file below.">
-          <input type="url" placeholder="https://" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} />
-        </Field>
-        {uploadsEnabled ? (
-          <Field label="…or upload a video">
-            <input type="file" accept="video/*" disabled={uploadPct !== null} onChange={(e) => void pickVideo(e.target.files?.[0])} />
-          </Field>
-        ) : null}
-        {uploadPct !== null ? <div className="small muted">Uploading video… {uploadPct}%</div> : null}
-        <Field label="Thumbnail link"><input type="url" placeholder="https://" value={thumbnailUrl} onChange={(e) => setThumbnailUrl(e.target.value)} /></Field>
-        {uploadsEnabled ? (
-          <Field label="…or upload a thumbnail image">
-            <input type="file" accept="image/*" disabled={thumbPct !== null} onChange={(e) => void pickThumb(e.target.files?.[0])} />
-          </Field>
-        ) : null}
-        {thumbPct !== null ? <div className="small muted">Uploading image… {thumbPct}%</div> : null}
-        {thumbnailUrl && isHttpUrl(thumbnailUrl) ? <img src={thumbnailUrl} alt="Thumbnail preview" style={{ maxWidth: 260, borderRadius: 10 }} /> : null}
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <Field label="Duration (m:ss or h:mm:ss)" style={{ flex: 1, minWidth: 160 }}><input value={durationText} onChange={(e) => setDurationText(e.target.value)} placeholder="4:32" /></Field>
-          <Field label="Publish date" style={{ flex: 1, minWidth: 160 }}><input type="date" value={publishDate} onChange={(e) => setPublishDate(e.target.value)} /></Field>
+        <div className="form-actions">
+          <div className="checks">
+            <Check checked={isPublished} onChange={setIsPublished} label="Published" hint="Hidden from users until published." />
+            {!editingId ? <Check checked={sendPushOn} onChange={setSendPushOn} label="Send a push notification" disabled={!pushEnabled || !isPublished} hint={!pushEnabled ? 'Push isn’t configured.' : undefined} /> : null}
+            <Check checked={isFeatured} onChange={setIsFeatured} label="Featured" hint="Shown first in the library." />
+            <Check checked={isDownloadable} onChange={setIsDownloadable} label="Allow downloads" hint="Needs an MP4 link." />
+          </div>
+          <div className="row">
+            {editingId ? <button type="button" className="btn ghost" onClick={resetForm}>Cancel edit</button> : null}
+            <button type="button" className="btn primary" onClick={() => void save()} disabled={busy || uploadPct !== null || thumbPct !== null}>
+              {busy ? <span className="spin sm" aria-hidden="true" /> : <Icon name="check" size={16} />}{busy ? 'Saving…' : editingId ? 'Save changes' : 'Save video'}
+            </button>
+          </div>
         </div>
-        <Check checked={isPublished} onChange={setIsPublished} label="Published (visible to app users)" hint="Unpublished videos are hidden from users." />
-        {!editingId ? <Check checked={sendPushOn} onChange={setSendPushOn} label="Send a push notification now" /> : null}
-        <Check checked={isFeatured} onChange={setIsFeatured} label="Featured (shown first in the library)" />
-        <Check checked={isDownloadable} onChange={setIsDownloadable} label="Allow downloads in the Downloads section" hint="Needs an MP4 link." />
         {err ? <Message kind="err">{err}</Message> : null}
         {ok ? <Message kind="ok">{ok}</Message> : null}
-        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <button className="btn" onClick={() => void save()} disabled={busy}>{busy ? 'Saving…' : editingId ? 'Save changes' : 'Save video'}</button>
-          {editingId ? <button className="btn ghost" onClick={resetForm}>Cancel edit</button> : null}
-        </div>
       </div>
 
-      <div className="card">
-        <h2>Library order</h2>
-        {!videos ? <div className="muted">Loading…</div> : null}
-        {videos && videos.length === 0 ? <div className="muted">No videos yet.</div> : null}
-        {videos?.map((v, i) => (
-          <div key={v.id} className="row" style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 0', borderTop: '1px solid #3A2253', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <b>{v.title}</b>
-              <div className="small muted">
-                {v.isPublished ? 'Published' : 'Draft (hidden)'}
-                {v.isFeatured ? ' • Featured' : ''}
-                {v.isDownloadable ? ' • Downloads on' : ' • Downloads off'}
+      <GlassCard>
+        <SectionHeader
+          icon="layers"
+          title="Library order"
+          hint={videos ? `${videos.length} videos · ${videos.filter((v) => v.isPublished).length} published. The app shows them in this order.` : undefined}
+          actions={<SearchInput value={search} onChange={setSearch} placeholder="Search the library…" label="Search the library" />}
+        />
+        {filtering ? <p className="result-count">Reordering is off while searching.</p> : null}
+        {!videos ? <LoadingList rows={4} /> : null}
+        {videos && listed.length === 0 ? <EmptyState icon="mic" title={videos.length === 0 ? 'No videos yet' : 'No videos match'}>{videos.length === 0 ? 'Add the first video with the form above.' : 'Try another search.'}</EmptyState> : null}
+        <div className="order-list">
+          {listed.map(({ v, i }) => (
+            <div key={v.id} className="order-row">
+              <div className="moves">
+                <button type="button" className="icon-btn xs" onClick={() => void move(i, -1)} disabled={filtering || i === 0} aria-label={`Move ${v.title} up`}><Icon name="arrowUp" size={14} /></button>
+                <button type="button" className="icon-btn xs" onClick={() => void move(i, 1)} disabled={filtering || !videos || i === videos.length - 1} aria-label={`Move ${v.title} down`}><Icon name="arrowDown" size={14} /></button>
+              </div>
+              {v.thumbnailUrl ? <img className="thumb" src={v.thumbnailUrl} alt="" loading="lazy" /> : <div className="thumb center-icon"><Icon name="mic" size={18} /></div>}
+              <div className="info">
+                <div className="t" title={v.title}>{v.title}</div>
+                <div className="tags">
+                  <StatusBadge kind={v.isPublished ? 'ok' : 'draft'}>{v.isPublished ? 'Published' : 'Draft'}</StatusBadge>
+                  {v.isFeatured ? <span className="tag gold"><Icon name="star" size={11} />Featured</span> : null}
+                  <span className="tag"><Icon name="download" size={11} />{v.isDownloadable ? 'Downloads on' : 'Downloads off'}</span>
+                  {v.duration ? <span className="tag"><Icon name="clock" size={11} />{fmtDuration(v.duration)}</span> : null}
+                </div>
+              </div>
+              <div className="row-actions">
+                <button type="button" className="btn small ghost" onClick={() => edit(v)}><Icon name="edit" size={14} />Edit</button>
+                <button type="button" className={`btn small ${v.isPublished ? 'ghost' : 'success'}`} onClick={() => void setField(v, { isPublished: !v.isPublished })}>{v.isPublished ? 'Unpublish' : 'Publish'}</button>
+                <button type="button" className="btn small ghost" onClick={() => void setField(v, { isFeatured: !v.isFeatured })}>{v.isFeatured ? 'Unfeature' : 'Feature'}</button>
+                <button type="button" className="btn small ghost" onClick={() => void setField(v, { isDownloadable: !v.isDownloadable })}>{v.isDownloadable ? 'Disable download' : 'Enable download'}</button>
+                <button type="button" className="btn small danger" aria-label={`Delete ${v.title}`} onClick={() => void remove(v)}><Icon name="trash" size={14} /></button>
               </div>
             </div>
-            <button className="btn ghost" onClick={() => void move(i, -1)} disabled={i === 0} aria-label={`Move ${v.title} up`}>↑</button>
-            <button className="btn ghost" onClick={() => void move(i, 1)} disabled={!videos || i === videos.length - 1} aria-label={`Move ${v.title} down`}>↓</button>
-            <button className="btn ghost" onClick={() => void setField(v, { isPublished: !v.isPublished })}>{v.isPublished ? 'Unpublish' : 'Publish'}</button>
-            <button className="btn ghost" onClick={() => void setField(v, { isFeatured: !v.isFeatured })}>{v.isFeatured ? 'Unfeature' : 'Feature'}</button>
-            <button className="btn ghost" onClick={() => void setField(v, { isDownloadable: !v.isDownloadable })}>{v.isDownloadable ? 'Disable download' : 'Enable download'}</button>
-            <button className="btn ghost" onClick={() => edit(v)}>Edit</button>
-            <button className="btn ghost" onClick={() => void remove(v)}>Delete</button>
+          ))}
+        </div>
+      </GlassCard>
+
+      <form className="card" onSubmit={saveHeroVideo}>
+        <SectionHeader icon="film" title="Page background video" hint="Plays at the top of the LoveWorld Singers page in the app and on the web." />
+        <div className="compose" style={{ gridTemplateColumns: 'minmax(0, 1fr) 320px' }}>
+          <div>
+            <Field label="Video link (https://, MP4)">
+              <input type="url" value={heroVideoUrl} onChange={(e) => setHeroVideoUrl(e.target.value)} placeholder="https://..." />
+            </Field>
+            {heroErr ? <Message kind="err">{heroErr}</Message> : null}
+            {heroOk ? <Message kind="ok">{heroOk}</Message> : null}
+            <div className="row">
+              <button type="submit" className="btn primary" disabled={heroBusy}>{heroBusy ? 'Saving…' : 'Save page video'}</button>
+              <button type="button" className="btn ghost" onClick={() => setHeroVideoUrl(DEFAULT_HERO_VIDEO)}><Icon name="undo" size={14} />Reset to default</button>
+            </div>
           </div>
-        ))}
-      </div>
-    </div>
+          {heroVideoUrl ? <video className="preview" src={heroVideoUrl} controls muted preload="metadata" /> : <div className="cover-empty">No video</div>}
+        </div>
+      </form>
+    </>
   );
 }

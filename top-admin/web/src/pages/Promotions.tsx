@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   addDoc,
   collection,
@@ -16,6 +16,9 @@ import { isHttpUrl } from '../lib';
 import { pushEnabled, sendPush } from '../push';
 import type { Promotion } from '../types';
 import { Check, Field, Message } from '../components/Field';
+import { Icon } from '../components/Icon';
+import { useConfirm } from '../components/feedback';
+import { EmptyState, GlassCard, LoadingList, PageHeader, SearchInput, SectionHeader, StatusBadge, UploadProgress } from '../components/ui';
 
 export function Promotions() {
   const [promotions, setPromotions] = useState<Promotion[] | null>(null);
@@ -38,6 +41,9 @@ export function Promotions() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
+  const [search, setSearch] = useState('');
+  const formRef = useRef<HTMLFormElement>(null);
+  const confirm = useConfirm();
 
   useEffect(() => {
     const q = query(collection(db, 'promotions'), orderBy('order', 'asc'));
@@ -74,7 +80,7 @@ export function Promotions() {
     setTarget(p.target || 'external');
     setOrder(p.order ?? 0);
     setIsPublished(p.isPublished !== false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,8 +92,8 @@ export function Promotions() {
     try {
       const url = await uploadToCloudinary(file, 'image', setUploadPct);
       setImageUrl(url);
-    } catch (ex: any) {
-      setErr(ex.message || 'Image upload failed.');
+    } catch (ex) {
+      setErr((ex as Error).message || 'Image upload failed.');
     } finally {
       setUploading(false);
     }
@@ -116,6 +122,9 @@ export function Promotions() {
         updatedAt: serverTimestamp(),
       };
 
+      const willPush = !editingId && isPublished && sendPushOn && pushEnabled;
+      if (willPush && !(await confirm({ title: 'Publish and send a push notification?', message: 'App users who chose Promotions are notified straight away.', confirmLabel: 'Publish and notify' }))) return;
+
       if (editingId) {
         await updateDoc(doc(db, 'promotions', editingId), payload);
         setOk('Promotion updated successfully.');
@@ -125,15 +134,14 @@ export function Promotions() {
           createdAt: serverTimestamp(),
         });
         setOk('Promotion published successfully.');
-        if (isPublished && sendPushOn && pushEnabled) {
-          if (!confirm('This sends a push notification to app users who chose Promotions. Continue?')) return;
+        if (willPush) {
           const r = await sendPush({ pref: 'promotions', title: title.trim(), body: (description.trim() || title.trim()).slice(0, 300), data: { type: 'promotion', contentId: created.id } });
           setOk(r.ok ? `Promotion published. Push sent to ${r.sent} device${r.sent === 1 ? '' : 's'}.` : `Promotion published, but the push failed: ${r.error}`);
         }
       }
       resetForm();
-    } catch (ex: any) {
-      setErr(ex.message || 'Failed to save promotion.');
+    } catch (ex) {
+      setErr((ex as Error).message || 'Failed to save promotion.');
     } finally {
       setBusy(false);
     }
@@ -145,202 +153,133 @@ export function Promotions() {
         isPublished: !p.isPublished,
         updatedAt: serverTimestamp(),
       });
-    } catch (ex: any) {
-      setErr(ex.message);
+    } catch (ex) {
+      setErr((ex as Error).message);
     }
   };
 
-  const remove = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this promotion?')) return;
+  const remove = async (p: Promotion) => {
+    if (!(await confirm({ title: `Delete “${p.title}”?`, message: 'It disappears from the app straight away. This can’t be undone.', confirmLabel: 'Delete permanently', danger: true }))) return;
     try {
-      await deleteDoc(doc(db, 'promotions', id));
+      await deleteDoc(doc(db, 'promotions', p.id));
       setOk('Promotion deleted.');
-    } catch (ex: any) {
-      setErr(ex.message);
+      if (editingId === p.id) resetForm();
+    } catch (ex) {
+      setErr((ex as Error).message);
     }
   };
+
+  const needle = search.trim().toLowerCase();
+  const shown = (promotions ?? []).filter((p) => !needle || [p.title, p.description ?? '', p.category ?? '', p.destinationUrl].some((v) => v.toLowerCase().includes(needle)));
 
   return (
     <>
-      <div className="row between">
-        <h1>Promotions Management</h1>
-        {editingId ? (
-          <button className="btn ghost" onClick={resetForm}>+ New Promotion</button>
-        ) : null}
-      </div>
-      <p className="muted">
-        Manage featured campaigns, media announcements, and partner links displayed in the mobile & web app.
-      </p>
+      <PageHeader
+        eyebrow="Content Studio"
+        title="Promotions"
+        sub="Featured campaigns, media announcements and partner links shown in the app and on the website."
+        actions={editingId ? <button type="button" className="btn ghost" onClick={resetForm}><Icon name="plus" size={16} />New promotion</button> : undefined}
+      />
 
       {err ? <Message kind="err">{err}</Message> : null}
       {ok ? <Message kind="ok">{ok}</Message> : null}
 
-      {/* Editor Card */}
-      <form onSubmit={save} className="card" style={{ marginBottom: 24 }}>
-        <h3>{editingId ? 'Edit Promotion' : 'Create New Promotion'}</h3>
-
-        <Field label="Title *">
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Special Easter Live Concert"
-            required
-          />
-        </Field>
-
-        <Field label="Description">
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Short promotional copy to display on the card"
-            rows={2}
-          />
-        </Field>
-
-        <Field label="Banner / Thumbnail Image *">
-          <div className="row gap" style={{ alignItems: 'center' }}>
-            <input
-              type="url"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://... (image URL)"
-              style={{ flex: 1 }}
-              required
-            />
-            {uploadsEnabled ? (
-              <label className="btn ghost" style={{ cursor: 'pointer', margin: 0 }}>
-                {uploading ? `Uploading ${uploadPct}%` : 'Upload Image'}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  style={{ display: 'none' }}
-                  disabled={uploading}
-                />
-              </label>
-            ) : null}
-          </div>
-          {imageUrl ? (
-            <div style={{ marginTop: 8 }}>
-              <img
-                src={imageUrl}
-                alt="Banner preview"
-                style={{ width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)' }}
-              />
+      <form ref={formRef} onSubmit={save} className={`card ${editingId ? 'editing-ring' : ''}`}>
+        <SectionHeader icon={editingId ? 'edit' : 'plus'} title={editingId ? 'Edit promotion' : 'Create a promotion'} hint={editingId ? `Editing “${title}”` : 'Published promotions appear in the app’s promotions carousel, in display order.'} />
+        <div className="compose">
+          <div>
+            <Field label="Title *">
+              <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Special Easter Live Concert" required />
+            </Field>
+            <Field label="Description">
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short copy shown on the card" rows={2} />
+            </Field>
+            <Field label="Banner image *" hint={uploadsEnabled ? 'Paste a link or upload an image.' : undefined}>
+              <div className="input-row">
+                <input type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://… image link" required />
+                {uploadsEnabled ? (
+                  <label className="btn ghost small file-btn">
+                    <Icon name="upload" size={14} />{uploading ? `${uploadPct}%` : 'Upload'}
+                    <input type="file" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
+                  </label>
+                ) : null}
+              </div>
+            </Field>
+            {uploading ? <UploadProgress label="Uploading banner" pct={uploadPct} /> : null}
+            <div className="form-grid">
+              <Field label="Destination link *" style={{ gridColumn: 'span 2' }}>
+                <input type="text" value={destinationUrl} onChange={(e) => setDestinationUrl(e.target.value)} placeholder="https://example.com or an in-app route" required />
+              </Field>
+              <Field label="Opens">
+                <select value={target} onChange={(e) => setTarget(e.target.value as 'internal' | 'external')}>
+                  <option value="external">In the browser</option>
+                  <option value="internal">Inside the app</option>
+                </select>
+              </Field>
+              <Field label="Category">
+                <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Events" />
+              </Field>
+              <Field label="Display order">
+                <input type="number" value={order} onChange={(e) => setOrder(Number(e.target.value))} />
+              </Field>
             </div>
-          ) : null}
-        </Field>
-
-        <div className="row gap" style={{ display: 'flex', gap: 12 }}>
-          <Field label="Destination URL *" style={{ flex: 2 }}>
-            <input
-              type="text"
-              value={destinationUrl}
-              onChange={(e) => setDestinationUrl(e.target.value)}
-              placeholder="https://example.com or internal route"
-              required
-            />
-          </Field>
-          <Field label="Category" style={{ flex: 1 }}>
-            <input
-              type="text"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="e.g. Events, Partnership"
-            />
-          </Field>
-          <Field label="Display Order" style={{ width: 100 }}>
-            <input
-              type="number"
-              value={order}
-              onChange={(e) => setOrder(Number(e.target.value))}
-            />
-          </Field>
+          </div>
+          <div>
+            <div className="small muted" style={{ marginBottom: 8 }}>Card preview</div>
+            <div className="card media-card" style={{ margin: 0 }}>
+              <div className="cover">
+                {imageUrl && isHttpUrl(imageUrl) ? <img src={imageUrl} alt="Banner preview" /> : <span className="none"><Icon name="image" size={28} /></span>}
+              </div>
+              <div className="body">
+                {category ? <span className="small gold">{category}</span> : null}
+                <span className="t">{title || 'Promotion title'}</span>
+                <span className="d">{description || 'Short description'}</span>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div className="row between" style={{ marginTop: 12, alignItems: 'center' }}>
-          <Check
-            label="Published (Visible to all users)"
-            checked={isPublished}
-            onChange={setIsPublished}
-          />
-          {!editingId ? <Check label="Send a push notification now" checked={sendPushOn} onChange={setSendPushOn} /> : null}
-
-          <div className="row gap">
-            {editingId ? (
-              <button type="button" className="btn ghost" onClick={resetForm}>Cancel</button>
-            ) : null}
+        <div className="form-actions">
+          <div className="checks">
+            <Check label="Published" checked={isPublished} onChange={setIsPublished} />
+            {!editingId ? <Check label="Send a push notification" checked={sendPushOn} onChange={setSendPushOn} disabled={!pushEnabled || !isPublished} hint={!pushEnabled ? 'Push isn’t configured.' : undefined} /> : null}
+          </div>
+          <div className="row">
+            {editingId ? <button type="button" className="btn ghost" onClick={resetForm}>Cancel</button> : null}
             <button type="submit" className="btn primary" disabled={busy || uploading}>
-              {busy ? 'Saving…' : editingId ? 'Update Promotion' : 'Publish Promotion'}
+              {busy ? <span className="spin sm" aria-hidden="true" /> : <Icon name={editingId ? 'check' : 'send'} size={16} />}
+              {busy ? 'Saving…' : editingId ? 'Update promotion' : isPublished ? 'Publish promotion' : 'Save draft'}
             </button>
           </div>
         </div>
       </form>
 
-      {/* List Table */}
-      <h3>Published & Draft Promotions</h3>
+      <SectionHeader icon="megaphone" title="All promotions" hint={promotions ? `${promotions.length} total · ${promotions.filter((p) => p.isPublished).length} published` : undefined} actions={<SearchInput value={search} onChange={setSearch} placeholder="Search promotions…" label="Search promotions" />} />
       {promotions === null ? (
-        <p className="muted">Loading promotions…</p>
-      ) : promotions.length === 0 ? (
-        <p className="muted">No promotions created yet.</p>
+        <GlassCard><LoadingList rows={3} /></GlassCard>
+      ) : shown.length === 0 ? (
+        <GlassCard><EmptyState icon="megaphone" title={promotions.length === 0 ? 'No promotions yet' : 'No promotions match'}>{promotions.length === 0 ? 'Create one with the form above.' : 'Try another search.'}</EmptyState></GlassCard>
       ) : (
-        <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
-                <th style={{ padding: '12px 16px' }}>Banner</th>
-                <th style={{ padding: '12px 16px' }}>Title & Description</th>
-                <th style={{ padding: '12px 16px' }}>Destination</th>
-                <th style={{ padding: '12px 16px' }}>Order</th>
-                <th style={{ padding: '12px 16px' }}>Status</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {promotions.map((p) => (
-                <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '10px 16px', width: 90 }}>
-                    {p.imageUrl ? (
-                      <img
-                        src={p.imageUrl}
-                        alt=""
-                        style={{ width: 80, height: 48, objectFit: 'cover', borderRadius: 4 }}
-                      />
-                    ) : (
-                      <span className="muted">No img</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <b>{p.title}</b>
-                    {p.category ? <span className="pill" style={{ marginLeft: 8, fontSize: 11 }}>{p.category}</span> : null}
-                    <div className="small muted" style={{ maxWidth: 300, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {p.description}
-                    </div>
-                  </td>
-                  <td style={{ padding: '10px 16px', fontSize: 13, maxWidth: 200, wordBreak: 'break-all' }}>
-                    <a href={p.destinationUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>
-                      {p.destinationUrl}
-                    </a>
-                  </td>
-                  <td style={{ padding: '10px 16px', fontWeight: 'bold' }}>{p.order ?? 0}</td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <button
-                      className={`pill ${p.isPublished ? 'ok' : 'ghost'}`}
-                      style={{ cursor: 'pointer', border: 'none' }}
-                      onClick={() => togglePublish(p)}
-                    >
-                      {p.isPublished ? 'Live' : 'Draft'}
-                    </button>
-                  </td>
-                  <td style={{ padding: '10px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    <button className="btn small ghost" onClick={() => startEdit(p)}>Edit</button>
-                    <button className="btn small danger" style={{ marginLeft: 6 }} onClick={() => remove(p.id)}>Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="media-grid">
+          {shown.map((p) => (
+            <article key={p.id} className={`card media-card ${p.isPublished ? '' : 'dim'}`}>
+              <div className="cover">
+                {p.imageUrl ? <img src={p.imageUrl} alt="" loading="lazy" /> : <span className="none"><Icon name="image" size={28} /></span>}
+                <div className="badges"><StatusBadge kind={p.isPublished ? 'ok' : 'draft'}>{p.isPublished ? 'Published' : 'Draft'}</StatusBadge></div>
+                <span className="order" title="Display order">#{p.order ?? 0}</span>
+              </div>
+              <div className="body">
+                {p.category ? <span className="small gold">{p.category}</span> : null}
+                <span className="t">{p.title}</span>
+                {p.description ? <span className="d clamp-3">{p.description}</span> : null}
+                <a className="link-out" href={p.destinationUrl} target="_blank" rel="noreferrer"><Icon name="link" size={12} /> {p.destinationUrl}</a>
+              </div>
+              <div className="actions">
+                <button type="button" className="btn small ghost" onClick={() => startEdit(p)}><Icon name="edit" size={14} />Edit</button>
+                <button type="button" className={`btn small ${p.isPublished ? 'ghost' : 'success'}`} onClick={() => void togglePublish(p)}>{p.isPublished ? 'Unpublish' : 'Publish'}</button>
+                <button type="button" className="btn small danger" aria-label={`Delete ${p.title}`} onClick={() => void remove(p)}><Icon name="trash" size={14} /></button>
+              </div>
+            </article>
+          ))}
         </div>
       )}
     </>

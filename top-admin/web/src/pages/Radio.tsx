@@ -23,6 +23,9 @@ import {
 import { isHttpUrl } from '../lib';
 import type { AudioTestimony, RadioSettings } from '../types';
 import { Check, Field, Message } from '../components/Field';
+import { Icon } from '../components/Icon';
+import { useConfirm } from '../components/feedback';
+import { EmptyState, FilterTabs, GlassCard, LoadingList, PageHeader, SearchInput, SectionHeader, StatusBadge, UploadProgress } from '../components/ui';
 
 const STALE_MS = 60_000; // Missed heartbeats (>60s) treated as left
 
@@ -90,6 +93,9 @@ export function Radio() {
 
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
+  const [search, setSearch] = useState('');
+  const formRef = useRef<HTMLFormElement>(null);
+  const confirm = useConfirm();
 
   // 1. Listen to Live Radio Settings
   useEffect(() => {
@@ -175,8 +181,8 @@ export function Radio() {
         setSessionId(newSessionId);
       }
       setOk(note);
-    } catch (ex: any) {
-      setErr(ex.message || 'Failed to update radio stream.');
+    } catch (ex) {
+      setErr((ex as Error).message || 'Failed to update radio stream.');
     } finally {
       setRadioBusy(false);
     }
@@ -218,7 +224,7 @@ export function Radio() {
     setAudioThumb(item.thumbnailUrl || '');
     setAudioPublished(item.isPublished !== false);
     setTab('library');
-    window.scrollTo({ top: 300, behavior: 'smooth' });
+    window.setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
   };
 
   const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -231,8 +237,8 @@ export function Radio() {
       const res = await uploadAudio(file, setAudioUploadPct);
       setAudioUrl(res.url);
       setOk(`Audio successfully uploaded to ${getProviderDisplayName(res.provider)}!`);
-    } catch (ex: any) {
-      setErr(ex.message || 'Audio upload failed.');
+    } catch (ex) {
+      setErr((ex as Error).message || 'Audio upload failed.');
     } finally {
       setUploadingAudio(false);
     }
@@ -248,8 +254,8 @@ export function Radio() {
       const res = await uploadImageToCloudinary(file, setThumbUploadPct);
       setAudioThumb(res.url);
       setOk('Thumbnail image uploaded to Cloudinary!');
-    } catch (ex: any) {
-      setErr(ex.message || 'Thumbnail upload failed.');
+    } catch (ex) {
+      setErr((ex as Error).message || 'Thumbnail upload failed.');
     } finally {
       setUploadingThumb(false);
     }
@@ -288,332 +294,215 @@ export function Radio() {
         setOk('Audio testimony added to library.');
       }
       resetAudioForm();
-    } catch (ex: any) {
-      setErr(ex.message || 'Failed to save audio testimony.');
+    } catch (ex) {
+      setErr((ex as Error).message || 'Failed to save audio testimony.');
     } finally {
       setRadioBusy(false);
     }
   };
 
-  const removeAudio = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this audio testimony?')) return;
+  const removeAudio = async (item: AudioTestimony) => {
+    if (!(await confirm({ title: `Delete “${item.title}”?`, message: 'It disappears from the TOP Radio library. The audio file stays in storage.', confirmLabel: 'Delete permanently', danger: true }))) return;
     try {
-      await deleteDoc(doc(db, 'audioTestimonies', id));
+      await deleteDoc(doc(db, 'audioTestimonies', item.id));
       setOk('Audio testimony deleted.');
-    } catch (ex: any) {
-      setErr(ex.message);
+      if (editingAudioId === item.id) resetAudioForm();
+    } catch (ex) {
+      setErr((ex as Error).message);
     }
   };
 
+  const endRadio = async () => {
+    if (!(await confirm({ title: 'Take TOP Radio off air?', message: 'Listeners are stopped and TOP Radio is greyed out in the app and on the website.', confirmLabel: 'Go off air', danger: true }))) return;
+    void saveRadio(false, 'TOP Radio is now off air.');
+  };
+
+  const needle = search.trim().toLowerCase();
+  const shownAudio = (audioItems ?? []).filter((i) => !needle || [i.title, i.speaker ?? '', i.category ?? ''].some((v) => v.toLowerCase().includes(needle)));
+
+  if (!radioLoaded && !err) {
+    return (
+      <>
+        <PageHeader eyebrow="Broadcast & Media" title="TOP Radio" />
+        <GlassCard><LoadingList rows={3} /></GlassCard>
+      </>
+    );
+  }
+
   return (
     <>
-      <div className="row between">
-        <div>
-          <h1>TOP Radio & Audio</h1>
-          <p className="muted">
-            Configure live audio radio broadcasts, monitor live listeners, and manage recorded audio testimonies.
-          </p>
-        </div>
-      </div>
+      <PageHeader eyebrow="Broadcast & Media" title="TOP Radio" sub="Run the live audio stream, watch listener numbers, and manage the recorded audio testimonies library." />
 
       {err ? <Message kind="err">{err}</Message> : null}
       {ok ? <Message kind="ok">{ok}</Message> : null}
 
-      {/* Tabs */}
-      <div className="row gap" style={{ marginBottom: 20 }}>
-        <button
-          className={`btn ${tab === 'stream' ? 'primary' : 'ghost'}`}
-          onClick={() => setTab('stream')}
-        >
-          📻 Live Radio Stream
-        </button>
-        <button
-          className={`btn ${tab === 'library' ? 'primary' : 'ghost'}`}
-          onClick={() => setTab('library')}
-        >
-          🎧 Audio Testimonies Library ({audioItems?.length ?? 0})
-        </button>
+      <div className="toolbar">
+        <FilterTabs
+          label="Radio sections"
+          value={tab}
+          onChange={setTab}
+          options={[
+            { id: 'stream', label: 'Live radio stream' },
+            { id: 'library', label: 'Audio testimonies', count: audioItems?.length },
+          ]}
+        />
       </div>
 
       {tab === 'stream' ? (
-        /* LIVE RADIO STREAM CONTROLS */
-        <div className="card">
-          <div className="row between" style={{ alignItems: 'center', marginBottom: 16 }}>
-            <div className="row gap" style={{ alignItems: 'center' }}>
-              <span className={`dot ${isLive ? 'on' : ''}`} />
-              <b>{isLive ? 'RADIO IS LIVE' : 'Radio is Offline'}</b>
-              {isLive && activeListeners !== null ? (
-                <span className="pill ok">🎧 {activeListeners} listening now</span>
-              ) : null}
+        <>
+          <GlassCard className={`broadcast-hero ${isLive ? 'on' : ''}`} aria-label="Radio status">
+            <div className="state">
+              <div className="row gap">
+                <span className={`on-air ${isLive ? 'live' : 'off'}`}><span className="pulse" />{isLive ? 'ON AIR' : 'OFF AIR'}</span>
+                {isLive && activeListeners !== null ? <span className="viewer-count"><Icon name="radio" size={14} />{activeListeners.toLocaleString()} listening now</span> : null}
+              </div>
+              <h2>{programme.trim() || 'TOP Radio'}</h2>
+              <span className="small muted" style={{ maxWidth: 620 }}>
+                {isLive
+                  ? 'App and website users can press Play on TOP Radio, even while the main video broadcast is offline.'
+                  : 'TOP Radio is greyed out in the app and on the website. This is separate from the main Live broadcast. For a 24/7 stream, leave the radio on air.'}
+              </span>
             </div>
             {isLive ? (
-              <button
-                className="btn danger"
-                disabled={radioBusy}
-                onClick={() => saveRadio(false, 'TOP Radio is now marked offline.')}
-              >
-                End Live Broadcast
-              </button>
+              <button type="button" className="btn danger xl" disabled={radioBusy} onClick={() => void endRadio()}><Icon name="x" size={18} />GO OFF AIR</button>
             ) : (
-              <button
-                className="btn primary"
-                disabled={radioBusy}
-                onClick={() => saveRadio(true, 'TOP Radio is now broadcasting LIVE!')}
-              >
-                Go Live on Radio
-              </button>
+              <button type="button" className="btn live xl" disabled={radioBusy} onClick={() => void saveRadio(true, 'TOP Radio is now on air.')}><Icon name="radio" size={18} />GO ON AIR</button>
             )}
-          </div>
+          </GlassCard>
 
-          <Message kind={isLive ? 'ok' : 'warn'}>
-            {isLive
-              ? 'ON AIR: app and website users can press Play on TOP Radio, including when the main video broadcast is offline.'
-              : 'OFF AIR: TOP Radio is greyed out in the app and website, so listeners cannot play it. This is separate from the main Live broadcast. For a 24/7 stream, leave the radio ON AIR.'}
-          </Message>
-          <div className="row gap" style={{ alignItems: 'center', margin: '8px 0 16px' }}>
-            <button
-              type="button"
-              className="btn ghost"
-              disabled={!streamUrl.trim() || streamCheck.state === 'checking'}
-              onClick={async () => {
-                setStreamCheck({ state: 'checking' });
-                setStreamCheck(await checkStream(streamUrl.trim()));
-              }}
-            >
-              {streamCheck.state === 'checking' ? 'Checking…' : '📡 Check stream now'}
-            </button>
-            {streamCheck.state === 'up' || streamCheck.state === 'down' ? (
-              <span className={`pill ${streamCheck.state === 'up' ? 'ok' : 'warn'}`}>{streamCheck.state === 'up' ? 'Stream is up' : 'Stream is down'}</span>
-            ) : null}
-            {streamCheck.detail ? <span className="small muted">{streamCheck.detail}</span> : null}
-          </div>
-
-          <Field label="Live Audio Stream URL * (Icecast / Shoutcast MP3/AAC or HLS .m3u8 audio)">
-            <div className="row gap">
-              <input
-                type="text"
-                value={streamUrl}
-                onChange={(e) => setStreamUrl(e.target.value)}
-                placeholder="https://radio.example.com/stream.mp3 or .m3u8"
-                style={{ flex: 1 }}
-              />
+          <GlassCard>
+            <SectionHeader icon="radio" title="Stream settings" />
+            <div className="audio-test">
               <button
                 type="button"
-                className="btn ghost"
-                onClick={toggleTestStream}
-                disabled={!streamUrl.trim()}
+                className="btn ghost small"
+                disabled={!streamUrl.trim() || streamCheck.state === 'checking'}
+                onClick={async () => {
+                  setStreamCheck({ state: 'checking' });
+                  setStreamCheck(await checkStream(streamUrl.trim()));
+                }}
               >
-                {isPlayingPreview ? '⏹ Stop Test' : '▶ Test Stream'}
+                <Icon name="activity" size={14} className={streamCheck.state === 'checking' ? 'spinning' : undefined} />{streamCheck.state === 'checking' ? 'Checking…' : 'Check stream now'}
               </button>
+              <button type="button" className="btn ghost small" onClick={toggleTestStream} disabled={!streamUrl.trim()}>
+                <Icon name={isPlayingPreview ? 'x' : 'play'} size={14} />{isPlayingPreview ? 'Stop listening' : 'Listen here'}
+              </button>
+              {streamCheck.state === 'up' || streamCheck.state === 'down' ? <StatusBadge kind={streamCheck.state === 'up' ? 'ok' : 'bad'}>{streamCheck.state === 'up' ? 'Stream is up' : 'Stream is down'}</StatusBadge> : null}
+              {streamCheck.detail ? <span className="small muted">{streamCheck.detail}</span> : null}
             </div>
-          </Field>
-          <audio ref={audioPreviewRef} onEnded={() => setIsPlayingPreview(false)} style={{ display: 'none' }} />
+            <audio ref={audioPreviewRef} onEnded={() => setIsPlayingPreview(false)} style={{ display: 'none' }} />
 
-          <Field label="Current Programme Title">
-            <input
-              type="text"
-              value={programme}
-              onChange={(e) => setProgramme(e.target.value)}
-              placeholder="e.g. Testimonies of Praise Live Radio Session"
-            />
-          </Field>
-
-          <Field label="Programme Description">
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="What listeners are currently hearing..."
-              rows={2}
-            />
-          </Field>
-
-          <div className="row between" style={{ marginTop: 16 }}>
-            <span className="small muted">
-              Session ID: <code>{sessionId || 'None (Offline)'}</code>
-            </span>
-            <button
-              className="btn ghost"
-              disabled={radioBusy}
-              onClick={() => saveRadio(isLive, 'Radio settings updated.')}
-            >
-              Save Stream Settings
-            </button>
-          </div>
-        </div>
+            <Field label="Live audio stream link *" hint="Icecast / Shoutcast MP3 or AAC, or an HLS (.m3u8) audio stream.">
+              <input type="text" value={streamUrl} onChange={(e) => setStreamUrl(e.target.value)} placeholder="https://radio.example.com/stream.mp3 or .m3u8" />
+            </Field>
+            <div className="two">
+              <Field label="Current programme title">
+                <input type="text" value={programme} onChange={(e) => setProgramme(e.target.value)} placeholder="e.g. Testimonies of Praise Live Radio Session" />
+              </Field>
+              <Field label="Programme description">
+                <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What listeners are hearing now" />
+              </Field>
+            </div>
+            <div className="form-actions">
+              <span className="small muted">Session ID: <code>{sessionId || 'none (off air)'}</code></span>
+              <button type="button" className="btn primary" disabled={radioBusy} onClick={() => void saveRadio(isLive, 'Radio settings saved.')}><Icon name="check" size={16} />Save stream settings</button>
+            </div>
+          </GlassCard>
+        </>
       ) : (
-        /* AUDIO TESTIMONIES LIBRARY */
         <>
-          <form onSubmit={saveAudioTestimony} className="card" style={{ marginBottom: 24 }}>
-            <h3>{editingAudioId ? 'Edit Audio Testimony' : 'Add Audio Testimony to Library'}</h3>
-
-            <Field label="Title *">
-              <input
-                type="text"
-                value={audioTitle}
-                onChange={(e) => setAudioTitle(e.target.value)}
-                placeholder="e.g. Miraculous Healing from Heart Disease"
-                required
-              />
-            </Field>
-
-            <Field label="Audio Recording URL / Upload *">
-              <div className="row gap" style={{ alignItems: 'center' }}>
-                <input
-                  type="url"
-                  value={audioUrl}
-                  onChange={(e) => setAudioUrl(e.target.value)}
-                  placeholder="https://... (mp3, aac, m4a)"
-                  style={{ flex: 1 }}
-                  required
-                />
-                {uploadsEnabled ? (
-                  <label className="btn ghost" style={{ cursor: 'pointer', margin: 0 }}>
-                    {uploadingAudio ? `Uploading ${audioUploadPct}%` : 'Upload Audio File'}
-                    <input
-                      type="file"
-                      accept="audio/*"
-                      onChange={handleAudioUpload}
-                      style={{ display: 'none' }}
-                      disabled={uploadingAudio}
-                    />
-                  </label>
-                ) : null}
-              </div>
-              {audioUrl ? (
-                <div style={{ marginTop: 6, fontSize: 12, color: '#aaa' }}>
-                  Storage Provider: <span style={{ color: '#F5C542', fontWeight: 600 }}>{getProviderDisplayName(identifyProvider(audioUrl))}</span>
+          <form ref={formRef} onSubmit={saveAudioTestimony} className={`card ${editingAudioId ? 'editing-ring' : ''}`}>
+            <SectionHeader icon={editingAudioId ? 'edit' : 'plus'} title={editingAudioId ? 'Edit audio testimony' : 'Add an audio testimony'} hint={editingAudioId ? `Editing “${audioTitle}”` : 'Published recordings appear in the TOP Radio library in the app.'} />
+            <div className="compose" style={{ gridTemplateColumns: 'minmax(0, 1fr) 300px' }}>
+              <div>
+                <Field label="Title *">
+                  <input type="text" value={audioTitle} onChange={(e) => setAudioTitle(e.target.value)} placeholder="e.g. Miraculous healing from heart disease" required />
+                </Field>
+                <Field label="Audio recording *" hint="MP3, AAC or M4A. Large files go to Bunny Storage through the Worker.">
+                  <div className="input-row">
+                    <input type="url" value={audioUrl} onChange={(e) => setAudioUrl(e.target.value)} placeholder="https://… (mp3, aac, m4a)" required />
+                    {uploadsEnabled ? (
+                      <label className={`btn ghost small file-btn ${uploadingAudio ? 'disabled' : ''}`}>
+                        <Icon name="upload" size={14} />Upload
+                        <input type="file" accept="audio/*" onChange={handleAudioUpload} disabled={uploadingAudio} />
+                      </label>
+                    ) : null}
+                  </div>
+                </Field>
+                {uploadingAudio ? <UploadProgress label="Uploading audio" pct={audioUploadPct} /> : null}
+                {audioUrl ? <div className="provider-note"><Icon name="cloud" size={14} />Storage provider: <b>{getProviderDisplayName(identifyProvider(audioUrl))}</b></div> : null}
+                <div className="two">
+                  <Field label="Speaker / testifier"><input type="text" value={speaker} onChange={(e) => setSpeaker(e.target.value)} placeholder="e.g. Brother Emmanuel" /></Field>
+                  <Field label="Category"><input type="text" value={audioCategory} onChange={(e) => setAudioCategory(e.target.value)} placeholder="e.g. Healing, Family" /></Field>
                 </div>
-              ) : null}
-            </Field>
-
-            <div className="row gap" style={{ display: 'flex', gap: 12 }}>
-              <Field label="Speaker / Testifier" style={{ flex: 1 }}>
-                <input
-                  type="text"
-                  value={speaker}
-                  onChange={(e) => setSpeaker(e.target.value)}
-                  placeholder="e.g. Brother Emmanuel"
-                />
-              </Field>
-              <Field label="Category" style={{ flex: 1 }}>
-                <input
-                  type="text"
-                  value={audioCategory}
-                  onChange={(e) => setAudioCategory(e.target.value)}
-                  placeholder="e.g. Healing, Financial, Family"
-                />
-              </Field>
-            </div>
-
-            <Field label="Cover Thumbnail (Optional)">
-              <div className="row gap" style={{ alignItems: 'center' }}>
-                <input
-                  type="url"
-                  value={audioThumb}
-                  onChange={(e) => setAudioThumb(e.target.value)}
-                  placeholder="https://... (thumbnail image URL)"
-                  style={{ flex: 1 }}
-                />
-                {uploadsEnabled ? (
-                  <label className="btn ghost" style={{ cursor: 'pointer', margin: 0 }}>
-                    {uploadingThumb ? `Uploading ${thumbUploadPct}%` : 'Upload Image'}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleThumbUpload}
-                      style={{ display: 'none' }}
-                      disabled={uploadingThumb}
-                    />
-                  </label>
-                ) : null}
+                <Field label="Cover image (optional)">
+                  <div className="input-row">
+                    <input type="url" value={audioThumb} onChange={(e) => setAudioThumb(e.target.value)} placeholder="https://… image link" />
+                    {uploadsEnabled ? (
+                      <label className={`btn ghost small file-btn ${uploadingThumb ? 'disabled' : ''}`}>
+                        <Icon name="upload" size={14} />Upload
+                        <input type="file" accept="image/*" onChange={handleThumbUpload} disabled={uploadingThumb} />
+                      </label>
+                    ) : null}
+                  </div>
+                </Field>
+                {uploadingThumb ? <UploadProgress label="Uploading cover" pct={thumbUploadPct} /> : null}
+                <Field label="Short description">
+                  <textarea value={audioDesc} onChange={(e) => setAudioDesc(e.target.value)} placeholder="A brief summary of the testimony" rows={2} />
+                </Field>
               </div>
-            </Field>
-
-            <Field label="Short Description">
-              <textarea
-                value={audioDesc}
-                onChange={(e) => setAudioDesc(e.target.value)}
-                placeholder="Brief summary of the testimony..."
-                rows={2}
-              />
-            </Field>
-
-            <div className="row between" style={{ marginTop: 12, alignItems: 'center' }}>
-              <Check
-                label="Published (Visible in TOP Radio library)"
-                checked={audioPublished}
-                onChange={setAudioPublished}
-              />
-              <div className="row gap">
-                {editingAudioId ? (
-                  <button type="button" className="btn ghost" onClick={resetAudioForm}>
-                    Cancel
-                  </button>
-                ) : null}
-                <button type="submit" className="btn primary" disabled={radioBusy || uploadingAudio}>
-                  {radioBusy ? 'Saving…' : editingAudioId ? 'Update Audio' : 'Add to Library'}
+              <div className="stack-sm">
+                <span className="small muted">Preview</span>
+                {audioThumb && isHttpUrl(audioThumb) ? <img className="cover-preview" src={audioThumb} alt="Cover preview" style={{ aspectRatio: '1 / 1' }} /> : <div className="cover-empty" style={{ aspectRatio: '1 / 1' }}><Icon name="mic" size={28} /></div>}
+                {audioUrl && isHttpUrl(audioUrl) ? <audio controls src={audioUrl} style={{ width: '100%' }} preload="none" /> : null}
+              </div>
+            </div>
+            <div className="form-actions">
+              <Check label="Published" hint="Visible in the TOP Radio library." checked={audioPublished} onChange={setAudioPublished} />
+              <div className="row">
+                {editingAudioId ? <button type="button" className="btn ghost" onClick={resetAudioForm}>Cancel</button> : null}
+                <button type="submit" className="btn primary" disabled={radioBusy || uploadingAudio || uploadingThumb}>
+                  {radioBusy ? <span className="spin sm" aria-hidden="true" /> : <Icon name="check" size={16} />}{radioBusy ? 'Saving…' : editingAudioId ? 'Update audio' : 'Add to library'}
                 </button>
               </div>
             </div>
           </form>
 
-          {/* Table of audio testimonies */}
-          <h3>Audio Testimonies Library</h3>
-          {audioItems === null ? (
-            <p className="muted">Loading audio library…</p>
-          ) : audioItems.length === 0 ? (
-            <p className="muted">No audio testimonies added yet.</p>
-          ) : (
-            <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
-                    <th style={{ padding: '12px 16px' }}>Title & Speaker</th>
-                    <th style={{ padding: '12px 16px' }}>Category</th>
-                    <th style={{ padding: '12px 16px' }}>Audio Source</th>
-                    <th style={{ padding: '12px 16px' }}>Status</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {audioItems.map((item) => (
-                    <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={{ padding: '10px 16px' }}>
-                        <b>{item.title}</b>
-                        <div className="small muted">{item.speaker || 'Anonymous'}</div>
-                      </td>
-                      <td style={{ padding: '10px 16px' }}>
-                        <span className="pill">{item.category || 'General'}</span>
-                      </td>
-                      <td style={{ padding: '10px 16px' }}>
-                        <audio controls src={item.audioUrl} style={{ height: 32, maxWidth: 220 }} />
-                        <div style={{ fontSize: 11, color: '#888', marginTop: 3 }}>
-                          {getProviderDisplayName(identifyProvider(item.audioUrl))}
-                        </div>
-                      </td>
-                      <td style={{ padding: '10px 16px' }}>
-                        <span className={`pill ${item.isPublished ? 'ok' : 'ghost'}`}>
-                          {item.isPublished ? 'Live' : 'Draft'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '10px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        <button className="btn small ghost" onClick={() => startEditAudio(item)}>
-                          Edit
-                        </button>
-                        <button
-                          className="btn small danger"
-                          style={{ marginLeft: 6 }}
-                          onClick={() => removeAudio(item.id)}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <GlassCard className="table-card">
+            <div style={{ padding: '20px 24px 0' }}>
+              <SectionHeader icon="mic" title="Audio testimonies library" hint={audioItems ? `${audioItems.length} recordings · ${audioItems.filter((i) => i.isPublished).length} published` : undefined} actions={<SearchInput value={search} onChange={setSearch} placeholder="Search recordings…" label="Search recordings" />} />
             </div>
-          )}
+            {audioItems === null ? (
+              <div style={{ padding: 20 }}><LoadingList rows={3} /></div>
+            ) : shownAudio.length === 0 ? (
+              <EmptyState icon="mic" title={audioItems.length === 0 ? 'No audio testimonies yet' : 'No recordings match'}>{audioItems.length === 0 ? 'Add one with the form above.' : 'Try another search.'}</EmptyState>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead><tr><th>Title</th><th>Category</th><th>Listen</th><th>Status</th><th aria-label="Actions"></th></tr></thead>
+                  <tbody>
+                    {shownAudio.map((item) => (
+                      <tr key={item.id}>
+                        <td className="title-cell"><b>{item.title}</b><div className="small muted">{item.speaker || 'Anonymous'}</div></td>
+                        <td><span className="tag">{item.category || 'General'}</span></td>
+                        <td>
+                          <audio className="audio-inline" controls preload="none" src={item.audioUrl} />
+                          <div className="tiny muted">{getProviderDisplayName(identifyProvider(item.audioUrl))}</div>
+                        </td>
+                        <td><StatusBadge kind={item.isPublished ? 'ok' : 'draft'}>{item.isPublished ? 'Published' : 'Draft'}</StatusBadge></td>
+                        <td>
+                          <div className="row-actions">
+                            <button type="button" className="btn small ghost" onClick={() => startEditAudio(item)}><Icon name="edit" size={14} />Edit</button>
+                            <button type="button" className="btn small danger" aria-label={`Delete ${item.title}`} onClick={() => void removeAudio(item)}><Icon name="trash" size={14} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </GlassCard>
         </>
       )}
     </>

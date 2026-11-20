@@ -19,6 +19,9 @@ import { auth, db } from '../firebase';
 import { fmtDate } from '../lib';
 import type { Route } from '../types';
 import { Message } from '../components/Field';
+import { Icon } from '../components/Icon';
+import { useConfirm } from '../components/feedback';
+import { EmptyState, GlassCard, LoadingList, PageHeader, SearchInput, StatusBadge } from '../components/ui';
 
 /**
  * Comments people post on video testimonies (testimonies/{id}/comments/{uid}), audio testimonies
@@ -87,6 +90,7 @@ export function Comments({ go }: { go: (r: Route) => void }) {
   const [newestFirst, setNewestFirst] = useState(true);
   const [search, setSearch] = useState('');
   const [busyId, setBusyId] = useState('');
+  const confirm = useConfirm();
 
   const load = useCallback(
     async (after: QueryDocumentSnapshot | null) => {
@@ -136,7 +140,18 @@ export function Comments({ go }: { go: (r: Route) => void }) {
   };
 
   const remove = async (r: Row) => {
-    if (!confirm(`Delete this comment by ${r.displayName}?\n\n"${r.text.slice(0, 140)}${r.text.length > 140 ? '…' : ''}"\n\nThis can't be undone. (Hide it instead if you may want it back.)`)) return;
+    const yes = await confirm({
+      title: `Delete this comment by ${r.displayName}?`,
+      message: (
+        <>
+          <span className="quote" style={{ display: 'block', whiteSpace: 'pre-wrap' }}>“{r.text.slice(0, 140)}{r.text.length > 140 ? '…' : ''}”</span>
+          This can’t be undone. Hide it instead if you may want it back.
+        </>
+      ),
+      confirmLabel: 'Delete comment',
+      danger: true,
+    });
+    if (!yes) return;
     setBusyId(r.ref.path);
     setErr('');
     setOk('');
@@ -157,18 +172,21 @@ export function Comments({ go }: { go: (r: Route) => void }) {
 
   return (
     <>
-      <h1>Comments</h1>
-      <p className="muted">
-        Comments on video, audio and written testimonies from the app and the website. Each account can leave one comment per testimony. Hiding removes a comment from public view (the author still sees it, marked as hidden); deleting removes it for good.
-      </p>
+      <PageHeader
+        eyebrow="Community Management"
+        title="Comments Moderation"
+        sub="Comments on video, audio and written testimonies from the app and the website. Each account can leave one comment per testimony. Hiding removes a comment from public view (the author still sees it, marked as hidden); deleting removes it for good."
+        actions={
+          <button type="button" className="btn ghost" onClick={() => void load(null)} disabled={loading}>
+            <Icon name="refresh" size={16} className={loading ? 'spinning' : undefined} />{loading ? 'Loading…' : 'Refresh'}
+          </button>
+        }
+      />
 
-      <div className="card">
-        <div className="row" style={{ alignItems: 'flex-end' }}>
-          <label className="f" style={{ marginBottom: 0, flex: '2 1 220px' }}>
-            <span>Search loaded comments</span>
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Text, name, user ID or media title" />
-          </label>
-          <label className="f" style={{ marginBottom: 0, flex: '1 1 130px' }}>
+      <GlassCard className="filter-card">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search loaded comments: text, name, user ID or media title…" label="Search loaded comments" />
+        <div className="filter-grid">
+          <label className="f">
             <span>Media type</span>
             <select value={type} onChange={(e) => setType(e.target.value as 'all' | MediaType)}>
               <option value="all">All</option>
@@ -177,7 +195,7 @@ export function Comments({ go }: { go: (r: Route) => void }) {
               <option value="written">Written testimonies</option>
             </select>
           </label>
-          <label className="f" style={{ marginBottom: 0, flex: '1 1 120px' }}>
+          <label className="f">
             <span>Status</span>
             <select value={status} onChange={(e) => setStatus(e.target.value as StatusFilter)}>
               <option value="all">All</option>
@@ -185,75 +203,75 @@ export function Comments({ go }: { go: (r: Route) => void }) {
               <option value="hidden">Hidden</option>
             </select>
           </label>
-          <label className="f" style={{ marginBottom: 0, flex: '1 1 120px' }}>
+          <label className="f">
             <span>Sort</span>
             <select value={newestFirst ? 'new' : 'old'} onChange={(e) => setNewestFirst(e.target.value === 'new')}>
               <option value="new">Newest first</option>
               <option value="old">Oldest first</option>
             </select>
           </label>
-          <label className="f" style={{ marginBottom: 0, flex: '1 1 180px' }}>
+          <label className="f">
             <span>Media item ID</span>
             <input type="text" value={mediaId} onChange={(e) => setMediaId(e.target.value)} placeholder="Any item" />
           </label>
-          <button className="btn small ghost" onClick={() => void load(null)} disabled={loading}>
-            {loading ? 'Loading…' : '↻ Refresh'}
-          </button>
         </div>
         {mediaId.trim() ? (
-          <div className="small muted" style={{ marginTop: 8 }}>
-            Showing one item. <button className="btn small ghost" onClick={() => setMediaId('')}>Show all items</button>
+          <div className="row small muted">
+            Showing comments on one item.
+            <button type="button" className="btn small ghost" onClick={() => setMediaId('')}><Icon name="x" size={14} />Show all items</button>
           </div>
         ) : null}
-        {q ? <div className="small muted" style={{ marginTop: 8 }}>Search covers the {rows?.length ?? 0} comments loaded so far. Load more to search further back.</div> : null}
-      </div>
+        {q ? <div className="small muted">Search covers the {rows?.length ?? 0} comments loaded so far. Load more to search further back.</div> : null}
+      </GlassCard>
 
       {err ? <Message kind="err">{err}</Message> : null}
       {ok ? <Message kind="ok">{ok}</Message> : null}
 
       {rows === null ? (
-        <p className="muted">Loading…</p>
+        <GlassCard><LoadingList rows={3} /></GlassCard>
       ) : shown.length === 0 ? (
-        <div className="card muted">{rows.length === 0 ? 'No comments match these filters yet.' : 'No loaded comments match your search.'}</div>
+        <GlassCard><EmptyState icon="messageSquare" title={rows.length === 0 ? 'No comments match these filters' : 'No loaded comments match your search'}>{rows.length === 0 ? 'Comments appear here as people post them.' : 'Load more, or try another search.'}</EmptyState></GlassCard>
       ) : (
         shown.map((r) => {
           const busy = busyId === r.ref.path;
           const link = siteLink(r);
           return (
-            <div className="card" key={r.ref.path} style={r.status === 'hidden' ? { opacity: 0.75 } : undefined}>
-              <div className="row between">
+            <GlassCard key={r.ref.path} as="article" className={`item-card ${r.status === 'hidden' ? 'dim' : ''}`}>
+              <div className="item-head">
                 <div style={{ minWidth: 0 }}>
-                  <b>{r.displayName}</b> <span className="small muted">· user ID <code>{r.uid}</code></span>
-                  <div className="small muted">
+                  <div className="t">{r.displayName} <span className="small muted" style={{ fontWeight: 500 }}>· <code>{r.uid}</code></span></div>
+                  <div className="m">
                     {fmtDate(r.createdAt)}
                     {r.updatedAt && r.createdAt && r.updatedAt.toMillis() - r.createdAt.toMillis() > 1000 ? ` · edited ${fmtDate(r.updatedAt)}` : ''}
                     {r.status === 'hidden' && r.moderatedAt ? ` · hidden ${fmtDate(r.moderatedAt)}` : ''}
                   </div>
                 </div>
-                <span className={`pill ${r.status === 'visible' ? 'ok' : 'bad'}`}>{r.status.toUpperCase()}</span>
+                <StatusBadge kind={r.status === 'visible' ? 'ok' : 'bad'}>{r.status === 'visible' ? 'Visible' : 'Hidden'}</StatusBadge>
               </div>
               <div className="quote" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{r.text}</div>
-              <div className="small muted" style={{ marginBottom: 10 }}>
-                On {r.mediaType} testimony: <b style={{ color: 'var(--text)' }}>{r.mediaTitle || '(untitled)'}</b> · ID <code>{r.mediaId}</code>
+              <div className="context-line">
+                On {r.mediaType} testimony: <b>{r.mediaTitle || '(untitled)'}</b> · <code>{r.mediaId}</code>
               </div>
-              <div className="row">
+              <div className="actions">
                 {r.status === 'visible' ? (
-                  <button className="btn small ghost" disabled={busy} onClick={() => void moderate(r, 'hidden')}>Hide</button>
+                  <button type="button" className="btn small ghost" disabled={busy} onClick={() => void moderate(r, 'hidden')}><Icon name="eyeOff" size={14} />Hide</button>
                 ) : (
-                  <button className="btn small" disabled={busy} onClick={() => void moderate(r, 'visible')}>Restore</button>
+                  <button type="button" className="btn small success" disabled={busy} onClick={() => void moderate(r, 'visible')}><Icon name="eye" size={14} />Restore</button>
                 )}
-                <button className="btn small danger" disabled={busy} onClick={() => void remove(r)}>Delete</button>
-                {!mediaId.trim() ? <button className="btn small ghost" onClick={() => setMediaId(r.mediaId)}>All comments on this item</button> : null}
-                {r.mediaType === 'video' ? <button className="btn small ghost" onClick={() => go({ name: 'editor', id: r.mediaId })}>Open testimony</button> : null}
-                {link ? <a className="btn small ghost" href={link} target="_blank" rel="noreferrer">View on website ↗</a> : null}
+                <button type="button" className="btn small danger" disabled={busy} onClick={() => void remove(r)}><Icon name="trash" size={14} />Delete</button>
+                {!mediaId.trim() ? <button type="button" className="btn small ghost" onClick={() => setMediaId(r.mediaId)}><Icon name="layers" size={14} />All comments on this item</button> : null}
+                {r.mediaType === 'video' ? <button type="button" className="btn small ghost" onClick={() => go({ name: 'editor', id: r.mediaId })}><Icon name="video" size={14} />Open testimony</button> : null}
+                {link ? <a className="btn small ghost" href={link} target="_blank" rel="noreferrer"><Icon name="external" size={14} />View on website</a> : null}
               </div>
-            </div>
+            </GlassCard>
           );
         })
       )}
 
       {hasMore && rows && rows.length > 0 ? (
-        <button className="btn ghost" disabled={loading} onClick={() => void load(cursor)}>{loading ? 'Loading…' : `Load ${PAGE} more`}</button>
+        <div className="load-more">
+          <button type="button" className="btn ghost" disabled={loading} onClick={() => void load(cursor)}>{loading ? 'Loading…' : `Load ${PAGE} more`}</button>
+        </div>
       ) : null}
     </>
   );

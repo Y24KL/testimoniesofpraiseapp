@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { collection, doc, getDoc, onSnapshot, orderBy, query, serverTimestamp, Timestamp, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { Field, Message } from '../components/Field';
+import { Message } from '../components/Field';
+import { Icon } from '../components/Icon';
+import { useToast } from '../components/feedback';
+import { usePendingCounts } from '../hooks/usePendingCounts';
+import { EmptyState, FilterTabs, GlassCard, LoadingList, PageHeader, SearchInput, StatusBadge } from '../components/ui';
 
 type Status = 'new' | 'reviewed' | 'resolved';
 type FeedbackType = 'general' | 'suggestion' | 'problem' | 'experience' | 'other';
@@ -37,8 +41,7 @@ const TYPE_LABEL: Record<FeedbackType, string> = {
   other: 'Other',
 };
 const TYPES = Object.keys(TYPE_LABEL) as FeedbackType[];
-const STATUS_LABEL: Record<Status, string> = { new: 'NEW', reviewed: 'REVIEWED', resolved: 'RESOLVED' };
-const STATUS_PILL: Record<Status, string> = { new: 'pill warn', reviewed: 'pill', resolved: 'pill ok' };
+const STATUS_LABEL: Record<Status, string> = { new: 'New', reviewed: 'Reviewed', resolved: 'Resolved' };
 const STATUSES: Status[] = ['new', 'reviewed', 'resolved'];
 const PLATFORM_LABEL: Record<string, string> = { android: 'Android app', ios: 'iPhone app', web: 'Website' };
 
@@ -49,6 +52,9 @@ export function UserFeedback() {
   const [statusFilter, setStatusFilter] = useState<'all' | Status>('all');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState('');
+  const [search, setSearch] = useState('');
+  const toast = useToast();
+  const { refresh: refreshCounts } = usePendingCounts();
   const [profiles, setProfiles] = useState<Record<string, Profile | null>>({});
   const asked = useRef(new Set<string>());
 
@@ -82,6 +88,8 @@ export function UserFeedback() {
         reviewedAt: serverTimestamp(),
         reviewedBy: auth.currentUser?.uid ?? null,
       });
+      toast.ok(`Feedback marked ${STATUS_LABEL[status].toLowerCase()}.`);
+      refreshCounts();
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -90,53 +98,41 @@ export function UserFeedback() {
   };
 
   const all = items ?? [];
-  const newCount = all.filter((f) => f.status === 'new').length;
-  const shown = all.filter((f) => (typeFilter === 'all' || f.feedbackType === typeFilter) && (statusFilter === 'all' || f.status === statusFilter));
+  const needle = search.trim().toLowerCase();
+  const shown = all.filter(
+    (f) =>
+      (typeFilter === 'all' || f.feedbackType === typeFilter) &&
+      (statusFilter === 'all' || f.status === statusFilter) &&
+      (!needle || [f.subject ?? '', f.message, f.userId].some((v) => v.toLowerCase().includes(needle))),
+  );
+  const badge = (st: Status) => (st === 'new' ? 'warn' : st === 'resolved' ? 'ok' : 'info');
 
   return (
-    <div>
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h1 style={{ margin: 0 }}>User Feedback</h1>
-        {items ? <span className={newCount > 0 ? 'pill warn' : 'pill'}>{newCount} new</span> : null}
+    <>
+      <PageHeader
+        eyebrow="Community Management"
+        title="User Feedback"
+        sub="Messages sent from “Feedback & Suggestions” in the app and on the website. Mark each one Reviewed or Resolved as you deal with it."
+      />
+      <div className="toolbar">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search subject, message or user ID…" label="Search feedback" />
+        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as 'all' | FeedbackType)} aria-label="Filter by category" style={{ width: 'auto' }}>
+          <option value="all">All categories</option>
+          {TYPES.map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
+        </select>
+        <FilterTabs
+          label="Filter by status"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={(['all', ...STATUSES] as ('all' | Status)[]).map((s) => ({ id: s, label: s === 'all' ? 'All' : STATUS_LABEL[s], count: items ? all.filter((f) => s === 'all' || f.status === s).length : undefined }))}
+        />
       </div>
-      <p className="muted">Messages sent from “Feedback &amp; Suggestions” in the app and on the website. Mark each one Reviewed or Resolved as you deal with it.</p>
-
-      <div className="card">
-        <div className="row" style={{ alignItems: 'flex-start' }}>
-          <div style={{ flex: '1 1 220px' }}>
-            <Field label="Category">
-              <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as 'all' | FeedbackType)}>
-                <option value="all">All categories</option>
-                {TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {TYPE_LABEL[t]}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
-          <div style={{ flex: '1 1 220px' }}>
-            <Field label="Status">
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | Status)}>
-                <option value="all">All statuses</option>
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {STATUS_LABEL[s]}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
-        </div>
-        {err ? <Message kind="err">{err}</Message> : null}
-        {!items ? <div className="muted">Loading…</div> : null}
-        {items && shown.length === 0 ? <div className="muted">{all.length === 0 ? 'No feedback yet.' : 'No feedback matches these filters.'}</div> : null}
-        {items && shown.length > 0 ? (
-          <div className="small muted">
-            Showing {shown.length} of {all.length}
-          </div>
-        ) : null}
-      </div>
+      {err ? <Message kind="err">{err}</Message> : null}
+      {!items ? <GlassCard><LoadingList rows={3} /></GlassCard> : null}
+      {items && shown.length === 0 ? (
+        <GlassCard><EmptyState icon="messageCircle" title={all.length === 0 ? 'No feedback yet' : 'No feedback matches'}>{all.length === 0 ? 'Feedback from the app and website appears here.' : 'Try other filters or another search.'}</EmptyState></GlassCard>
+      ) : null}
+      {items && shown.length > 0 ? <p className="result-count">Showing {shown.length} of {all.length}</p> : null}
 
       {shown.map((f) => {
         const profile = profiles[f.userId];
@@ -144,51 +140,38 @@ export function UserFeedback() {
         const place = profile ? [profile.church, profile.zone].filter(Boolean).join(', ') : '';
         const status: Status = STATUSES.includes(f.status) ? f.status : 'new';
         return (
-          <div key={f.id} className="card">
-            <div className="row" style={{ justifyContent: 'space-between' }}>
-              <span className="pill">{TYPE_LABEL[f.feedbackType] ?? f.feedbackType}</span>
-              <span className={STATUS_PILL[status]}>{STATUS_LABEL[status]}</span>
+          <GlassCard key={f.id} as="article" className="item-card">
+            <div className="item-head">
+              <div className="row gap" style={{ gap: 8 }}>
+                <StatusBadge kind="info" plain>{TYPE_LABEL[f.feedbackType] ?? f.feedbackType}</StatusBadge>
+                {f.rating ? (
+                  <span className="gold" aria-label={`Rated ${f.rating} out of 5`} title={`Rated ${f.rating} out of 5`}>
+                    {Array.from({ length: 5 }, (_, i) => <Icon key={i} name="star" size={14} fill={i < (f.rating ?? 0) ? 'currentColor' : 'none'} />)}
+                  </span>
+                ) : <span className="small muted">No rating</span>}
+              </div>
+              <StatusBadge kind={badge(status)}>{STATUS_LABEL[status]}</StatusBadge>
             </div>
-            {f.subject ? <h2 style={{ margin: '10px 0 0' }}>{f.subject}</h2> : null}
-            <p style={{ margin: '10px 0', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{f.message}</p>
-            <div className="small muted">
-              Rating:{' '}
-              {f.rating ? (
-                <span style={{ color: 'var(--accent)' }} aria-label={`${f.rating} out of 5`}>
-                  {'★'.repeat(f.rating)}
-                  {'☆'.repeat(5 - f.rating)}
-                </span>
-              ) : (
-                'not given'
-              )}{' '}
-              • {PLATFORM_LABEL[f.platform] ?? f.platform}
-              {f.appVersion ? ` (version ${f.appVersion})` : ''}
-            </div>
-            <div className="small muted">
-              Sent {f.createdAt ? f.createdAt.toDate().toLocaleString() : 'just now'}
-              {f.reviewedAt ? ` • Status changed ${f.reviewedAt.toDate().toLocaleString()}` : ''}
-            </div>
-            <div className="small muted">
-              From:{' '}
-              {profile === undefined ? 'Loading…' : name || 'No profile saved'}
-              {place ? ` • ${place}` : ''} • User ID <code>{f.userId}</code>
-            </div>
-            <div className="row" style={{ marginTop: 12 }}>
-              <button className="btn ghost" disabled={busyId === f.id || status === 'reviewed'} onClick={() => void setStatus(f, 'reviewed')}>
-                Mark reviewed
-              </button>
-              <button className="btn" disabled={busyId === f.id || status === 'resolved'} onClick={() => void setStatus(f, 'resolved')}>
-                Mark resolved
-              </button>
+            {f.subject ? <div className="t" style={{ fontSize: 17, fontWeight: 700 }}>{f.subject}</div> : null}
+            <p style={{ margin: 0, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{f.message}</p>
+            <dl className="kv">
+              <dt>From</dt>
+              <dd>{profile === undefined ? 'Loading…' : name || 'No profile saved'}{place ? ` · ${place}` : ''} · <code>{f.userId}</code></dd>
+              <dt>Platform</dt>
+              <dd>{PLATFORM_LABEL[f.platform] ?? f.platform}{f.appVersion ? ` (version ${f.appVersion})` : ''}</dd>
+              <dt>Sent</dt>
+              <dd>{f.createdAt ? f.createdAt.toDate().toLocaleString() : 'just now'}{f.reviewedAt ? ` · status changed ${f.reviewedAt.toDate().toLocaleString()}` : ''}</dd>
+            </dl>
+            <div className="actions">
+              <button type="button" className="btn small ghost" disabled={busyId === f.id || status === 'reviewed'} onClick={() => void setStatus(f, 'reviewed')}><Icon name="eye" size={14} />Mark reviewed</button>
+              <button type="button" className="btn small success" disabled={busyId === f.id || status === 'resolved'} onClick={() => void setStatus(f, 'resolved')}><Icon name="check" size={14} />Mark resolved</button>
               {status === 'new' ? null : (
-                <button className="btn ghost" disabled={busyId === f.id} onClick={() => void setStatus(f, 'new')}>
-                  Back to new
-                </button>
+                <button type="button" className="btn small ghost" disabled={busyId === f.id} onClick={() => void setStatus(f, 'new')}><Icon name="arrowUp" size={14} />Back to new</button>
               )}
             </div>
-          </div>
+          </GlassCard>
         );
       })}
-    </div>
+    </>
   );
 }

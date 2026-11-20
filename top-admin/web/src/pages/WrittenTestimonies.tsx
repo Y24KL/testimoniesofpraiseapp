@@ -5,6 +5,9 @@ import { fmtDate } from '../lib';
 import { describe, notifyWrittenPublished } from '../notify';
 import type { Route } from '../types';
 import { Message } from '../components/Field';
+import { Icon } from '../components/Icon';
+import { useConfirm } from '../components/feedback';
+import { EmptyState, FilterTabs, GlassCard, LoadingList, PageHeader, SearchInput, StatusBadge } from '../components/ui';
 
 export interface WrittenTestimonyDoc {
   id: string;
@@ -30,6 +33,7 @@ export function WrittenTestimonies({ go }: { go: (r: Route) => void }) {
   const [busyId, setBusyId] = useState('');
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
+  const confirm = useConfirm();
 
   useEffect(
     () =>
@@ -43,7 +47,7 @@ export function WrittenTestimonies({ go }: { go: (r: Route) => void }) {
 
   const togglePublish = async (w: WrittenTestimonyDoc) => {
     const publish = !w.isPublished;
-    if (!publish && !confirm(`Unpublish “${w.title}”? It disappears from the app and website right away.`)) return;
+    if (!publish && !(await confirm({ title: `Unpublish “${w.title}”?`, message: 'It disappears from the app and website right away.', confirmLabel: 'Unpublish' }))) return;
     setBusyId(w.id); setErr(''); setOk('');
     try {
       await updateDoc(doc(db, 'writtenTestimonies', w.id), {
@@ -61,7 +65,7 @@ export function WrittenTestimonies({ go }: { go: (r: Route) => void }) {
   };
 
   const remove = async (w: WrittenTestimonyDoc) => {
-    if (!confirm(`Delete “${w.title}”? This can’t be undone. (Unpublish it instead if you may want it back.)`)) return;
+    if (!(await confirm({ title: `Delete “${w.title}”?`, message: 'This can’t be undone. Unpublish it instead if you may want it back.', confirmLabel: 'Delete permanently', danger: true }))) return;
     setBusyId(w.id); setErr(''); setOk('');
     try {
       await deleteDoc(doc(db, 'writtenTestimonies', w.id));
@@ -79,46 +83,58 @@ export function WrittenTestimonies({ go }: { go: (r: Route) => void }) {
       (!q || [w.title, w.authorName, w.churchZone, w.body].some((v) => v?.toLowerCase().includes(q))),
   );
 
+  const n = (f: Filter) => (items ?? []).filter((w) => f === 'all' || (f === 'published') === w.isPublished).length;
+
   return (
     <>
-      <div className="row between">
-        <h1>Written testimonies</h1>
-        <button className="btn" onClick={() => go({ name: 'writtenEditor' })}>+ New written testimony</button>
-      </div>
-      <p className="muted">
-        Text testimonies shown in the app’s and website’s “Written testimonies” library. Only published ones are visible to users. You can also turn an approved submission into a written testimony from the Submissions page.
-      </p>
-      <div className="row" style={{ marginBottom: 12 }}>
-        {(['all', 'published', 'draft'] as Filter[]).map((f) => (
-          <button key={f} className={`btn small ${filter === f ? '' : 'ghost'}`} onClick={() => setFilter(f)}>{f.toUpperCase()}</button>
-        ))}
-        <input type="text" placeholder="Search title, name, church or text" value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 320 }} />
+      <PageHeader
+        eyebrow="Content Studio"
+        title="Written Testimonies"
+        sub="Text testimonies in the app’s and website’s “Written testimonies” library. Only published ones are visible. You can also turn an approved submission into a written testimony from Testimony Submissions."
+        actions={<button type="button" className="btn primary" onClick={() => go({ name: 'writtenEditor' })}><Icon name="plus" size={16} />New written testimony</button>}
+      />
+      <div className="toolbar">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search title, name, church or text…" label="Search written testimonies" />
+        <FilterTabs
+          label="Filter by status"
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { id: 'all', label: 'All', count: items ? n('all') : undefined },
+            { id: 'published', label: 'Published', count: items ? n('published') : undefined },
+            { id: 'draft', label: 'Drafts', count: items ? n('draft') : undefined },
+          ]}
+        />
       </div>
       {err ? <Message kind="err">{err}</Message> : null}
       {ok ? <Message kind="ok">{ok}</Message> : null}
       {!items ? (
-        <p className="muted">Loading…</p>
+        <GlassCard><LoadingList rows={3} /></GlassCard>
       ) : shown.length === 0 ? (
-        <div className="card muted">{items.length === 0 ? 'No written testimonies yet.' : 'Nothing matches this filter.'}</div>
+        <GlassCard>
+          <EmptyState icon="fileText" title={items.length === 0 ? 'No written testimonies yet' : 'Nothing matches'}>
+            {items.length === 0 ? 'Create one, or convert an approved submission.' : 'Try another search or status filter.'}
+          </EmptyState>
+        </GlassCard>
       ) : (
         shown.map((w) => (
-          <div className="card" key={w.id}>
-            <div className="row between">
+          <GlassCard key={w.id} as="article" className="item-card">
+            <div className="item-head">
               <div style={{ minWidth: 0 }}>
-                <b>{w.title}</b>
-                <div className="small muted">{[w.authorName, w.churchZone, w.category, fmtDate(w.createdAt)].filter(Boolean).join(' · ')}</div>
+                <div className="t">{w.title}</div>
+                <div className="m">{[w.authorName, w.churchZone, w.category, fmtDate(w.createdAt)].filter(Boolean).join(' · ')}</div>
               </div>
-              <span className={`pill ${w.isPublished ? 'ok' : 'draft'}`}>{w.isPublished ? 'PUBLISHED' : 'DRAFT'}</span>
+              <StatusBadge kind={w.isPublished ? 'ok' : 'draft'}>{w.isPublished ? 'Published' : 'Draft'}</StatusBadge>
             </div>
-            <div className="quote" style={{ whiteSpace: 'pre-wrap', maxHeight: 120, overflow: 'hidden' }}>{w.body}</div>
-            <div className="row">
-              <button className="btn small" onClick={() => go({ name: 'writtenEditor', id: w.id })}>Edit</button>
-              <button className={`btn small ${w.isPublished ? 'ghost' : ''}`} disabled={busyId === w.id} onClick={() => void togglePublish(w)}>
+            <div className="quote clamp-5">{w.body}</div>
+            <div className="actions">
+              <button type="button" className="btn small ghost" onClick={() => go({ name: 'writtenEditor', id: w.id })}><Icon name="edit" size={14} />Edit</button>
+              <button type="button" className={`btn small ${w.isPublished ? 'ghost' : 'success'}`} disabled={busyId === w.id} onClick={() => void togglePublish(w)}>
                 {w.isPublished ? 'Unpublish' : 'Publish'}
               </button>
-              <button className="btn small danger" disabled={busyId === w.id} onClick={() => void remove(w)}>Delete</button>
+              <button type="button" className="btn small danger" disabled={busyId === w.id} onClick={() => void remove(w)}><Icon name="trash" size={14} />Delete</button>
             </div>
-          </div>
+          </GlassCard>
         ))
       )}
     </>

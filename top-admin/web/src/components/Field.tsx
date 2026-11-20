@@ -1,11 +1,12 @@
 import type { CSSProperties, ReactNode } from 'react';
+import { Icon } from './Icon';
 
 export function Field({ label, hint, children, style }: { label: string; hint?: string; children: ReactNode; style?: CSSProperties }) {
   return (
     <label className="f" style={style}>
       <span>{label}</span>
       {children}
-      {hint ? <span className="small muted" style={{ marginTop: 4, fontWeight: 400 }}>{hint}</span> : null}
+      {hint ? <span className="f-hint">{hint}</span> : null}
     </label>
   );
 }
@@ -23,5 +24,11 @@ export function Check({ checked, onChange, label, hint, disabled }: { checked: b
 }
 
 export function Message({ kind, children }: { kind: 'err' | 'ok' | 'warn'; children: ReactNode }) {
-  return <div className={`msg ${kind}`} role={kind === 'err' ? 'alert' : 'status'}>{children}</div>;
+  const icon = kind === 'err' ? 'alert' : kind === 'ok' ? 'checkCircle' : 'info';
+  return (
+    <div className={`msg ${kind}`} role={kind === 'err' ? 'alert' : 'status'}>
+      <Icon name={icon} size={18} className="msg-ic" />
+      <div className="msg-body">{children}</div>
+    </div>
+  );
 }

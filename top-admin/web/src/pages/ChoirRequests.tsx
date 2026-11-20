@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, Timestamp, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { Field, Message } from '../components/Field';
+import { Message } from '../components/Field';
+import { Icon } from '../components/Icon';
+import { useToast } from '../components/feedback';
+import { usePendingCounts } from '../hooks/usePendingCounts';
+import { EmptyState, FilterTabs, GlassCard, LoadingList, PageHeader, StatusBadge } from '../components/ui';
 import type { Route } from '../types';
 
 type Status = 'pending' | 'reviewed' | 'approved' | 'rejected';
@@ -29,6 +33,8 @@ export function ChoirRequests({ go }: { go: (r: Route) => void }) {
   const [filter, setFilter] = useState<'all' | Status>('pending');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState('');
+  const toast = useToast();
+  const { refresh: refreshCounts } = usePendingCounts();
 
   useEffect(() => {
     const q = query(collection(db, 'choirFeatureRequests'), orderBy('submittedAt', 'desc'));
@@ -49,6 +55,8 @@ export function ChoirRequests({ go }: { go: (r: Route) => void }) {
         reviewedAt: serverTimestamp(),
         reviewedBy: auth.currentUser?.uid ?? null,
       });
+      toast.ok(`${r.groupName} marked ${LABEL[status].toLowerCase()}.`);
+      refreshCounts();
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -57,53 +65,55 @@ export function ChoirRequests({ go }: { go: (r: Route) => void }) {
   };
 
   const shown = (requests ?? []).filter((r) => filter === 'all' || r.status === filter);
+  const badge = (st: Status) => (st === 'approved' ? 'ok' : st === 'rejected' ? 'bad' : st === 'reviewed' ? 'info' : 'warn');
 
   return (
-    <div>
-      <h1>Choir requests</h1>
-      <p className="muted">Requests from “Feature your choir/group on T.O.P”. Nothing is published from here. To show a group in the app, add it under Featured choirs.</p>
-
-      <div className="card">
-        <Field label="Show">
-          <select value={filter} onChange={(e) => setFilter(e.target.value as 'all' | Status)}>
-            {FILTERS.map((f) => (
-              <option key={f} value={f}>
-                {f === 'all' ? 'All requests' : LABEL[f]}
-              </option>
-            ))}
-          </select>
-        </Field>
-        {err ? <Message kind="err">{err}</Message> : null}
-        {!requests ? <div className="muted">Loading…</div> : null}
-        {requests && shown.length === 0 ? <div className="muted">No requests here.</div> : null}
+    <>
+      <PageHeader
+        eyebrow="Community Management"
+        title="Choir Requests"
+        sub="Requests from “Feature your choir/group on T.O.P”. Approving doesn’t publish anything; to show a group in the app, add it under Featured Choirs."
+        actions={<button type="button" className="btn ghost" onClick={() => go({ name: 'featuredChoirs' })}><Icon name="users" size={16} />Open Featured Choirs</button>}
+      />
+      <div className="toolbar">
+        <FilterTabs
+          label="Filter requests"
+          value={filter}
+          onChange={setFilter}
+          options={FILTERS.map((f) => ({ id: f, label: f === 'all' ? 'All' : LABEL[f], count: requests ? requests.filter((r) => f === 'all' || r.status === f).length : undefined }))}
+        />
       </div>
+      {err ? <Message kind="err">{err}</Message> : null}
+      {!requests ? <GlassCard><LoadingList rows={3} /></GlassCard> : null}
+      {requests && shown.length === 0 ? (
+        <GlassCard><EmptyState icon="userPlus" title={filter === 'pending' ? 'No requests waiting' : 'No requests here'}>{filter === 'pending' ? 'New choir and group requests appear here.' : 'Try another status filter.'}</EmptyState></GlassCard>
+      ) : null}
 
       {shown.map((r) => (
-        <div key={r.id} className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <h2 style={{ margin: 0 }}>{r.groupName}</h2>
-            <span className="small" style={{ fontWeight: 700 }}>{LABEL[r.status] ?? r.status}</span>
+        <GlassCard key={r.id} as="article" className="item-card">
+          <div className="item-head">
+            <div style={{ minWidth: 0 }}>
+              <div className="t">{r.groupName}</div>
+              <div className="m">{[r.churchZone, r.songTitle ? `“${r.songTitle}”` : ''].filter(Boolean).join(' · ')}</div>
+            </div>
+            <StatusBadge kind={badge(r.status)}>{LABEL[r.status] ?? r.status}</StatusBadge>
           </div>
-          <div className="small muted">
-            Church zone: {r.churchZone} • Song: {r.songTitle}
-          </div>
-          <div className="small muted">
-            Submitted {r.submittedAt ? r.submittedAt.toDate().toLocaleString() : 'just now'} • User ID <code>{r.submittedBy}</code>
-          </div>
-          {r.reviewedAt ? <div className="small muted">Reviewed {r.reviewedAt.toDate().toLocaleString()}</div> : null}
-          <p style={{ margin: '10px 0', wordBreak: 'break-all' }}>
-            <a href={r.ministrationUrl} target="_blank" rel="noopener noreferrer">Open the ministration link</a>
-          </p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className="btn ghost" disabled={busyId === r.id || r.status === 'reviewed'} onClick={() => void setStatus(r, 'reviewed')}>Mark reviewed</button>
-            <button className="btn" disabled={busyId === r.id || r.status === 'approved'} onClick={() => void setStatus(r, 'approved')}>Approve</button>
-            <button className="btn ghost" disabled={busyId === r.id || r.status === 'rejected'} onClick={() => void setStatus(r, 'rejected')}>Reject</button>
+          <dl className="kv">
+            <dt>Submitted</dt><dd>{r.submittedAt ? r.submittedAt.toDate().toLocaleString() : 'just now'}</dd>
+            <dt>User ID</dt><dd><code>{r.submittedBy}</code></dd>
+            {r.reviewedAt ? <><dt>Reviewed</dt><dd>{r.reviewedAt.toDate().toLocaleString()}</dd></> : null}
+          </dl>
+          <div className="actions">
+            <a className="btn small" href={r.ministrationUrl} target="_blank" rel="noopener noreferrer"><Icon name="play" size={14} />Watch ministration</a>
+            <button type="button" className="btn small ghost" disabled={busyId === r.id || r.status === 'reviewed'} onClick={() => void setStatus(r, 'reviewed')}><Icon name="eye" size={14} />Mark reviewed</button>
+            <button type="button" className="btn small success" disabled={busyId === r.id || r.status === 'approved'} onClick={() => void setStatus(r, 'approved')}><Icon name="check" size={14} />Approve</button>
+            <button type="button" className="btn small ghost" disabled={busyId === r.id || r.status === 'rejected'} onClick={() => void setStatus(r, 'rejected')}><Icon name="x" size={14} />Reject</button>
             {r.status === 'pending' ? null : (
-              <button className="btn ghost" disabled={busyId === r.id} onClick={() => void setStatus(r, 'pending')}>Back to pending</button>
+              <button type="button" className="btn small ghost" disabled={busyId === r.id} onClick={() => void setStatus(r, 'pending')}><Icon name="arrowUp" size={14} />Back to pending</button>
             )}
           </div>
-        </div>
+        </GlassCard>
       ))}
-    </div>
+    </>
   );
 }

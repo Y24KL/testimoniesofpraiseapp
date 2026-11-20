@@ -46,7 +46,7 @@ Date: 2026-11-18. Builds on `docs/PHASE0_AUDIT.md`. Nothing here is deployed. Ev
 
 ## Decisions taken in this build
 
-- **Engine runs on the Worker**, on a 15-minute cron, with no Blaze upgrade (decision D1, recommended).
+- **Engine runs on the Worker**, on a 2-minute cron, with no Blaze upgrade (decision D1, recommended).
 - **Admin approval is required for every notification** (decision D4, recommended).
 - **Engine identity changed from Phase 0's recommendation.** Phase 0 proposed a scoped system uid (S6). This build uses the Worker's existing service account, through an OAuth token (`googleAuth.js`). Like the Firebase Admin SDK, it bypasses rules. The reasons: the secret is already in the Worker, a custom-token route would need a Web API key that isn't configured, and all client access to engine collections is still denied by rules. The engine code is the only writer. If you want stricter isolation, a scoped identity can replace it later.
 - **Quiet-hours default** when unset: 22:00 to 07:00 local time. **Daily cap** when unset: 3 per person.

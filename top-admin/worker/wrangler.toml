@@ -35,7 +35,7 @@ new_sqlite_classes = ["PraxiomConcurrencyGate"]
 # Notification engine: scans for new content and sends approved notifications. The engine does nothing
 # until settings/notifications.enabled is true in Firestore (the kill switch fails closed).
 [triggers]
-crons = ["*/15 * * * *"]
+crons = ["*/2 * * * *"]
 
 # EMAIL VERIFICATION (6-digit codes) — see docs/EMAIL_VERIFICATION_WORKER.md
 # Storage for codes and trusted devices (created with: npx wrangler kv namespace create OTP_KV)

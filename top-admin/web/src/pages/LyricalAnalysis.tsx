@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import {
   Timestamp,
   addDoc,
@@ -234,7 +234,7 @@ export function LyricalAnalysis() {
           title={editingId ? 'Edit analysis' : 'New analysis'}
           hint={editingId ? <>Currently <StatusBadge kind={badge(editingStatus)}>{STATUS_LABEL[editingStatus]}</StatusBadge></> : 'Save as a draft to keep working on it, or publish straight away.'}
         />
-        <div className="compose" style={{ gridTemplateColumns: 'minmax(0, 1fr) 360px' }}>
+        <div className="compose" style={{ '--side': '360px' } as CSSProperties}>
           <div>
             <Field label="Analysis title *"><input value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
             <div className="two">

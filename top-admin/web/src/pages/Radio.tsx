@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import {
   addDoc,
   collection,
@@ -413,7 +413,7 @@ export function Radio() {
         <>
           <form ref={formRef} onSubmit={saveAudioTestimony} className={`card ${editingAudioId ? 'editing-ring' : ''}`}>
             <SectionHeader icon={editingAudioId ? 'edit' : 'plus'} title={editingAudioId ? 'Edit audio testimony' : 'Add an audio testimony'} hint={editingAudioId ? `Editing “${audioTitle}”` : 'Published recordings appear in the TOP Radio library in the app.'} />
-            <div className="compose" style={{ gridTemplateColumns: 'minmax(0, 1fr) 300px' }}>
+            <div className="compose" style={{ '--side': '300px' } as CSSProperties}>
               <div>
                 <Field label="Title *">
                   <input type="text" value={audioTitle} onChange={(e) => setAudioTitle(e.target.value)} placeholder="e.g. Miraculous healing from heart disease" required />

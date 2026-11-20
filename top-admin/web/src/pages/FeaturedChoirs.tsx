@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { notifyChoirFeatured } from '../notify';
@@ -185,7 +185,7 @@ export function FeaturedChoirs() {
 
       <div ref={formRef} className={`card ${editingId ? 'editing-ring' : ''}`}>
         <SectionHeader icon={editingId ? 'edit' : 'plus'} title={editingId ? 'Edit entry' : 'Add to the showcase'} hint={editingId ? `Editing “${groupName}”` : 'New entries go to the end of the showcase.'} />
-        <div className="compose" style={{ gridTemplateColumns: 'minmax(0, 1fr) 320px' }}>
+        <div className="compose" style={{ '--side': '320px' } as CSSProperties}>
           <div>
             <div className="two">
               <Field label="Group name *"><input value={groupName} onChange={(e) => setGroupName(e.target.value)} /></Field>

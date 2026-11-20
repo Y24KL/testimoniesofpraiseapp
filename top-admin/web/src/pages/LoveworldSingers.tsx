@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import {
   Timestamp,
   deleteDoc,
@@ -261,7 +261,7 @@ export function LoveworldSingers() {
 
       <div ref={formRef} className={`card ${editingId ? 'editing-ring' : ''}`}>
         <SectionHeader icon={editingId ? 'edit' : 'plus'} title={editingId ? 'Edit video' : 'Add a video'} hint={editingId ? `Editing “${title}”` : 'New videos go to the end of the library.'} />
-        <div className="compose" style={{ gridTemplateColumns: 'minmax(0, 1fr) 320px' }}>
+        <div className="compose" style={{ '--side': '320px' } as CSSProperties}>
           <div>
             <Field label="Title *"><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Song title" /></Field>
             <Field label="Description"><textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
@@ -364,7 +364,7 @@ export function LoveworldSingers() {
 
       <form className="card" onSubmit={saveHeroVideo}>
         <SectionHeader icon="film" title="Page background video" hint="Plays at the top of the LoveWorld Singers page in the app and on the web." />
-        <div className="compose" style={{ gridTemplateColumns: 'minmax(0, 1fr) 320px' }}>
+        <div className="compose" style={{ '--side': '320px' } as CSSProperties}>
           <div>
             <Field label="Video link (https://, MP4)">
               <input type="url" value={heroVideoUrl} onChange={(e) => setHeroVideoUrl(e.target.value)} placeholder="https://..." />

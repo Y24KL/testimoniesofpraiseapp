@@ -25,10 +25,25 @@ export interface PushResult {
   devices: number;
   reasons?: Record<string, number>;
   firstError?: string;
+  /** Set when the live notification engine (worker 2.5+) handled the request. */
+  engine?: { queued: number; inApp: number; duplicate: boolean };
 }
+
+const phones = (n: number) => `${n} phone${n === 1 ? '' : 's'}`;
 
 /** One-line summary of a relay result for the admin, including why sends failed. */
 export function describePush(r: PushResult): string {
+  if (r.engine) {
+    const { queued, inApp, duplicate } = r.engine;
+    if (duplicate) return 'A notification was already sent for this one, so it was not sent again.';
+    if (queued === 0 && r.sent === 0 && inApp === 0) return 'No phones have this notification type turned on, so no push was sent.';
+    const parts = [`Push sent to ${phones(r.sent)}.`];
+    if (inApp) parts.push(`${phones(inApp)} had the app open and got it in the app instead.`);
+    if (r.failed) parts.push(`${r.failed} failed.`);
+    const held = queued - r.sent - inApp - r.failed;
+    if (held > 0) parts.push(`${phones(held)} will get it later (quiet hours or their daily limit).`);
+    return parts.join(' ');
+  }
   if (r.devices === 0) return 'No phones are signed up for this notification type yet, so no push was sent.';
   let s = `Push sent to ${r.sent} of ${r.devices} device${r.devices === 1 ? '' : 's'}.`;
   if (r.failed) {
@@ -50,7 +65,8 @@ export async function sendPush(req: PushRequest): Promise<PushResult | { ok: fal
     });
     const j = await res.json().catch(() => ({}));
     if (!res.ok) return { ok: false, error: j.error ?? `Relay error (${res.status}).` };
-    return { ok: true, sent: j.sent ?? 0, failed: j.failed ?? 0, devices: j.devices ?? 0, reasons: j.reasons, firstError: j.firstError };
+    const engine = j.engine === true ? { queued: j.queued ?? 0, inApp: j.inApp ?? 0, duplicate: j.duplicate === true } : undefined;
+    return { ok: true, sent: j.sent ?? 0, failed: j.failed ?? 0, devices: j.devices ?? 0, reasons: j.reasons, firstError: j.firstError, engine };
   } catch {
     return { ok: false, error: 'Could not reach the push relay.' };
   }

@@ -79,7 +79,7 @@ export function Sponsorships() {
             <div className="actions">
               {s.status !== 'approved' ? <button type="button" className="btn small success" onClick={() => void setStatus(s, 'approved')}><Icon name="check" size={14} />Approve</button> : null}
               {s.status !== 'rejected' ? <button type="button" className="btn small ghost" onClick={() => void setStatus(s, 'rejected')}><Icon name="x" size={14} />Reject</button> : null}
-              {s.status !== 'pending' ? <button type="button" className="btn small ghost" onClick={() => void setStatus(s, 'pending')}><Icon name="arrowUp" size={14} />Move back to pending</button> : null}
+              {s.status !== 'pending' ? <button type="button" className="btn small ghost" onClick={() => void setStatus(s, 'pending')}><Icon name="undo" size={14} />Move back to pending</button> : null}
               {s.receiptUrl ? <a className="btn small ghost" href={s.receiptUrl} target="_blank" rel="noreferrer"><Icon name="external" size={14} />Open receipt</a> : null}
             </div>
           </GlassCard>

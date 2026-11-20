@@ -13,6 +13,8 @@ import { describe, notifyArticlePublished } from '../notify';
 import { isHttpUrl } from '../lib';
 import type { Article, Route } from '../types';
 import { Check, Field, Message } from '../components/Field';
+import { Icon } from '../components/Icon';
+import { FilterTabs, GlassCard, LoadingList, PageHeader, SectionHeader, StatusBadge, UploadProgress } from '../components/ui';
 
 interface Props {
   id?: string;
@@ -66,8 +68,8 @@ export function ArticleEditor({ id, go }: Props) {
     try {
       const url = await uploadToCloudinary(file, 'image', setUploadPct);
       setCoverImageUrl(url);
-    } catch (ex: any) {
-      setErr(ex.message || 'Image upload failed.');
+    } catch (ex) {
+      setErr((ex as Error).message || 'Image upload failed.');
     } finally {
       setUploading(false);
     }
@@ -119,180 +121,116 @@ export function ArticleEditor({ id, go }: Props) {
 
       setOk(noteMsg);
       setTimeout(() => go({ name: 'articles' }), 1200);
-    } catch (ex: any) {
-      setErr(ex.message || 'Failed to save article.');
+    } catch (ex) {
+      setErr((ex as Error).message || 'Failed to save article.');
     } finally {
       setBusy(false);
     }
   };
 
-  if (loading) return <p className="muted">Loading article…</p>;
+  if (loading) {
+    return (
+      <>
+        <PageHeader eyebrow="Articles & Updates" title="Edit article" />
+        <GlassCard><LoadingList rows={4} /></GlassCard>
+      </>
+    );
+  }
+
+  const submitLabel = busy ? 'Saving…' : isPublished ? (id ? 'Update and publish' : 'Publish article') : 'Save as draft';
 
   return (
-    <>
-      <div className="row between">
-        <div>
-          <h1>{id ? 'Edit Article' : 'Write New Article'}</h1>
-          <p className="muted">Craft an inspiring update, written testimony, devotional, or announcement.</p>
-        </div>
-        <button className="btn ghost" onClick={() => go({ name: 'articles' })}>
-          ← Back to Articles
-        </button>
-      </div>
+    <form onSubmit={save}>
+      <PageHeader
+        eyebrow="Articles & Updates"
+        title={id ? 'Edit article' : 'Write new article'}
+        sub="An update, devotional or announcement for app and website readers."
+        actions={
+          <>
+            <button type="button" className="btn ghost" onClick={() => go({ name: 'articles' })}><Icon name="arrowLeft" size={16} />Back to articles</button>
+            <button type="submit" className="btn primary" disabled={busy || uploading}>
+              {busy ? <span className="spin sm" aria-hidden="true" /> : <Icon name={isPublished ? 'send' : 'check'} size={16} />}
+              {submitLabel}
+            </button>
+          </>
+        }
+      />
 
       {err ? <Message kind="err">{err}</Message> : null}
       {ok ? <Message kind="ok">{ok}</Message> : null}
 
-      <form onSubmit={save} className="card" style={{ marginTop: 16 }}>
-        <div className="row between" style={{ marginBottom: 16 }}>
-          <div className="row gap">
-            <button
-              type="button"
-              className={`btn small ${!preview ? 'primary' : 'ghost'}`}
-              onClick={() => setPreview(false)}
-            >
-              Editor
-            </button>
-            <button
-              type="button"
-              className={`btn small ${preview ? 'primary' : 'ghost'}`}
-              onClick={() => setPreview(true)}
-            >
-              Live Preview
-            </button>
-          </div>
-        </div>
+      <div className="toolbar">
+        <FilterTabs
+          label="Editor mode"
+          value={preview ? 'preview' : 'edit'}
+          onChange={(v) => setPreview(v === 'preview')}
+          options={[{ id: 'edit', label: 'Write' }, { id: 'preview', label: 'Reading preview' }]}
+        />
+      </div>
 
-        {!preview ? (
-          <>
-            <Field label="Article Title *">
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Unwavering Faith: How God Healed Against All Odds"
-                required
-              />
-            </Field>
+      <div className="editor-layout">
+        <GlassCard>
+          {!preview ? (
+            <>
+              <Field label="Title *">
+                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Unwavering Faith: How God Healed Against All Odds" required />
+              </Field>
+              <Field label="Article body *" hint="Separate paragraphs with a blank line. Start a line with “-” for a bullet or “#” for a heading.">
+                <textarea className="body-input" value={body} onChange={(e) => setBody(e.target.value)} rows={16} placeholder="Write the full article here…" required />
+              </Field>
+              <div className="small muted">{body.trim() ? `${body.trim().split(/\s+/).length.toLocaleString()} words · about ${Math.max(1, Math.round(body.trim().split(/\s+/).length / 200))} min read` : 'No words yet'}</div>
+            </>
+          ) : (
+            <article className="reading">
+              {coverImageUrl ? <img className="cover-preview" src={coverImageUrl} alt="" /> : null}
+              {category ? <StatusBadge kind="info" plain>{category}</StatusBadge> : null}
+              <h1>{title || 'Untitled article'}</h1>
+              <p className="small muted">By {author || 'TOP Editorial'} · Preview</p>
+              <div className="body">{body || 'No content written yet.'}</div>
+            </article>
+          )}
+        </GlassCard>
 
-            <div className="row gap" style={{ display: 'flex', gap: 12 }}>
-              <Field label="Author / Byline" style={{ flex: 1 }}>
-                <input
-                  type="text"
-                  value={author}
-                  onChange={(e) => setAuthor(e.target.value)}
-                  placeholder="e.g. Pastor Karen or TOP Editorial"
-                />
-              </Field>
-              <Field label="Category" style={{ flex: 1 }}>
-                <input
-                  type="text"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  placeholder="e.g. Devotional, Announcement, Praise Report"
-                />
-              </Field>
+        <aside className="editor-side">
+          <GlassCard>
+            <SectionHeader icon="send" title="Publishing" as="h3" />
+            <Check label="Publish now" hint="Visible to everyone in the app and on the website." checked={isPublished} onChange={setIsPublished} />
+            {isPublished ? <Check label="Notify app users" hint="Sends a push notification when it publishes." checked={notifyOnPublish} onChange={setNotifyOnPublish} /> : null}
+            <div className="sticky-actions">
+              <button type="button" className="btn ghost" onClick={() => go({ name: 'articles' })}>Cancel</button>
+              <button type="submit" className="btn primary" disabled={busy || uploading}>{submitLabel}</button>
             </div>
+          </GlassCard>
 
-            <Field label="Cover Image (Optional)">
-              <div className="row gap" style={{ alignItems: 'center' }}>
-                <input
-                  type="url"
-                  value={coverImageUrl}
-                  onChange={(e) => setCoverImageUrl(e.target.value)}
-                  placeholder="https://... (image URL)"
-                  style={{ flex: 1 }}
-                />
+          <GlassCard>
+            <SectionHeader icon="image" title="Cover image" as="h3" />
+            {coverImageUrl ? <img className="cover-preview" src={coverImageUrl} alt="Cover preview" /> : <div className="cover-empty">No cover image. Articles without one show as text cards.</div>}
+            {uploading ? <UploadProgress label="Uploading cover" pct={uploadPct} /> : null}
+            <div className="stack-sm" style={{ marginTop: 12 }}>
+              <input type="url" value={coverImageUrl} onChange={(e) => setCoverImageUrl(e.target.value)} placeholder="https://… image link" aria-label="Cover image link" />
+              <div className="row">
                 {uploadsEnabled ? (
-                  <label className="btn ghost" style={{ cursor: 'pointer', margin: 0 }}>
-                    {uploading ? `Uploading ${uploadPct}%` : 'Upload Cover'}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                      style={{ display: 'none' }}
-                      disabled={uploading}
-                    />
+                  <label className="btn ghost small file-btn">
+                    <Icon name="upload" size={14} />{uploading ? `Uploading ${uploadPct}%` : 'Upload image'}
+                    <input type="file" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
                   </label>
-                ) : null}
+                ) : <span className="small muted">Uploads aren’t configured; paste a link instead.</span>}
+                {coverImageUrl ? <button type="button" className="btn ghost small" onClick={() => setCoverImageUrl('')}><Icon name="x" size={14} />Remove</button> : null}
               </div>
-              {coverImageUrl ? (
-                <div style={{ marginTop: 8 }}>
-                  <img
-                    src={coverImageUrl}
-                    alt="Cover preview"
-                    style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)' }}
-                  />
-                </div>
-              ) : null}
-            </Field>
-
-            <Field label="Article Body * (Supports multi-line paragraphs, bullet points with '-', and headings with '#')">
-              <textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                rows={14}
-                placeholder="Write the full content of the article here..."
-                required
-                style={{ fontFamily: 'inherit', lineHeight: '1.6', fontSize: 14 }}
-              />
-            </Field>
-          </>
-        ) : (
-          /* Live Reading Preview */
-          <div
-            style={{
-              padding: 24,
-              backgroundColor: 'var(--surface, #1E0A2B)',
-              borderRadius: 8,
-              border: '1px solid var(--border)',
-              marginBottom: 16,
-            }}
-          >
-            {coverImageUrl ? (
-              <img
-                src={coverImageUrl}
-                alt=""
-                style={{ width: '100%', maxHeight: 260, objectFit: 'cover', borderRadius: 8, marginBottom: 16 }}
-              />
-            ) : null}
-            {category ? <span className="pill" style={{ marginBottom: 8, display: 'inline-block' }}>{category}</span> : null}
-            <h1 style={{ fontSize: 26, margin: '8px 0', color: '#fff' }}>{title || 'Untitled Article'}</h1>
-            <p className="small muted" style={{ marginBottom: 20 }}>
-              By {author || 'TOP Editorial'} • Preview Mode
-            </p>
-            <div style={{ lineHeight: '1.7', fontSize: 15, color: '#f3e8ff', whiteSpace: 'pre-wrap' }}>
-              {body || 'No content written yet.'}
             </div>
-          </div>
-        )}
+          </GlassCard>
 
-        <div className="row between" style={{ marginTop: 16, alignItems: 'center' }}>
-          <div className="row gap" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-            <Check
-              label="Publish immediately (visible to all users)"
-              checked={isPublished}
-              onChange={setIsPublished}
-            />
-            {isPublished ? (
-              <Check
-                label="Send push notification to users on publish"
-                checked={notifyOnPublish}
-                onChange={setNotifyOnPublish}
-              />
-            ) : null}
-          </div>
-
-          <div className="row gap">
-            <button type="button" className="btn ghost" onClick={() => go({ name: 'articles' })}>
-              Cancel
-            </button>
-            <button type="submit" className="btn primary" disabled={busy || uploading}>
-              {busy ? 'Saving…' : isPublished ? (id ? 'Update & Publish' : 'Publish Article') : 'Save as Draft'}
-            </button>
-          </div>
-        </div>
-      </form>
-    </>
+          <GlassCard>
+            <SectionHeader icon="info" title="Details" as="h3" />
+            <Field label="Author / byline">
+              <input type="text" value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="TOP Editorial" />
+            </Field>
+            <Field label="Category">
+              <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Devotional, Announcement" />
+            </Field>
+          </GlassCard>
+        </aside>
+      </div>
+    </form>
   );
 }

@@ -109,7 +109,7 @@ export function ChoirRequests({ go }: { go: (r: Route) => void }) {
             <button type="button" className="btn small success" disabled={busyId === r.id || r.status === 'approved'} onClick={() => void setStatus(r, 'approved')}><Icon name="check" size={14} />Approve</button>
             <button type="button" className="btn small ghost" disabled={busyId === r.id || r.status === 'rejected'} onClick={() => void setStatus(r, 'rejected')}><Icon name="x" size={14} />Reject</button>
             {r.status === 'pending' ? null : (
-              <button type="button" className="btn small ghost" disabled={busyId === r.id} onClick={() => void setStatus(r, 'pending')}><Icon name="arrowUp" size={14} />Back to pending</button>
+              <button type="button" className="btn small ghost" disabled={busyId === r.id} onClick={() => void setStatus(r, 'pending')}><Icon name="undo" size={14} />Back to pending</button>
             )}
           </div>
         </GlassCard>

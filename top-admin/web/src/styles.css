@@ -658,6 +658,7 @@ video.preview, .preview video { width: 100%; max-height: 340px; background: #000
 .loader { display: grid; justify-items: center; gap: var(--s4); color: var(--muted); }
 .loader img { width: 72px; opacity: 0.95; animation: breathe 2.4s var(--ease) infinite; }
 .spin { display: inline-block; width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.18); border-top-color: currentColor; animation: spin 900ms linear infinite; }
+.spin.sm { width: 14px; height: 14px; border-width: 2px; }
 .loader .spin { width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.12); border-top-color: var(--accent); animation: spin 900ms linear infinite; }
 
 /* ---------------------------------------------------------------- phone preview (promotions) */
@@ -716,3 +717,50 @@ video.preview, .preview video { width: 100%; max-height: 340px; background: #000
 .context-line { font-size: var(--fs-sm); color: var(--muted); }
 .context-line b { color: var(--text); }
 .load-more { display: flex; justify-content: center; margin: var(--s4) 0; }
+.compose { display: grid; gap: var(--s5); grid-template-columns: minmax(0, 1fr) 280px; align-items: start; }
+@media (max-width: 900px) { .compose { grid-template-columns: 1fr; } .compose .phone { margin: 0 auto; } }
+.char-count { float: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+.char-count.near { color: var(--accent); }
+.push-card { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; padding: 10px; border-radius: 14px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.12); backdrop-filter: blur(12px); }
+.push-card img { width: 34px; height: 34px; border-radius: 8px; }
+.push-card .app { font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; }
+.push-card .pt { font-size: 13px; font-weight: 700; margin-top: 2px; overflow-wrap: anywhere; }
+.push-card .pb { font-size: 12.5px; color: #E9DDF3; overflow-wrap: anywhere; }
+.phone .clock { text-align: center; font-size: 34px; font-weight: 300; margin: 12px 0 2px; }
+.phone .date { text-align: center; font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+.center-icon { display: grid; place-items: center; color: var(--muted); }
+
+/* ---------------------------------------------------------------- editors */
+.editor-layout { display: grid; gap: var(--s4); grid-template-columns: minmax(0, 1fr) 340px; align-items: start; }
+.editor-layout > .card { margin-bottom: 0; }
+.editor-side { display: grid; gap: var(--s4); position: sticky; top: calc(var(--topbar-h, 64px) + 16px); }
+.editor-side > .card { margin-bottom: 0; }
+@media (max-width: 1100px) { .editor-layout { grid-template-columns: 1fr; } .editor-side { position: static; } }
+.cover-preview { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--r-md); border: 1px solid var(--glass-border); background: var(--glass-highlight); display: block; }
+.cover-empty { width: 100%; aspect-ratio: 16 / 9; border-radius: var(--r-md); border: 1px dashed rgba(201, 181, 217, 0.35); display: grid; place-items: center; color: var(--muted); font-size: var(--fs-sm); text-align: center; padding: var(--s3); }
+.file-btn { position: relative; overflow: hidden; }
+.file-btn input[type='file'] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.reading { max-width: 720px; margin: 0 auto; }
+.reading .cover-preview { margin-bottom: var(--s4); }
+.reading h1 { font-size: 30px; margin: var(--s2) 0; }
+.reading .body { line-height: 1.75; font-size: 16px; color: #F3E8FF; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sticky-actions { display: flex; gap: var(--s2); justify-content: flex-end; flex-wrap: wrap; }
+textarea.body-input { font-family: inherit; line-height: 1.65; font-size: 15px; min-height: 360px; }
+.provider-note { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); margin: -6px 0 var(--s3); }
+.provider-note b { color: var(--accent); font-weight: 650; }
+.upload-zone { display: grid; gap: var(--s2); padding: var(--s4); border-radius: var(--r-md); border: 1px dashed rgba(201, 181, 217, 0.35); background: rgba(18, 0, 28, 0.35); margin-bottom: var(--s4); }
+.upload-zone .row { justify-content: space-between; }
+.or-sep { display: flex; align-items: center; gap: var(--s3); color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; margin: 0 0 var(--s3); }
+.or-sep::before, .or-sep::after { content: ''; flex: 1; height: 1px; background: rgba(255, 255, 255, 0.08); }
+.btn.disabled { opacity: 0.55; pointer-events: none; }
+/* Mirrors the app's written-testimony card so editors see what readers see. */
+.wt-preview { background: linear-gradient(135deg, #7A1FA2, #4B006E); border-radius: 22px; padding: 12px; }
+.wt-preview .paper { background: #fff; border-radius: 16px; padding: 18px; color: #14063A; }
+.wt-preview .who { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.wt-preview .ring { width: 60px; height: 60px; border-radius: 50%; background: #F5C542; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.wt-preview .ring img, .wt-preview .ring span { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; background: #4B006E; }
+.wt-preview .name { font-weight: 900; color: #4B006E; }
+.wt-preview .zone { font-weight: 700; color: #2B1B9A; font-size: 13px; }
+.wt-preview .title { font-weight: 800; color: #4B006E; font-size: 18px; margin-bottom: 8px; }
+.wt-preview p { margin: 0 0 10px; font-weight: 600; line-height: 1.55; }
+.wt-preview .placeholder { color: #8A7A9A; font-weight: 500; }

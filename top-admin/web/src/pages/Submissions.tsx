@@ -134,7 +134,7 @@ export function Submissions({ go }: { go: (r: Route) => void }) {
                 </button>
               )}
               {s.status !== 'rejected' && !s.linkedTestimonyId && !s.linkedWrittenId ? <button type="button" className="btn small ghost" onClick={() => void setStatus(s, 'rejected')}><Icon name="x" size={14} />Reject</button> : null}
-              {s.status === 'rejected' ? <button type="button" className="btn small ghost" onClick={() => void setStatus(s, 'pending')}><Icon name="arrowUp" size={14} />Move back to pending</button> : null}
+              {s.status === 'rejected' ? <button type="button" className="btn small ghost" onClick={() => void setStatus(s, 'pending')}><Icon name="undo" size={14} />Move back to pending</button> : null}
               <button type="button" className="btn small danger" onClick={() => void remove(s)}><Icon name="trash" size={14} />Delete</button>
             </div>
           </GlassCard>

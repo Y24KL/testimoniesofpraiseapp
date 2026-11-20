@@ -166,7 +166,7 @@ export function UserFeedback() {
               <button type="button" className="btn small ghost" disabled={busyId === f.id || status === 'reviewed'} onClick={() => void setStatus(f, 'reviewed')}><Icon name="eye" size={14} />Mark reviewed</button>
               <button type="button" className="btn small success" disabled={busyId === f.id || status === 'resolved'} onClick={() => void setStatus(f, 'resolved')}><Icon name="check" size={14} />Mark resolved</button>
               {status === 'new' ? null : (
-                <button type="button" className="btn small ghost" disabled={busyId === f.id} onClick={() => void setStatus(f, 'new')}><Icon name="arrowUp" size={14} />Back to new</button>
+                <button type="button" className="btn small ghost" disabled={busyId === f.id} onClick={() => void setStatus(f, 'new')}><Icon name="undo" size={14} />Back to new</button>
               )}
             </div>
           </GlassCard>

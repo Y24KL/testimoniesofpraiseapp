@@ -13,6 +13,10 @@ import { describe, notifyTestimonyPublished } from '../notify';
 import { CATEGORIES, fmtDuration, isHls, isHttpUrl, parseDuration, readVideoDuration, testimonyFromDoc } from '../lib';
 import type { Route, Testimony } from '../types';
 import { Check, Field, Message } from '../components/Field';
+import { Icon } from '../components/Icon';
+import { StreamPreview } from '../components/StreamPreview';
+import { useConfirm } from '../components/feedback';
+import { GlassCard, LoadingList, PageHeader, SectionHeader, UploadProgress } from '../components/ui';
 import { indexTestimony } from '../aiSearchIndex';
 
 interface Props {
@@ -47,6 +51,7 @@ export function TestimonyEditor({ id, prefill, go }: Props) {
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
   const dirty = useRef(false);
+  const confirm = useConfirm();
 
   useEffect(() => {
     if (!id) return;
@@ -100,7 +105,7 @@ export function TestimonyEditor({ id, prefill, go }: Props) {
     if (thumbnail && !isHttpUrl(thumbnail)) return setErr('The thumbnail link must start with https://');
     if (isPublished && !videoUrl) return setErr('Add a video before publishing (or save as a draft).');
     const newlyPublished = isPublished && !existing?.isPublished;
-    if (newlyPublished && notifyOnPublish && !confirm('Publishing sends a push notification to app users. Continue?')) return;
+    if (newlyPublished && notifyOnPublish && !(await confirm({ title: 'Publish and notify app users?', message: 'Publishing sends a push notification to everyone with testimony alerts on.', confirmLabel: 'Publish and notify' }))) return;
 
     setSaving(true);
     try {
@@ -151,81 +156,114 @@ export function TestimonyEditor({ id, prefill, go }: Props) {
     }
   };
 
-  const back = () => { if (!dirty.current || confirm('Discard your unsaved changes?')) go({ name: 'testimonies' }); };
-  if (loading) return <p className="muted">Loading…</p>;
+  const back = async () => {
+    if (!dirty.current || (await confirm({ title: 'Discard your unsaved changes?', message: 'Anything you changed on this page will be lost.', confirmLabel: 'Discard changes', cancelLabel: 'Keep editing', danger: true }))) go({ name: 'testimonies' });
+  };
+  if (loading) {
+    return (
+      <>
+        <PageHeader eyebrow="Video Testimonies" title="Edit testimony" />
+        <GlassCard><LoadingList rows={4} /></GlassCard>
+      </>
+    );
+  }
   const busy = saving || thumbPct !== null || videoPct !== null;
+  const saveLabel = saving ? 'Saving…' : busy ? 'Uploading…' : isNew ? 'Save testimony' : 'Save changes';
 
   return (
     <>
-      <div className="row between"><h1>{isNew ? 'New testimony' : 'Edit testimony'}</h1><button className="btn ghost" onClick={back}>← Back</button></div>
+      <PageHeader
+        eyebrow="Video Testimonies"
+        title={isNew ? 'New testimony' : 'Edit testimony'}
+        sub={isNew ? 'Add the details, a video and a thumbnail. Save as a draft or publish straight away.' : existing?.title}
+        actions={
+          <>
+            <button type="button" className="btn ghost" onClick={() => void back()}><Icon name="arrowLeft" size={16} />Back</button>
+            <button type="button" className="btn primary" onClick={() => void save()} disabled={busy}>
+              {saving ? <span className="spin sm" aria-hidden="true" /> : <Icon name="check" size={16} />}{saveLabel}
+            </button>
+          </>
+        }
+      />
       {err ? <Message kind="err">{err}</Message> : null}
       {ok ? <Message kind="ok">{ok}</Message> : null}
 
-      <div className="card">
-        <h2>Details</h2>
-        <Field label="Title *"><input type="text" value={title} onChange={(e) => mark(setTitle)(e.target.value)} maxLength={160} /></Field>
-        <div className="two">
-          <Field label="Testifier name"><input type="text" value={authorName} onChange={(e) => mark(setAuthorName)(e.target.value)} /></Field>
-          <Field label="Category">
-            <input type="text" list="cats" value={category} onChange={(e) => mark(setCategory)(e.target.value)} />
-            <datalist id="cats">{CATEGORIES.map((c) => <option key={c} value={c} />)}</datalist>
-          </Field>
+      <div className="editor-layout">
+        <div className="stack">
+          <GlassCard>
+            <SectionHeader icon="fileText" title="Details" />
+            <Field label="Title *"><input type="text" value={title} onChange={(e) => mark(setTitle)(e.target.value)} maxLength={160} placeholder="e.g. Healed of a lifelong condition" /></Field>
+            <div className="two">
+              <Field label="Testifier name"><input type="text" value={authorName} onChange={(e) => mark(setAuthorName)(e.target.value)} /></Field>
+              <Field label="Category">
+                <input type="text" list="cats" value={category} onChange={(e) => mark(setCategory)(e.target.value)} />
+                <datalist id="cats">{CATEGORIES.map((c) => <option key={c} value={c} />)}</datalist>
+              </Field>
+            </div>
+            <Field label="Description"><textarea value={description} onChange={(e) => mark(setDescription)(e.target.value)} style={{ minHeight: 120 }} /></Field>
+            <Field label="Search keywords" hint="Comma-separated. Helps people find it in the app’s search."><input type="text" value={keywords} onChange={(e) => mark(setKeywords)(e.target.value)} placeholder="healing, faith, family" /></Field>
+          </GlassCard>
+
+          <GlassCard>
+            <SectionHeader icon="film" title="Video" />
+            {uploadsEnabled ? (
+              <>
+                <div className="upload-zone">
+                  <div className="row">
+                    <div>
+                      <b>Upload a video file</b>
+                      <div className="small muted">MP4 works best. Up to {MAX_VIDEO_MB} MB on the free plan. Keep this page open until it finishes.</div>
+                    </div>
+                    <label className={`btn small file-btn ${videoPct !== null ? 'disabled' : ''}`}>
+                      <Icon name="upload" size={14} />Choose video
+                      <input type="file" accept="video/*" onChange={(e) => void pickVideo(e.target.files?.[0])} disabled={videoPct !== null} />
+                    </label>
+                  </div>
+                  {videoPct !== null ? <UploadProgress label="Uploading video" pct={videoPct} /> : null}
+                </div>
+                <div className="or-sep">or paste a link</div>
+              </>
+            ) : null}
+            <Field label={uploadsEnabled ? 'Video link' : 'Video link *'} hint="An MP4 link or an HLS (.m3u8) stream from your video host."><input type="url" placeholder="https://" value={videoUrl} onChange={(e) => mark(setVideoUrl)(e.target.value)} /></Field>
+            {videoUrl ? <div className="provider-note"><Icon name="cloud" size={14} />Storage provider: <b>{getProviderDisplayName(identifyProvider(videoUrl))}</b></div> : null}
+            {videoUrl && !hls ? <video className="preview" src={videoUrl} controls preload="metadata" /> : null}
+            {hls && isHttpUrl(videoUrl) ? <StreamPreview url={videoUrl} /> : null}
+            {hls ? <Message kind="warn">HLS stream detected. Viewers can watch it, but it can’t be downloaded for offline use.</Message> : null}
+            <div className="two" style={{ marginTop: 12 }}>
+              <Field label="Duration" hint="Filled in automatically when you upload. Format 12:40."><input type="text" value={durationText} onChange={(e) => mark(setDurationText)(e.target.value)} placeholder="12:40" /></Field>
+            </div>
+          </GlassCard>
         </div>
-        <Field label="Description"><textarea value={description} onChange={(e) => mark(setDescription)(e.target.value)} /></Field>
-        <Field label="Search keywords" hint="Comma-separated. Helps people find it in the app’s search."><input type="text" value={keywords} onChange={(e) => mark(setKeywords)(e.target.value)} /></Field>
-      </div>
 
-      <div className="card">
-        <h2>Video</h2>
-        {uploadsEnabled ? (
-          <>
-            <Field label="Upload a video file" hint={`MP4 works best. Up to ${MAX_VIDEO_MB} MB on the free plan. Keep this page open until it finishes.`}>
-              <input type="file" accept="video/*" onChange={(e) => void pickVideo(e.target.files?.[0])} disabled={videoPct !== null} />
-            </Field>
-            {videoPct !== null ? <div className="bar" aria-label="Video upload progress"><i style={{ width: `${videoPct}%` }} /></div> : null}
-          </>
-        ) : null}
-        <Field label={uploadsEnabled ? '…or paste a video link' : 'Video link *'} hint="An MP4 link or an HLS (.m3u8) stream from your video host."><input type="url" placeholder="https://" value={videoUrl} onChange={(e) => mark(setVideoUrl)(e.target.value)} /></Field>
-        {videoUrl ? (
-          <div style={{ fontSize: 12, color: '#aaa', margin: '-4px 0 8px 0' }}>
-            Storage Provider: <span style={{ color: '#F5C542', fontWeight: 600 }}>{getProviderDisplayName(identifyProvider(videoUrl))}</span>
-          </div>
-        ) : null}
-        {videoUrl && !hls ? <video className="preview" src={videoUrl} controls preload="metadata" /> : null}
-        {hls ? <Message kind="ok">HLS stream detected. Viewers can watch it, but it can’t be downloaded for offline use.</Message> : null}
-        <div className="two" style={{ marginTop: 12 }}>
-          <Field label="Duration" hint="Filled in automatically when you upload. Format 12:40."><input type="text" value={durationText} onChange={(e) => mark(setDurationText)(e.target.value)} placeholder="12:40" /></Field>
-        </div>
-      </div>
+        <aside className="editor-side">
+          <GlassCard>
+            <SectionHeader icon="eye" title="Visibility" as="h3" />
+            <Check checked={isPublished} onChange={mark(setPublished)} label="Published" hint="Visible in the app and the website feed. Untick to keep it as a draft or remove it from the app." />
+            <Check checked={notifyOnPublish} onChange={mark(setNotify)} label="Push notification on publish" hint="Only sent the first time it’s published." />
+            <Check checked={isFeatured} onChange={mark(setFeatured)} label="Featured on the Home screen" />
+            <Check checked={isDownloadable && !hls} disabled={hls} onChange={mark(setDownloadable)} label="Allow offline downloads" hint={hls ? 'Not available for HLS streams.' : undefined} />
+            <div className="sticky-actions">
+              <button type="button" className="btn ghost" onClick={() => void back()} disabled={saving}>Cancel</button>
+              <button type="button" className="btn primary" onClick={() => void save()} disabled={busy}>{saveLabel}</button>
+            </div>
+          </GlassCard>
 
-      <div className="card">
-        <h2>Thumbnail</h2>
-        {uploadsEnabled ? (
-          <>
-            <Field label="Upload an image"><input type="file" accept="image/*" onChange={(e) => void pickThumb(e.target.files?.[0])} disabled={thumbPct !== null} /></Field>
-            {thumbPct !== null ? <div className="bar"><i style={{ width: `${thumbPct}%` }} /></div> : null}
-          </>
-        ) : null}
-        <Field label={uploadsEnabled ? '…or paste an image link' : 'Image link'}><input type="url" placeholder="https://" value={thumbnail} onChange={(e) => mark(setThumbnail)(e.target.value)} /></Field>
-        {thumbnail ? (
-          <div style={{ fontSize: 12, color: '#aaa', margin: '-4px 0 8px 0' }}>
-            Storage Provider: <span style={{ color: '#F5C542', fontWeight: 600 }}>{getProviderDisplayName(identifyProvider(thumbnail))}</span>
-          </div>
-        ) : null}
-        {thumbnail ? <img src={thumbnail} alt="Thumbnail preview" style={{ maxWidth: 280, borderRadius: 12 }} /> : null}
-      </div>
-
-      <div className="card">
-        <h2>Visibility</h2>
-        <Check checked={isPublished} onChange={mark(setPublished)} label="Published" hint="Visible in the app and the website feed. Uncheck to keep as a draft or to remove it from the app." />
-        <Check checked={notifyOnPublish} onChange={mark(setNotify)} label="Send a push notification when published" hint="Only sent the first time it is published." />
-        <Check checked={isFeatured} onChange={mark(setFeatured)} label="Featured on the app’s Home screen" />
-        <Check checked={isDownloadable && !hls} disabled={hls} onChange={mark(setDownloadable)} label="Allow users to download for offline viewing" hint={hls ? 'Not available for HLS streams.' : undefined} />
-      </div>
-
-      <div className="row">
-        <button className="btn" onClick={() => void save()} disabled={busy}>{saving ? 'Saving…' : busy ? 'Uploading…' : isNew ? 'SAVE TESTIMONY' : 'SAVE CHANGES'}</button>
-        <button className="btn ghost" onClick={back} disabled={saving}>Cancel</button>
+          <GlassCard>
+            <SectionHeader icon="image" title="Thumbnail" as="h3" />
+            {thumbnail ? <img className="cover-preview" src={thumbnail} alt="Thumbnail preview" /> : <div className="cover-empty">No thumbnail yet</div>}
+            {thumbPct !== null ? <UploadProgress label="Uploading thumbnail" pct={thumbPct} /> : null}
+            <div className="stack-sm" style={{ marginTop: 12 }}>
+              <input type="url" placeholder="https://… image link" aria-label="Thumbnail link" value={thumbnail} onChange={(e) => mark(setThumbnail)(e.target.value)} />
+              {thumbnail ? <div className="provider-note" style={{ margin: 0 }}><Icon name="cloud" size={14} />Storage provider: <b>{getProviderDisplayName(identifyProvider(thumbnail))}</b></div> : null}
+              {uploadsEnabled ? (
+                <label className="btn ghost small file-btn" style={{ justifySelf: 'start' }}>
+                  <Icon name="upload" size={14} />Upload image
+                  <input type="file" accept="image/*" onChange={(e) => void pickThumb(e.target.files?.[0])} disabled={thumbPct !== null} />
+                </label>
+              ) : null}
+            </div>
+          </GlassCard>
+        </aside>
       </div>
     </>
   );

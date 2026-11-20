@@ -6,6 +6,9 @@ import { describe, notifyWrittenPublished } from '../notify';
 import { uploadToCloudinary, uploadsEnabled } from '../uploads';
 import type { Route } from '../types';
 import { Check, Field, Message } from '../components/Field';
+import { Icon } from '../components/Icon';
+import { useConfirm } from '../components/feedback';
+import { GlassCard, LoadingList, PageHeader, SectionHeader, UploadProgress } from '../components/ui';
 
 // Same limits as the Firestore rules (validWrittenTestimony).
 const MAX_TITLE = 200;
@@ -39,6 +42,7 @@ export function WrittenTestimonyEditor({ id, prefill, go }: { id?: string; prefi
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
   const dirty = useRef(false);
+  const confirm = useConfirm();
   const mark = <T,>(set: (v: T) => void) => (v: T) => { dirty.current = true; set(v); };
 
   useEffect(() => {
@@ -115,66 +119,100 @@ export function WrittenTestimonyEditor({ id, prefill, go }: { id?: string; prefi
     setSaving(false);
   };
 
-  const back = () => { if (!dirty.current || confirm('Discard your unsaved changes?')) go({ name: 'written' }); };
-  if (loading) return <p className="muted">Loading…</p>;
+  const back = async () => {
+    if (!dirty.current || (await confirm({ title: 'Discard your unsaved changes?', message: 'Anything you changed on this page will be lost.', confirmLabel: 'Discard changes', cancelLabel: 'Keep editing', danger: true }))) go({ name: 'written' });
+  };
+  if (loading) {
+    return (
+      <>
+        <PageHeader eyebrow="Written Testimonies" title="Edit written testimony" />
+        <GlassCard><LoadingList rows={4} /></GlassCard>
+      </>
+    );
+  }
   const paragraphs = body.split(/\n\s*\n|\n/).map((p) => p.trim()).filter(Boolean);
+  const len = body.trim().length;
 
   return (
     <>
-      <div className="row between"><h1>{isNew ? 'New written testimony' : 'Edit written testimony'}</h1><button className="btn ghost" onClick={back}>← Back</button></div>
-      {prefill?.sourceSubmissionId ? <Message kind="warn">Prefilled from a submission. Check the name and church/zone may be shown publicly before publishing.</Message> : null}
+      <PageHeader
+        eyebrow="Written Testimonies"
+        title={isNew ? 'New written testimony' : 'Edit written testimony'}
+        sub="Readers see it exactly as the preview shows."
+        actions={
+          <>
+            <button type="button" className="btn ghost" onClick={() => void back()}><Icon name="arrowLeft" size={16} />Back</button>
+            <button type="button" className="btn primary" disabled={saving || photoPct !== null} onClick={() => void save()}>
+              {saving ? <span className="spin sm" aria-hidden="true" /> : <Icon name="check" size={16} />}{saving ? 'Saving…' : 'Save'}
+            </button>
+          </>
+        }
+      />
+      {prefill?.sourceSubmissionId ? <Message kind="warn">Prefilled from a submission. Check the name and church/zone can be shown publicly before publishing.</Message> : null}
       {err ? <Message kind="err">{err}</Message> : null}
       {ok ? <Message kind="ok">{ok}</Message> : null}
 
-      <div className="card">
-        <h2>Testimony</h2>
-        <Field label="Title *"><input type="text" value={title} maxLength={MAX_TITLE} onChange={(e) => mark(setTitle)(e.target.value)} placeholder="Business breakthrough after leaving my job" /></Field>
-        <Field label="Testimony text *" hint={`${body.trim().length.toLocaleString()} / ${MAX_BODY.toLocaleString()} characters. Leave a blank line between paragraphs.`}>
-          <textarea value={body} onChange={(e) => mark(setBody)(e.target.value)} style={{ minHeight: 260 }} />
-        </Field>
-        <div className="two">
-          <Field label="Testifier name (shown publicly)"><input type="text" value={authorName} maxLength={120} onChange={(e) => mark(setAuthorName)(e.target.value)} placeholder="Brother Ajiboye Oluwaseun Henry" /></Field>
-          <Field label="Church / zone (shown publicly)"><input type="text" value={churchZone} maxLength={160} onChange={(e) => mark(setChurchZone)(e.target.value)} placeholder="Christ Embassy Lagos Zone 1" /></Field>
-        </div>
-        <div className="two">
+      <div className="editor-layout">
+        <GlassCard>
+          <SectionHeader icon="fileText" title="Testimony" />
+          <Field label="Title *"><input type="text" value={title} maxLength={MAX_TITLE} onChange={(e) => mark(setTitle)(e.target.value)} placeholder="Business breakthrough after leaving my job" /></Field>
+          <label className="f">
+            <span>Testimony text * <span className={`char-count ${len > MAX_BODY * 0.9 ? 'near' : ''}`}>{len.toLocaleString()} / {MAX_BODY.toLocaleString()}</span></span>
+            <textarea className="body-input" value={body} onChange={(e) => mark(setBody)(e.target.value)} />
+            <span className="f-hint">Leave a blank line between paragraphs.</span>
+          </label>
+          <div className="two">
+            <Field label="Testifier name (shown publicly)"><input type="text" value={authorName} maxLength={120} onChange={(e) => mark(setAuthorName)(e.target.value)} placeholder="Brother Ajiboye Oluwaseun Henry" /></Field>
+            <Field label="Church / zone (shown publicly)"><input type="text" value={churchZone} maxLength={160} onChange={(e) => mark(setChurchZone)(e.target.value)} placeholder="Christ Embassy Lagos Zone 1" /></Field>
+          </div>
           <Field label="Category">
             <input type="text" list="written-cats" value={category} maxLength={60} onChange={(e) => mark(setCategory)(e.target.value)} />
             <datalist id="written-cats">{CATEGORIES.map((c) => <option key={c} value={c} />)}</datalist>
           </Field>
-          <Field label="Photo link (optional)" hint={uploadsEnabled ? 'Or upload a photo below.' : undefined}><input type="url" value={photo} onChange={(e) => mark(setPhoto)(e.target.value)} placeholder="https://" /></Field>
-        </div>
-        {uploadsEnabled ? (
-          <Field label="Upload photo">
-            <input type="file" accept="image/*" disabled={photoPct !== null} onChange={(e) => void pickPhoto(e.target.files?.[0])} />
-          </Field>
-        ) : null}
-        {photoPct !== null ? <div className="bar" aria-label="Photo upload progress"><i style={{ width: `${photoPct}%` }} /></div> : null}
-      </div>
+        </GlassCard>
 
-      <div className="card">
-        <h2>Publishing</h2>
-        <Check checked={isPublished} onChange={mark(setPublished)} label="Published (visible in the app and on the website)" hint="Leave off to keep it as a draft." />
-        {isPublished && !wasPublished ? <Check checked={notify} onChange={setNotify} label="Send a notification when published" /> : null}
-        <button className="btn" disabled={saving || photoPct !== null} onClick={() => void save()}>{saving ? 'Saving…' : 'SAVE'}</button>
-      </div>
+        <aside className="editor-side">
+          <GlassCard>
+            <SectionHeader icon="send" title="Publishing" as="h3" />
+            <Check checked={isPublished} onChange={mark(setPublished)} label="Published" hint="Visible in the app and on the website. Leave off to keep it as a draft." />
+            {isPublished && !wasPublished ? <Check checked={notify} onChange={setNotify} label="Notify app users when published" /> : null}
+            <div className="sticky-actions">
+              <button type="button" className="btn ghost" onClick={() => void back()} disabled={saving}>Cancel</button>
+              <button type="button" className="btn primary" disabled={saving || photoPct !== null} onClick={() => void save()}>{saving ? 'Saving…' : 'Save'}</button>
+            </div>
+          </GlassCard>
 
-      <div className="card">
-        <h2>Preview</h2>
-        <div style={{ background: 'linear-gradient(135deg,#7A1FA2,#4B006E)', borderRadius: 22, padding: 12 }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 18, color: '#14063A' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-              <span style={{ width: 60, height: 60, borderRadius: '50%', background: '#F5C542', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                {photo && isHttpUrl(photo) ? <img src={photo} alt="" style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover' }} /> : <span style={{ width: 52, height: 52, borderRadius: '50%', background: '#4B006E' }} />}
-              </span>
-              <div>
-                <div style={{ fontWeight: 900, color: '#4B006E' }}>{authorName || 'Testifier name'}</div>
-                <div style={{ fontWeight: 700, color: '#2B1B9A', fontSize: 13 }}>{churchZone || 'Church / zone'}</div>
+          <GlassCard>
+            <SectionHeader icon="user" title="Testifier photo" as="h3" hint="Optional" />
+            <div className="stack-sm">
+              <input type="url" value={photo} onChange={(e) => mark(setPhoto)(e.target.value)} placeholder="https://… photo link" aria-label="Photo link" />
+              {uploadsEnabled ? (
+                <label className="btn ghost small file-btn" style={{ justifySelf: 'start' }}>
+                  <Icon name="upload" size={14} />Upload photo
+                  <input type="file" accept="image/*" disabled={photoPct !== null} onChange={(e) => void pickPhoto(e.target.files?.[0])} />
+                </label>
+              ) : null}
+              {photoPct !== null ? <UploadProgress label="Uploading photo" pct={photoPct} /> : null}
+            </div>
+          </GlassCard>
+
+          <GlassCard>
+            <SectionHeader icon="smartphone" title="Preview" as="h3" />
+            <div className="wt-preview">
+              <div className="paper">
+                <div className="who">
+                  <span className="ring">{photo && isHttpUrl(photo) ? <img src={photo} alt="" /> : <span />}</span>
+                  <div>
+                    <div className="name">{authorName || 'Testifier name'}</div>
+                    <div className="zone">{churchZone || 'Church / zone'}</div>
+                  </div>
+                </div>
+                <div className="title">{title || 'Title'}</div>
+                {paragraphs.length ? paragraphs.map((p, i) => <p key={i}>{p}</p>) : <p className="placeholder">The testimony text appears here.</p>}
               </div>
             </div>
-            <div style={{ fontWeight: 800, color: '#4B006E', fontSize: 18, marginBottom: 8 }}>{title || 'Title'}</div>
-            {paragraphs.length ? paragraphs.map((p, i) => <p key={i} style={{ margin: '0 0 10px', fontWeight: 600, lineHeight: 1.55 }}>{p}</p>) : <p className="muted">The testimony text appears here.</p>}
-          </div>
-        </div>
+          </GlassCard>
+        </aside>
       </div>
     </>
   );

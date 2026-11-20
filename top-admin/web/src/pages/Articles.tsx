@@ -13,6 +13,9 @@ import { db } from '../firebase';
 import { fmtDate } from '../lib';
 import type { Article, Route } from '../types';
 import { Message } from '../components/Field';
+import { Icon } from '../components/Icon';
+import { useConfirm } from '../components/feedback';
+import { EmptyState, FilterTabs, GlassCard, LoadingList, PageHeader, SearchInput, StatusBadge } from '../components/ui';
 
 interface Props {
   go: (r: Route) => void;
@@ -22,6 +25,9 @@ export function Articles({ go }: Props) {
   const [articles, setArticles] = useState<Article[] | null>(null);
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all');
+  const confirm = useConfirm();
 
   useEffect(() => {
     const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'));
@@ -43,132 +49,95 @@ export function Articles({ go }: Props) {
         updatedAt: serverTimestamp(),
       });
       setOk(`Article marked as ${willPublish ? 'Published' : 'Draft'}.`);
-    } catch (ex: any) {
-      setErr(ex.message);
+    } catch (ex) {
+      setErr((ex as Error).message);
     }
   };
 
-  const remove = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this article? This cannot be undone.')) return;
+  const remove = async (a: Article) => {
+    if (!(await confirm({ title: `Delete “${a.title}”?`, message: 'The article disappears from the app and website. This can’t be undone.', confirmLabel: 'Delete permanently', danger: true }))) return;
     try {
-      await deleteDoc(doc(db, 'articles', id));
+      await deleteDoc(doc(db, 'articles', a.id));
       setOk('Article deleted.');
-    } catch (ex: any) {
-      setErr(ex.message);
+    } catch (ex) {
+      setErr((ex as Error).message);
     }
   };
+
+  const needle = search.trim().toLowerCase();
+  const all = articles ?? [];
+  const shown = all.filter(
+    (a) => (filter === 'all' || (filter === 'published') === a.isPublished) && (!needle || [a.title, a.category ?? '', a.author ?? ''].some((v) => v.toLowerCase().includes(needle))),
+  );
+  const n = (f: typeof filter) => all.filter((a) => f === 'all' || (f === 'published') === a.isPublished).length;
 
   return (
     <>
-      <div className="row between">
-        <div>
-          <h1>Articles & Updates</h1>
-          <p className="muted">
-            Write and publish announcements, devotionals, written testimonies, and church updates for mobile and web readers.
-          </p>
-        </div>
-        <button className="btn primary" onClick={() => go({ name: 'articleEditor' })}>
-          + Write New Article
-        </button>
+      <PageHeader
+        eyebrow="Content Studio"
+        title="Articles & Updates"
+        sub="Write and publish announcements, devotionals and church updates for app and website readers."
+        actions={<button type="button" className="btn primary" onClick={() => go({ name: 'articleEditor' })}><Icon name="plus" size={16} />Write new article</button>}
+      />
+      <div className="toolbar">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search title, category or author…" label="Search articles" />
+        <FilterTabs
+          label="Filter by status"
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { id: 'all', label: 'All', count: articles ? n('all') : undefined },
+            { id: 'published', label: 'Published', count: articles ? n('published') : undefined },
+            { id: 'draft', label: 'Drafts', count: articles ? n('draft') : undefined },
+          ]}
+        />
       </div>
 
       {err ? <Message kind="err">{err}</Message> : null}
       {ok ? <Message kind="ok">{ok}</Message> : null}
 
-      {articles === null ? (
-        <p className="muted">Loading articles…</p>
-      ) : articles.length === 0 ? (
-        <div className="card center" style={{ padding: 48 }}>
-          <p className="muted">No articles written yet.</p>
-          <button className="btn primary" onClick={() => go({ name: 'articleEditor' })}>
-            Create Your First Article
-          </button>
-        </div>
-      ) : (
-        <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
-                <th style={{ padding: '12px 16px' }}>Cover</th>
-                <th style={{ padding: '12px 16px' }}>Title & Category</th>
-                <th style={{ padding: '12px 16px' }}>Author</th>
-                <th style={{ padding: '12px 16px' }}>Published</th>
-                <th style={{ padding: '12px 16px' }}>Status</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {articles.map((a) => (
-                <tr key={a.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '10px 16px', width: 80 }}>
-                    {a.coverImageUrl ? (
-                      <img
-                        src={a.coverImageUrl}
-                        alt=""
-                        style={{ width: 64, height: 42, objectFit: 'cover', borderRadius: 4 }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: 64,
-                          height: 42,
-                          background: 'rgba(255,255,255,0.05)',
-                          borderRadius: 4,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 11,
-                          color: 'var(--muted)',
-                        }}
-                      >
-                        Text
+      <GlassCard className="table-card">
+        {articles === null ? (
+          <div style={{ padding: 20 }}><LoadingList rows={4} /></div>
+        ) : shown.length === 0 ? (
+          <EmptyState
+            icon="newspaper"
+            title={all.length === 0 ? 'No articles yet' : 'No articles match'}
+            action={all.length === 0 ? <button type="button" className="btn primary" onClick={() => go({ name: 'articleEditor' })}><Icon name="plus" size={16} />Write the first article</button> : undefined}
+          >
+            {all.length === 0 ? 'Published articles appear in the app’s Updates section.' : 'Try another search or status filter.'}
+          </EmptyState>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr><th aria-label="Cover"></th><th>Title</th><th>Author</th><th>Date</th><th>Status</th><th aria-label="Actions"></th></tr>
+              </thead>
+              <tbody>
+                {shown.map((a) => (
+                  <tr key={a.id}>
+                    <td>{a.coverImageUrl ? <img className="thumb" src={a.coverImageUrl} alt="" loading="lazy" /> : <div className="thumb center-icon"><Icon name="fileText" size={18} /></div>}</td>
+                    <td className="title-cell">
+                      <b>{a.title}</b>
+                      {a.category ? <div className="small muted">{a.category}</div> : null}
+                    </td>
+                    <td className="small muted">{a.author || 'TOP Editorial'}</td>
+                    <td className="small muted nowrap">{a.publishedAt ? fmtDate(a.publishedAt) : a.createdAt ? fmtDate(a.createdAt) : '—'}</td>
+                    <td><StatusBadge kind={a.isPublished ? 'ok' : 'draft'}>{a.isPublished ? 'Published' : 'Draft'}</StatusBadge></td>
+                    <td>
+                      <div className="row-actions">
+                        <button type="button" className="btn small ghost" onClick={() => go({ name: 'articleEditor', id: a.id })}><Icon name="edit" size={14} />Edit</button>
+                        <button type="button" className={`btn small ${a.isPublished ? 'ghost' : 'success'}`} onClick={() => void togglePublish(a)}>{a.isPublished ? 'Unpublish' : 'Publish'}</button>
+                        <button type="button" className="btn small danger" aria-label={`Delete ${a.title}`} onClick={() => void remove(a)}><Icon name="trash" size={14} /></button>
                       </div>
-                    )}
-                  </td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <b>{a.title}</b>
-                    {a.category ? (
-                      <span className="pill" style={{ marginLeft: 8, fontSize: 11 }}>
-                        {a.category}
-                      </span>
-                    ) : null}
-                  </td>
-                  <td style={{ padding: '10px 16px', color: 'var(--muted)', fontSize: 14 }}>
-                    {a.author || 'TOP Editorial'}
-                  </td>
-                  <td style={{ padding: '10px 16px', fontSize: 13, color: 'var(--muted)' }}>
-                    {a.publishedAt ? fmtDate(a.publishedAt) : a.createdAt ? fmtDate(a.createdAt) : '—'}
-                  </td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <button
-                      className={`pill ${a.isPublished ? 'ok' : 'ghost'}`}
-                      style={{ cursor: 'pointer', border: 'none' }}
-                      onClick={() => togglePublish(a)}
-                    >
-                      {a.isPublished ? 'Live' : 'Draft'}
-                    </button>
-                  </td>
-                  <td style={{ padding: '10px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    <button
-                      className="btn small ghost"
-                      onClick={() => go({ name: 'articleEditor', id: a.id })}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn small danger"
-                      style={{ marginLeft: 6 }}
-                      onClick={() => remove(a.id)}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </GlassCard>
     </>
   );
 }

@@ -1510,7 +1510,8 @@ function evaluate(item, s, ledger, now, ctx) {
     return { action: "defer", until: at, reason };
   }, "wrap");
   if (st.countToday >= s.dailyMax) return wrap(zonedTimeToUtc(addDays(day, 1), 0, s.timezone), "daily_cap");
-  if (st.lastSentAt && now - st.lastSentAt < minGapMs(s)) return wrap(st.lastSentAt + minGapMs(s), "spacing");
+  // The 2-hour gap only paces time-slot campaigns; content sent on publish is not held back by it.
+  if (item.delivery !== "immediate" && st.lastSentAt && now - st.lastSentAt < minGapMs(s)) return wrap(st.lastSentAt + minGapMs(s), "spacing");
   const qEnd = quietHoursEnd(now, s);
   if (qEnd > now) return wrap(qEnd, "quiet_hours");
   if (item.delivery === "window" && item.windowId && now - item.scheduledAt > WINDOW_LATE_MS) return wrap(now, "missed_window");
@@ -1951,7 +1952,8 @@ function eventCampaign(ev, now) {
       expiresAt: now + DEFAULT_EXPIRY_HOURS[category] * HOUR,
       priority: DEFAULT_PRIORITY[category],
       dedupeKey: key,
-      delivery: category === "live" ? "immediate" : "window",
+      // Send on publish: every content event goes out straight away instead of waiting for a time slot.
+      delivery: "immediate",
       status: "scheduled",
       dueAt: now,
       source: "event",
@@ -2346,7 +2348,7 @@ async function publishEvent(env, ev, { fetchFn = fetch, now = Date.now() } = {})
 __name(publishEvent, "publishEvent");
 
 // src/index.js
-var WORKER_VERSION = "2.5.0";
+var WORKER_VERSION = "2.5.1";
 var json = /* @__PURE__ */ __name((body, status, headers) => new Response(JSON.stringify(body), {
   status,
   headers: {
@@ -2667,4 +2669,4 @@ export {
   isAllowedOrigin,
   parseAllowedOrigins
 };
-//# sourceMappingURL=index.js.map
+

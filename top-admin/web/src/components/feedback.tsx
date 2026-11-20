@@ -83,12 +83,15 @@ function ConfirmDialog({ opts, onClose }: { opts: ConfirmOptions; onClose: (v: b
   const inputRef = useRef<HTMLInputElement>(null);
   const returnFocus = useRef<Element | null>(document.activeElement);
   const blocked = Boolean(opts.requireText) && typed !== opts.requireText;
+  // Kept in a ref so re-renders of the provider (a toast appearing, say) don't re-run the focus logic.
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
 
   useEffect(() => {
     // Destructive dialogs start on Cancel, so a stray Enter never confirms them.
     (opts.requireText ? inputRef.current : opts.danger ? cancelRef.current : confirmRef.current)?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose(false);
+      if (e.key === 'Escape') closeRef.current(false);
     };
     window.addEventListener('keydown', onKey);
     const back = returnFocus.current;
@@ -96,7 +99,7 @@ function ConfirmDialog({ opts, onClose }: { opts: ConfirmOptions; onClose: (v: b
       window.removeEventListener('keydown', onKey);
       if (back instanceof HTMLElement) back.focus();
     };
-  }, [opts.danger, opts.requireText, onClose]);
+  }, [opts.danger, opts.requireText]);
 
   return (
     <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(false); }}>
@@ -107,7 +110,16 @@ function ConfirmDialog({ opts, onClose }: { opts: ConfirmOptions; onClose: (v: b
         {opts.requireText ? (
           <label className="f">
             <span>Type <b className="gold">{opts.requireText}</b> to confirm</span>
-            <input ref={inputRef} type="text" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" spellCheck={false} />
+            <input
+              ref={inputRef}
+              type="text"
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !blocked) onClose(true); }}
+              autoComplete="off"
+              spellCheck={false}
+              aria-label={`Type ${opts.requireText} to confirm`}
+            />
           </label>
         ) : null}
         <div className="modal-actions">

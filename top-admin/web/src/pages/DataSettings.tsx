@@ -1,10 +1,16 @@
 import { useState } from 'react';
 import { DATA_COLLECTIONS, downloadJson, exportEverything, resetEverything, type ResetResult } from '../dataOps';
 import { Message } from '../components/Field';
+import { Icon } from '../components/Icon';
+import { useConfirm } from '../components/feedback';
+import { usePendingCounts } from '../hooks/usePendingCounts';
+import { GlassCard, PageHeader, SectionHeader } from '../components/ui';
 
 const CONFIRM_PHRASE = 'DELETE EVERYTHING';
 
 export function DataSettings() {
+  const confirm = useConfirm();
+  const { refresh: refreshCounts } = usePendingCounts();
   // --- export ---
   const [exporting, setExporting] = useState(false);
   const [exportStep, setExportStep] = useState('');
@@ -24,114 +30,90 @@ export function DataSettings() {
   };
 
   // --- reset ---
-  const [confirmText, setConfirmText] = useState('');
-  const [step, setStep] = useState<'idle' | 'confirming' | 'running' | 'done'>('idle');
+  const [step, setStep] = useState<'idle' | 'running' | 'done'>('idle');
   const [progress, setProgress] = useState('');
   const [result, setResult] = useState<ResetResult | null>(null);
   const [resetErr, setResetErr] = useState('');
 
-  const runReset = async () => {
+  const askReset = async () => {
+    const yes = await confirm({
+      title: 'Permanently delete all app data?',
+      message: (
+        <>
+          <p style={{ marginTop: 0 }}>This deletes every document in:</p>
+          <div className="chips" style={{ marginBottom: 12 }}>{DATA_COLLECTIONS.map((c) => <span key={c} className="tag">{c}</span>)}</div>
+          <p style={{ margin: 0 }}>plus live chat and live viewer records, and puts the live stream back to offline. Admin accounts are kept. Nothing is backed up automatically.</p>
+        </>
+      ),
+      confirmLabel: 'Permanently delete',
+      danger: true,
+      requireText: CONFIRM_PHRASE,
+    });
+    if (!yes) return;
     setStep('running');
     setResetErr('');
     try {
       const r = await resetEverything(setProgress);
       setResult(r);
       setStep('done');
+      refreshCounts();
     } catch (e) {
       setResetErr((e as Error).message);
-      setStep('confirming');
+      setStep('idle');
     }
   };
 
+  const removed = result ? Object.entries(result.counts) : [];
+  const total = removed.reduce((n, [, v]) => n + (Number(v) || 0), 0);
+
   return (
     <>
-      <h1>Data</h1>
-      <p className="muted">Back up everything the portal collects, or wipe it to start fresh before launch.</p>
+      <PageHeader eyebrow="System" title="Data Management" sub="Back up everything the portal collects, or wipe it to start fresh before launch." />
 
-      <div className="card">
-        <h2>Download everything</h2>
-        <p className="muted small">
-          One JSON file with every testimony, submission, notification, sponsorship, push token, and analytics
-          event. (Admin accounts, live chat, and live viewer presence aren't included — the first is identity
-          data, the other two are transient and not meant to be backed up.)
-        </p>
-        {exportErr ? <Message kind="err">{exportErr}</Message> : null}
-        <button className="btn" disabled={exporting} onClick={() => void runExport()}>
-          {exporting ? `Exporting ${exportStep}…` : 'DOWNLOAD DATA (.json)'}
-        </button>
-      </div>
-
-      <div className="card" style={{ borderColor: 'var(--danger)' }}>
-        <h2 style={{ color: 'var(--danger)' }}>Reset everything</h2>
-        <p className="muted small">
-          Permanently deletes every testimony, submission, notification, sponsorship, push token registration,
-          analytics event, live chat message, and live viewer record — and puts the live stream back to
-          offline. <b>Admin accounts are never touched</b> — you can't lock yourself out this way. This cannot
-          be undone; there is no backup made automatically, so download the data above first if you want one.
-        </p>
-
-        {step === 'idle' ? (
-          <button className="btn danger" onClick={() => setStep('confirming')}>
-            RESET EVERYTHING
+      <div className="split">
+        <GlassCard>
+          <SectionHeader icon="download" title="Download everything" hint="One JSON file, generated in your browser." />
+          <p className="muted small" style={{ marginTop: 0 }}>
+            Every testimony, submission, notification, sponsorship, push token and analytics event. Admin accounts, live chat and live viewer presence aren’t included: the first is identity data, and the other two are temporary.
+          </p>
+          <div className="chips" style={{ marginBottom: 16 }}>{DATA_COLLECTIONS.map((c) => <span key={c} className="tag">{c}</span>)}</div>
+          {exportErr ? <Message kind="err">{exportErr}</Message> : null}
+          <button type="button" className="btn primary" disabled={exporting} onClick={() => void runExport()}>
+            {exporting ? <span className="spin sm" aria-hidden="true" /> : <Icon name="download" size={16} />}
+            {exporting ? `Exporting ${exportStep}…` : 'Download data (.json)'}
           </button>
-        ) : null}
+        </GlassCard>
 
-        {step === 'confirming' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {resetErr ? <Message kind="err">{resetErr}</Message> : null}
-            <p>
-              This deletes data from: <code>{DATA_COLLECTIONS.join(', ')}</code>, plus live chat and live
-              viewer records, across every testimony and every user. Type <b>{CONFIRM_PHRASE}</b> to confirm.
-            </p>
-            <input
-              type="text"
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              placeholder={CONFIRM_PHRASE}
-              autoComplete="off"
-            />
-            <div className="row">
-              <button className="btn danger" disabled={confirmText !== CONFIRM_PHRASE} onClick={() => void runReset()}>
-                PERMANENTLY DELETE
-              </button>
-              <button
-                className="btn ghost"
-                onClick={() => {
-                  setStep('idle');
-                  setConfirmText('');
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        {step === 'running' ? <p>Deleting {progress}…</p> : null}
-
-        {step === 'done' && result ? (
-          <div>
-            <Message kind="ok">Done. Here's what was removed:</Message>
-            <ul className="small">
-              {Object.entries(result.counts).map(([name, n]) => (
-                <li key={name}>
-                  {name}: {n}
-                </li>
-              ))}
-            </ul>
-            <button
-              className="btn ghost"
-              onClick={() => {
-                setStep('idle');
-                setConfirmText('');
-                setResult(null);
-              }}
-            >
-              Close
-            </button>
-          </div>
-        ) : null}
+        <GlassCard className="danger-zone">
+          <SectionHeader icon="alert" title="Reset everything" hint="Danger zone" />
+          <p className="small" style={{ marginTop: 0 }}>
+            Permanently deletes every testimony, submission, notification, sponsorship, push token, analytics event, live chat message and live viewer record, and sets the live stream to offline.
+          </p>
+          <ul className="small muted" style={{ paddingLeft: 18 }}>
+            <li><b style={{ color: 'var(--text)' }}>Admin accounts are never touched</b>, so you can’t lock yourself out.</li>
+            <li>This can’t be undone. Download the data first if you want a copy.</li>
+            <li>You’ll be asked to type <b className="gold">{CONFIRM_PHRASE}</b>.</li>
+          </ul>
+          {resetErr ? <Message kind="err">Reset stopped: {resetErr}</Message> : null}
+          {step === 'running' ? (
+            <div className="row gap" role="status"><span className="spin sm" aria-hidden="true" />Deleting {progress}… Keep this page open.</div>
+          ) : (
+            <button type="button" className="btn danger" onClick={() => void askReset()}><Icon name="trash" size={16} />Reset everything…</button>
+          )}
+        </GlassCard>
       </div>
+
+      {step === 'done' && result ? (
+        <GlassCard>
+          <SectionHeader icon="checkCircle" title="Reset complete" hint={`${total.toLocaleString()} records removed`} actions={<button type="button" className="btn ghost small" onClick={() => { setStep('idle'); setResult(null); }}>Close</button>} />
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Collection</th><th>Removed</th></tr></thead>
+              <tbody>{removed.map(([name, n]) => <tr key={name}><td><code>{name}</code></td><td className="tabular">{String(n)}</td></tr>)}</tbody>
+            </table>
+          </div>
+        </GlassCard>
+      ) : null}
     </>
   );
 }

@@ -10,7 +10,9 @@ import {
   type ServerMediaStatus,
   type MediaVerifyResult,
 } from '../mediaService';
-import { Field, Message } from '../components/Field';
+import { Message } from '../components/Field';
+import { Icon } from '../components/Icon';
+import { ErrorState, GlassCard, PageHeader, SectionHeader, StatusBadge } from '../components/ui';
 
 export function MediaManager() {
   const [serverStatus, setServerStatus] = useState<ServerMediaStatus | null>(null);
@@ -57,8 +59,8 @@ export function MediaManager() {
     try {
       const res = await verifyMediaReachability(testUrl.trim());
       setVerifyResult(res);
-    } catch (e: any) {
-      setVerifyResult({ verified: false, error: e?.message || 'Verification failed.' });
+    } catch (e) {
+      setVerifyResult({ verified: false, error: (e as Error)?.message || 'Verification failed.' });
     } finally {
       setVerifying(false);
     }
@@ -69,214 +71,121 @@ export function MediaManager() {
   const cloudinaryConfigured = isCloudinaryAvailable;
   const firebaseConfigured = Boolean(serverStatus?.providers?.firebase?.configured || import.meta.env.VITE_FIREBASE_PROJECT_ID);
 
+  const bunnyBadge = bunnyConfigured ? { kind: 'ok' as const, text: 'Active' } : bunnyHasAccessKey === false ? { kind: 'warn' as const, text: 'Missing secret' } : serverStatus ? { kind: 'warn' as const, text: 'Needs config' } : { kind: 'draft' as const, text: 'Status unknown' };
+  const unknown = (configuredText: string) => <span className="muted">{serverStatus ? configuredText : 'Unknown'}</span>;
+
   return (
     <>
-      <div className="row between" style={{ alignItems: 'center', marginBottom: 20 }}>
-        <div>
-          <h1>Media & Storage Infrastructure</h1>
-          <p className="muted" style={{ margin: '4px 0 0 0' }}>
-            Multi-cloud media management with Bunny Storage, Cloudinary, and Firebase.
-          </p>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <button className="btn ghost" onClick={fetchStatus} disabled={loading}>
-            {loading ? 'Refreshing…' : '↻ Refresh Status'}
-          </button>
-          {lastChecked ? (
-            <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>
-              Last checked: {lastChecked.toLocaleTimeString()} {isStale ? '(stale)' : ''}
-            </div>
-          ) : null}
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Content Studio"
+        title="Media & Storage"
+        sub="Where uploads go: Bunny Storage for large video and audio, Cloudinary for images, Firebase for data. Storage secrets stay on the Worker; this page only reads their status."
+        actions={
+          <>
+            {lastChecked ? <span className="small muted">Checked {lastChecked.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}{isStale ? ' (stale)' : ''}</span> : null}
+            <button type="button" className="btn ghost" onClick={() => void fetchStatus()} disabled={loading}>
+              <Icon name="refresh" size={16} className={loading ? 'spinning' : undefined} />{loading ? 'Checking…' : 'Refresh status'}
+            </button>
+          </>
+        }
+      />
 
       {statusError ? (
-        <div style={{ marginBottom: 20 }}>
-          <Message kind="err">
-            <div className="row between" style={{ alignItems: 'center' }}>
-              <div>
-                <b>Worker Status Error:</b> {statusError}
-                <div style={{ fontSize: 12, marginTop: 4, opacity: 0.9 }}>
-                  Target: <code>{workerBaseUrl || 'Not configured'}</code>
-                </div>
-              </div>
-              <button
-                className="btn primary"
-                style={{ fontSize: 12, padding: '4px 12px', minHeight: 32 }}
-                onClick={fetchStatus}
-                disabled={loading}
-              >
-                Retry
-              </button>
-            </div>
-          </Message>
-        </div>
+        <ErrorState
+          title="Couldn’t read the Worker’s storage status"
+          message={<>{statusError} · Target: <code>{workerBaseUrl || 'not configured'}</code></>}
+          onRetry={() => void fetchStatus()}
+        />
       ) : null}
 
-      {/* Storage Providers Overview Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 24 }}>
-        {/* Bunny Storage Card */}
-        <div className="card" style={{ borderTop: '4px solid #FF8000' }}>
-          <div className="row between" style={{ alignItems: 'center' }}>
-            <h3 style={{ margin: 0, color: '#FF8000' }}>🐰 Bunny Storage</h3>
-            <span
-              className={`pill ${
-                bunnyConfigured ? 'ok' : bunnyHasAccessKey === false ? 'warn' : 'ghost'
-              }`}
-            >
-              {bunnyConfigured
-                ? 'Active & Ready'
-                : bunnyHasAccessKey === false
-                ? 'Missing Secret'
-                : serverStatus
-                ? 'Needs Config'
-                : 'Status Unknown'}
-            </span>
+      <div className="provider-grid">
+        <GlassCard>
+          <div className="provider-head">
+            <h3><span className="mark" style={{ background: '#FF8000' }}><Icon name="hardDrive" size={18} /></span>Bunny Storage</h3>
+            {loading && !serverStatus ? <span className="skeleton" style={{ width: 80, height: 22 }} /> : <StatusBadge kind={bunnyBadge.kind}>{bunnyBadge.text}</StatusBadge>}
           </div>
-          <p className="small muted" style={{ marginTop: 8 }}>
-            Assigned for <b>audio testimonies, podcast files, and large video files</b>.
-            Uploads are streamed securely server-side so access keys are never exposed.
-          </p>
-          <div style={{ fontSize: 13, background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 8, marginTop: 12 }}>
-            <div>
-              <b>Storage Zone:</b> {serverStatus?.providers?.bunny?.storageZone || <span className="muted">{serverStatus ? 'Not set in worker' : 'Unknown (status unavailable)'}</span>}
-            </div>
-            <div style={{ marginTop: 4 }}>
-              <b>CDN Hostname:</b> {serverStatus?.providers?.bunny?.cdnHostname || <span className="muted">{serverStatus ? 'Not set in worker' : 'Unknown'}</span>}
-            </div>
-            <div style={{ marginTop: 4 }}>
-              <b>Edge Endpoint:</b> {serverStatus?.providers?.bunny?.endpoint || 'storage.bunnycdn.com'}
-            </div>
-            <div style={{ marginTop: 4 }}>
-              <b>Server Secret:</b>{' '}
-              {serverStatus?.providers?.bunny?.hasAccessKey ? (
-                <span style={{ color: '#4CAF50' }}>Configured on Worker</span>
-              ) : (
-                <span className="muted">{serverStatus ? 'Missing in Worker Secrets' : 'Unknown'}</span>
-              )}
-            </div>
-          </div>
-        </div>
+          <p className="provider-role">For <b>audio testimonies, podcast files and large videos</b>. Uploads stream through the Worker, so the access key never reaches the browser.</p>
+          <dl className="spec">
+            <div><dt>Storage zone</dt><dd>{serverStatus?.providers?.bunny?.storageZone || unknown('Not set on the Worker')}</dd></div>
+            <div><dt>CDN hostname</dt><dd>{serverStatus?.providers?.bunny?.cdnHostname || unknown('Not set on the Worker')}</dd></div>
+            <div><dt>Edge endpoint</dt><dd>{serverStatus?.providers?.bunny?.endpoint || 'storage.bunnycdn.com'}</dd></div>
+            <div><dt>Server secret</dt><dd>{serverStatus?.providers?.bunny?.hasAccessKey ? <span style={{ color: 'var(--success)' }}>Set on the Worker</span> : unknown('Missing from Worker secrets')}</dd></div>
+          </dl>
+        </GlassCard>
 
-        {/* Cloudinary Card */}
-        <div className="card" style={{ borderTop: '4px solid #3448C5' }}>
-          <div className="row between" style={{ alignItems: 'center' }}>
-            <h3 style={{ margin: 0, color: '#4A72FF' }}>☁️ Cloudinary</h3>
-            <span className={`pill ${cloudinaryConfigured ? 'ok' : 'ghost'}`}>
-              {cloudinaryConfigured ? 'Configured (Client)' : 'Needs Config'}
-            </span>
+        <GlassCard>
+          <div className="provider-head">
+            <h3><span className="mark" style={{ background: '#3448C5' }}><Icon name="cloud" size={18} /></span>Cloudinary</h3>
+            <StatusBadge kind={cloudinaryConfigured ? 'ok' : 'warn'}>{cloudinaryConfigured ? 'Configured' : 'Needs config'}</StatusBadge>
           </div>
-          <p className="small muted" style={{ marginTop: 8 }}>
-            Assigned for <b>images, thumbnails, article covers, and promotion banners</b>.
-            Supports automatic format optimization (<code style={{ color: '#F5C542' }}>f_auto,q_auto</code>).
-          </p>
-          <div style={{ fontSize: 13, background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 8, marginTop: 12 }}>
-            <div><b>Cloud Name:</b> {import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || <span className="muted">Not configured</span>}</div>
-            <div style={{ marginTop: 4 }}><b>Upload Preset:</b> {import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || <span className="muted">Not configured</span>}</div>
-            <div style={{ marginTop: 4 }}><b>Role:</b> Visual & Graphical Assets</div>
-          </div>
-        </div>
+          <p className="provider-role">For <b>images, thumbnails, article covers and promotion banners</b>, with automatic format optimisation (<code>f_auto,q_auto</code>).</p>
+          <dl className="spec">
+            <div><dt>Cloud name</dt><dd>{import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || <span className="muted">Not configured</span>}</dd></div>
+            <div><dt>Upload preset</dt><dd>{import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || <span className="muted">Not configured</span>}</dd></div>
+            <div><dt>Role</dt><dd>Images and graphics</dd></div>
+          </dl>
+        </GlassCard>
 
-        {/* Firebase Card */}
-        <div className="card" style={{ borderTop: '4px solid #FFA000' }}>
-          <div className="row between" style={{ alignItems: 'center' }}>
-            <h3 style={{ margin: 0, color: '#FFA000' }}>🔥 Firebase</h3>
-            <span className={`pill ${serverStatus?.providers?.firebase?.configured ? 'ok' : 'ghost'}`}>
-              {serverStatus?.providers?.firebase?.configured ? 'Configured & Connected' : firebaseConfigured ? 'Configured (Local)' : 'Needs Config'}
-            </span>
+        <GlassCard>
+          <div className="provider-head">
+            <h3><span className="mark" style={{ background: '#E8860C' }}><Icon name="database" size={18} /></span>Firebase</h3>
+            <StatusBadge kind={serverStatus?.providers?.firebase?.configured || firebaseConfigured ? 'ok' : 'warn'}>
+              {serverStatus?.providers?.firebase?.configured ? 'Connected' : firebaseConfigured ? 'Configured locally' : 'Needs config'}
+            </StatusBadge>
           </div>
-          <p className="small muted" style={{ marginTop: 8 }}>
-            Handles <b>structured Firestore metadata, authentication tokens, real-time presence</b>, and listener heartbeats.
-          </p>
-          <div style={{ fontSize: 13, background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 8, marginTop: 12 }}>
-            <div><b>Project ID:</b> {import.meta.env.VITE_FIREBASE_PROJECT_ID || 'Connected'}</div>
-            <div style={{ marginTop: 4 }}><b>Auth Mode:</b> Admin Token Relay</div>
-            <div style={{ marginTop: 4 }}><b>Relay Worker:</b> {isWorkerAvailable ? 'Configured' : <span className="muted">Missing VITE_WORKER_URL</span>}</div>
-          </div>
-        </div>
+          <p className="provider-role">Holds <b>Firestore data, sign-in and real-time presence</b>.</p>
+          <dl className="spec">
+            <div><dt>Project ID</dt><dd>{import.meta.env.VITE_FIREBASE_PROJECT_ID || 'Connected'}</dd></div>
+            <div><dt>Auth mode</dt><dd>Admin token relay</dd></div>
+            <div><dt>Relay Worker</dt><dd>{isWorkerAvailable ? 'Configured' : <span className="muted">Missing VITE_WORKER_URL</span>}</dd></div>
+          </dl>
+        </GlassCard>
       </div>
 
-      {/* URL Reachability & Migration Safeguard Tester */}
-      <div className="card" style={{ marginBottom: 24 }}>
-        <h3>🔍 Media Reachability & URL Verification Tool</h3>
-        <p className="muted small">
-          Before linking media or applying migrations, test any URL here to verify that it responds with HTTP 200 OK
-          and outputs valid audio/video/image byte streams.
-        </p>
-
-        <form onSubmit={handleVerify} style={{ marginTop: 16 }}>
-          <Field label="Media URL to test">
-            <div className="row gap" style={{ alignItems: 'center' }}>
-              <input
-                type="url"
-                value={testUrl}
-                onChange={(e) => setTestUrl(e.target.value)}
-                placeholder="https://... (Bunny CDN, Cloudinary, HLS, or external URL)"
-                style={{ flex: 1 }}
-                required
-              />
-              <button type="submit" className="btn primary" disabled={verifying}>
-                {verifying ? 'Checking…' : 'Verify URL'}
-              </button>
-            </div>
-          </Field>
+      <GlassCard>
+        <SectionHeader icon="search" title="Check a media link" hint="Before linking media or migrating, confirm a URL answers HTTP 200 with real audio, video or image data." />
+        <form onSubmit={handleVerify}>
+          <div className="input-row">
+            <input type="url" value={testUrl} onChange={(e) => setTestUrl(e.target.value)} placeholder="https://… (Bunny CDN, Cloudinary, HLS or another host)" aria-label="Media URL to test" required />
+            <button type="submit" className="btn primary" disabled={verifying}>
+              {verifying ? <span className="spin sm" aria-hidden="true" /> : <Icon name="check" size={16} />}{verifying ? 'Checking…' : 'Verify link'}
+            </button>
+          </div>
         </form>
-
-        {testUrl ? (
-          <div style={{ marginTop: 8, fontSize: 12, color: '#aaa' }}>
-            Detected Provider:{' '}
-            <b style={{ color: '#F5C542' }}>{getProviderDisplayName(identifyProvider(testUrl))}</b>
-          </div>
-        ) : null}
-
+        {testUrl ? <div className="provider-note" style={{ marginTop: 10 }}><Icon name="cloud" size={14} />Detected provider: <b>{getProviderDisplayName(identifyProvider(testUrl))}</b></div> : null}
         {verifyResult ? (
-          <div style={{ marginTop: 16 }}>
-            {verifyResult.verified ? (
-              <Message kind="ok">
-                <b>Reachability Verified (HTTP {verifyResult.status})!</b>
-                <div style={{ marginTop: 4, fontSize: 12 }}>
-                  Content-Type: <code>{verifyResult.contentType || 'N/A'}</code>
-                  {verifyResult.contentLength ? ` • Size: ${Math.round(Number(verifyResult.contentLength) / 1024)} KB` : ''}
-                </div>
-              </Message>
-            ) : (
-              <Message kind="err">
-                <b>Verification Failed:</b> {verifyResult.error || `Server responded with HTTP ${verifyResult.status}`}.
-                Please make sure the file exists and is publicly accessible via CDN.
-              </Message>
-            )}
-          </div>
+          verifyResult.verified ? (
+            <Message kind="ok">
+              <b>Reachable (HTTP {verifyResult.status}).</b>{' '}
+              Content type <code>{verifyResult.contentType || 'n/a'}</code>
+              {verifyResult.contentLength ? ` · ${Math.round(Number(verifyResult.contentLength) / 1024).toLocaleString()} KB` : ''}
+            </Message>
+          ) : (
+            <Message kind="err">
+              <b>Not reachable:</b> {verifyResult.error || `the server answered HTTP ${verifyResult.status}`}. Check the file exists and is public on the CDN.
+            </Message>
+          )
         ) : null}
-      </div>
+      </GlassCard>
 
-      {/* Setup & Architecture Guide */}
-      <div className="card">
-        <h3>📋 Setup & Configuration Guide</h3>
-        <div style={{ fontSize: 13, lineHeight: '20px', color: '#ccc' }}>
-          <h4 style={{ color: '#F5C542', margin: '12px 0 6px 0' }}>1. Setting up Bunny Storage</h4>
-          <ol style={{ paddingLeft: 20, margin: 0 }}>
-            <li>Log into your <b>Bunny.net</b> dashboard and create a <b>Storage Zone</b> (e.g. <code>top-media-storage</code>).</li>
-            <li>Link a <b>Pull Zone</b> to it (e.g. <code>top-media.b-cdn.net</code> or a custom hostname).</li>
-            <li>Copy the <b>Storage Password (AccessKey)</b> from Bunny.net &gt; Storage &gt; FTP &amp; API Access.</li>
-            <li>Add secrets to your Cloudflare Worker:
-              <pre style={{ background: '#12001C', padding: 8, borderRadius: 6, margin: '6px 0', overflowX: 'auto' }}>
-npx wrangler secret put BUNNY_STORAGE_ACCESS_KEY
-              </pre>
+      <GlassCard>
+        <SectionHeader icon="info" title="Setup guide" />
+        <div className="guide">
+          <h4>1. Bunny Storage</h4>
+          <ol>
+            <li>In the <b>Bunny.net</b> dashboard, create a <b>Storage Zone</b> (for example <code>top-media-storage</code>).</li>
+            <li>Link a <b>Pull Zone</b> to it (for example <code>top-media.b-cdn.net</code> or a custom hostname).</li>
+            <li>Copy the <b>Storage Password (AccessKey)</b> from Storage → FTP &amp; API Access.</li>
+            <li>Add it to the Cloudflare Worker as a secret, never to this portal:
+              <pre className="code-block">npx wrangler secret put BUNNY_STORAGE_ACCESS_KEY</pre>
             </li>
-            <li>In <code>wrangler.toml</code> set <code>BUNNY_STORAGE_ZONE_NAME</code> and <code>BUNNY_CDN_HOSTNAME</code>.</li>
+            <li>In <code>wrangler.toml</code>, set <code>BUNNY_STORAGE_ZONE_NAME</code> and <code>BUNNY_CDN_HOSTNAME</code>.</li>
           </ol>
-
-          <h4 style={{ color: '#F5C542', margin: '16px 0 6px 0' }}>2. Migration Safeguards</h4>
-          <p style={{ margin: 0 }}>
-            Existing media URLs (Cloudinary images/videos, HLS livestreams) are preserved automatically.
-            Never run destructive migrations. Before switching any document URL, run the audit &amp; verification tool:
-          </p>
-          <pre style={{ background: '#12001C', padding: 8, borderRadius: 6, margin: '6px 0', overflowX: 'auto' }}>
-node scripts/media-migration.mjs --audit
-node scripts/media-migration.mjs --verify
-          </pre>
+          <h4>2. Migration safeguards</h4>
+          <p style={{ margin: 0 }}>Existing media links (Cloudinary images and videos, HLS streams) are kept as they are. Never run destructive migrations. Before switching any document’s link, audit and verify:</p>
+          <pre className="code-block">{'node scripts/media-migration.mjs --audit\nnode scripts/media-migration.mjs --verify'}</pre>
         </div>
-      </div>
+      </GlassCard>
     </>
   );
 }

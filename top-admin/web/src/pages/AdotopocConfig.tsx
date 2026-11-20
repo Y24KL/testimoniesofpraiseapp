@@ -4,6 +4,8 @@ import { db } from '../firebase';
 import { isHttpUrl } from '../lib';
 import type { AdotopocSettings } from '../types';
 import { Check, Field, Message } from '../components/Field';
+import { Icon } from '../components/Icon';
+import { ErrorState, GlassCard, LoadingList, PageHeader, SectionHeader } from '../components/ui';
 
 const DEFAULT_RESOURCE_URL = 'https://testimoniesofpraiseweb.onrender.com/adotopoc';
 const DEFAULT_INTRO_VIDEO = 'https://res.cloudinary.com/duw6xrnpn/video/upload/v1792135475/ADOTOP_LOGO_OUTRO_m1awjk.mp4';
@@ -59,79 +61,67 @@ export function AdotopocConfig() {
         { merge: true }
       );
       setOk('ADOTOPOC Resource Center configuration saved.');
-    } catch (ex: any) {
-      setErr(ex.message || 'Failed to save settings.');
+    } catch (ex) {
+      setErr((ex as Error).message || 'Failed to save settings.');
     } finally {
       setBusy(false);
     }
   };
 
-  if (!loaded) return <p className="muted">Loading configuration…</p>;
+  if (!loaded) {
+    return (
+      <>
+        <PageHeader eyebrow="Content Studio" title="ADOTOPOC Resource Centre" />
+        {err ? <ErrorState title="Couldn’t load the configuration" message={err} /> : <GlassCard><LoadingList rows={3} /></GlassCard>}
+      </>
+    );
+  }
 
   return (
     <>
-      <h1>ADOTOPOC Resource Center Configuration</h1>
-      <p className="muted">
-        Configure the embedded resource center platform and branded intro video parameters.
-      </p>
+      <PageHeader
+        eyebrow="Content Studio"
+        title="ADOTOPOC Resource Centre"
+        sub="The resource platform embedded in the app, and the branded intro video people see when they open it."
+        actions={isHttpUrl(resourceUrl) ? <a className="btn ghost" href={resourceUrl} target="_blank" rel="noreferrer"><Icon name="external" size={16} />Open resource centre</a> : undefined}
+      />
 
       {err ? <Message kind="err">{err}</Message> : null}
       {ok ? <Message kind="ok">{ok}</Message> : null}
 
-      <form onSubmit={save} className="card" style={{ maxWidth: 640 }}>
-        <Field label="ADOTOPOC Resource Platform URL *">
-          <input
-            type="url"
-            value={resourceUrl}
-            onChange={(e) => setResourceUrl(e.target.value)}
-            placeholder="https://testimoniesofpraiseweb.onrender.com/adotopoc"
-            required
-          />
-        </Field>
-
-        <Field label="Branded Intro Video URL">
-          <input
-            type="url"
-            value={introVideoUrl}
-            onChange={(e) => setIntroVideoUrl(e.target.value)}
-            placeholder="https://... (.mp4 video link)"
-          />
-        </Field>
-
-        <div style={{ margin: '14px 0' }}>
-          <Check
-            label="Enable Intro Video on section entry"
-            checked={introEnabled}
-            onChange={setIntroEnabled}
-          />
-        </div>
-
-        {introVideoUrl ? (
-          <div style={{ marginTop: 12, marginBottom: 16 }}>
-            <p className="small muted" style={{ marginBottom: 6 }}>Video Preview:</p>
-            <video
-              src={introVideoUrl}
-              controls
-              style={{ width: '100%', maxHeight: 200, borderRadius: 6, backgroundColor: '#000' }}
-            />
-          </div>
-        ) : null}
-
-        <div className="row between" style={{ marginTop: 20 }}>
-          <button
-            type="button"
-            className="btn ghost"
-            onClick={() => {
-              setResourceUrl(DEFAULT_RESOURCE_URL);
-              setIntroVideoUrl(DEFAULT_INTRO_VIDEO);
-              setIntroEnabled(true);
-            }}
-          >
-            Reset Defaults
-          </button>
-          <button type="submit" className="btn primary" disabled={busy}>
-            {busy ? 'Saving…' : 'Save Changes'}
-          </button>
+      <form onSubmit={save}>
+        <div className="split">
+          <GlassCard>
+            <SectionHeader icon="globe" title="Resource platform" />
+            <Field label="Resource platform link *" hint="The page the app opens inside the ADOTOPOC section.">
+              <input type="url" value={resourceUrl} onChange={(e) => setResourceUrl(e.target.value)} placeholder={DEFAULT_RESOURCE_URL} required />
+            </Field>
+            <SectionHeader icon="film" title="Intro video" as="h3" />
+            <Field label="Intro video link" hint="An MP4 link. It plays once when someone opens the section.">
+              <input type="url" value={introVideoUrl} onChange={(e) => setIntroVideoUrl(e.target.value)} placeholder="https://… .mp4" />
+            </Field>
+            <Check label="Play the intro video when the section opens" checked={introEnabled} onChange={setIntroEnabled} />
+            <div className="form-actions">
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => {
+                  setResourceUrl(DEFAULT_RESOURCE_URL);
+                  setIntroVideoUrl(DEFAULT_INTRO_VIDEO);
+                  setIntroEnabled(true);
+                }}
+              >
+                <Icon name="undo" size={14} />Reset to defaults
+              </button>
+              <button type="submit" className="btn primary" disabled={busy}>
+                {busy ? <span className="spin sm" aria-hidden="true" /> : <Icon name="check" size={16} />}{busy ? 'Saving…' : 'Save changes'}
+              </button>
+            </div>
+          </GlassCard>
+          <GlassCard>
+            <SectionHeader icon="eye" title="Intro preview" hint={introEnabled ? 'Plays when the section opens.' : 'Turned off: people go straight to the resources.'} />
+            {introVideoUrl && isHttpUrl(introVideoUrl) ? <video className="preview" src={introVideoUrl} controls preload="metadata" style={introEnabled ? undefined : { opacity: 0.5 }} /> : <div className="cover-empty">No intro video link</div>}
+          </GlassCard>
         </div>
       </form>
     </>

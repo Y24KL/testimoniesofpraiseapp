@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { collection, doc, getDocs, limit, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Check, Field, Message } from '../components/Field';
+import { Icon } from '../components/Icon';
+import { EmptyState, ErrorState, GlassCard, LoadingList, PageHeader, SectionHeader } from '../components/ui';
 
 const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 const MAX_INSPIRATIONS = 30;
@@ -32,6 +34,7 @@ export function Editorial() {
   const [highlights, setHighlights] = useState<string[]>([]);
   const [choirs, setChoirs] = useState<{ id: string; name: string }[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [options, setOptions] = useState<Record<'testimony' | 'lyrical' | 'article', { id: string; title: string }[]>>({ testimony: [], lyrical: [], article: [] });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
@@ -56,6 +59,17 @@ export function Editorial() {
       }, (e) => setErr(e.message)),
     [],
   );
+
+  // Recent published items, offered as suggestions for the featured picks. Ids can still be pasted by hand.
+  useEffect(() => {
+    const load = (col: string, field: string, value: unknown, titleField = 'title') =>
+      getDocs(query(collection(db, col), where(field, '==', value), limit(100)))
+        .then((s) => s.docs.map((d) => ({ id: d.id, title: String(d.data()[titleField] ?? d.id) })))
+        .catch(() => [] as { id: string; title: string }[]);
+    void Promise.all([load('testimonies', 'isPublished', true), load('lyricalAnalyses', 'status', 'published'), load('articles', 'isPublished', true)]).then(([testimony, lyrical, article]) =>
+      setOptions({ testimony, lyrical, article }),
+    );
+  }, []);
 
   // Only published choirs can be highlighted, so only those are offered.
   useEffect(() => {
@@ -115,78 +129,107 @@ export function Editorial() {
   const toggleHighlight = (id: string) =>
     setHighlights(highlights.includes(id) ? highlights.filter((x) => x !== id) : highlights.length < MAX_HIGHLIGHTS ? [...highlights, id] : highlights);
 
-  if (!loaded) return <p>Loading the daily discovery settings…</p>;
+  if (!loaded) {
+    return (
+      <>
+        <PageHeader eyebrow="Content Studio" title="Daily Discovery" />
+        {err ? <ErrorState title="Couldn’t load the daily discovery settings" message={err} /> : <GlassCard><LoadingList rows={4} /></GlassCard>}
+      </>
+    );
+  }
+
+  const pick = (key: keyof typeof featured, label: string, list: { id: string; title: string }[]) => {
+    const match = list.find((o) => o.id === featured[key].trim());
+    return (
+      <label className="f">
+        <span>{label}</span>
+        <input list={`pick-${key}`} value={featured[key]} onChange={(e) => setFeatured({ ...featured, [key]: e.target.value })} placeholder={list.length ? 'Type to search titles, or paste an id' : 'Paste the item id'} />
+        <datalist id={`pick-${key}`}>{list.map((o) => <option key={o.id} value={o.id}>{o.title}</option>)}</datalist>
+        <span className="f-hint">
+          {!featured[key].trim() ? 'Nothing featured.' : match ? <>Featuring <b className="gold">{match.title}</b></> : 'Not among the latest published items. It shows only if that id is published.'}
+        </span>
+      </label>
+    );
+  };
 
   return (
-    <div style={{ display: 'grid', gap: 24, maxWidth: 880 }}>
-      <header>
-        <h1 style={{ margin: 0 }}>Daily discovery</h1>
-        <p style={{ margin: '4px 0 0', opacity: 0.8 }}>
-          What Home shows in the Daily discovery section. An empty part is hidden. Nothing is invented to fill it.
-        </p>
-      </header>
-      {err && <Message kind="err">{err}</Message>}
-      {ok && <Message kind="ok">{ok}</Message>}
+    <>
+      <PageHeader
+        eyebrow="Content Studio"
+        title="Daily Discovery"
+        sub="What the app’s Home screen shows in its Daily Discovery section. An empty part is hidden; nothing is invented to fill it."
+        actions={<button type="button" className="btn primary" disabled={busy} onClick={() => void save()}>{busy ? <span className="spin sm" aria-hidden="true" /> : <Icon name="check" size={16} />}{busy ? 'Saving…' : 'Save daily discovery'}</button>}
+      />
+      {err ? <Message kind="err">{err}</Message> : null}
+      {ok ? <Message kind="ok">{ok}</Message> : null}
 
-      <section style={{ display: 'grid', gap: 8 }}>
-        <h2 style={{ margin: 0 }}>Inspiration lines</h2>
-        <p style={{ margin: 0, opacity: 0.8 }}>One per line. Add a source after " | ", for example: The Lord is my shepherd | Psalm 23:1. One line is shown each day, in turn.</p>
-        <textarea rows={6} value={inspirations} onChange={(e) => setInspirations(e.target.value)} aria-label="Inspiration lines" />
-      </section>
+      <div className="split">
+        <GlassCard>
+          <SectionHeader icon="sparkles" title="Inspiration lines" hint={`${parseLines().length} of ${MAX_INSPIRATIONS} lines. One is shown each day, in turn.`} />
+          <Field label="One per line" hint="Add a source after “ | ”, for example: The Lord is my shepherd | Psalm 23:1">
+            <textarea rows={9} value={inspirations} onChange={(e) => setInspirations(e.target.value)} aria-label="Inspiration lines" />
+          </Field>
+        </GlassCard>
 
-      <section style={{ display: 'grid', gap: 12 }}>
-        <h2 style={{ margin: 0 }}>Radio programme</h2>
-        {prefilled && <Message kind="warn">Pre-filled from the programme brief: Wednesdays at 1 PM GMT+1 (12:00 UTC). Check it, then save. It shows to people only when Confirmed is ticked.</Message>}
+        <GlassCard>
+          <SectionHeader icon="star" title="Featured picks" hint="Shown only while the item stays published." />
+          {pick('testimony', 'Testimony', options.testimony)}
+          {pick('lyrical', 'Lyrical analysis', options.lyrical)}
+          {pick('article', 'Article', options.article)}
+        </GlassCard>
+      </div>
+
+      <GlassCard>
+        <SectionHeader icon="radio" title="Radio programme" hint={`Up to ${MAX_RADIO} weekly entries. People see an entry only when it’s confirmed.`} actions={radio.length < MAX_RADIO ? <button type="button" className="btn small ghost" onClick={() => setRadio([...radio, { ...BRIEF_RADIO, confirmed: false, title: '' }])}><Icon name="plus" size={14} />Add entry</button> : undefined} />
+        {prefilled ? <Message kind="warn">Pre-filled from the programme brief: Wednesdays at 1 PM GMT+1 (12:00 UTC). Check it, then save.</Message> : null}
+        {radio.length === 0 ? <EmptyState icon="radio" title="No radio programme">Add an entry to show the weekly programme on Home.</EmptyState> : null}
         {radio.map((r, i) => (
-          <div key={i} style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end', border: '1px solid #ddd', borderRadius: 8, padding: 12 }}>
+          <div key={i} className="radio-entry">
             <Field label="Day">
               <select value={r.weekday} onChange={(e) => setRadioAt(i, { weekday: e.target.value as Radio['weekday'] })}>
                 {WEEKDAYS.map((d) => <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>)}
               </select>
             </Field>
-            <Field label="Local time (HH:MM)">
-              <input value={r.localTime} onChange={(e) => setRadioAt(i, { localTime: e.target.value })} style={{ width: 90 }} />
+            <Field label="Local time">
+              <input value={r.localTime} onChange={(e) => setRadioAt(i, { localTime: e.target.value })} placeholder="13:00" />
             </Field>
-            <Field label="UTC offset (minutes)">
-              <input type="number" value={r.utcOffsetMinutes} onChange={(e) => setRadioAt(i, { utcOffsetMinutes: Number(e.target.value) })} style={{ width: 110 }} />
+            <Field label="UTC offset (min)">
+              <input type="number" value={r.utcOffsetMinutes} onChange={(e) => setRadioAt(i, { utcOffsetMinutes: Number(e.target.value) })} />
             </Field>
             <Field label="Zone label">
-              <input value={r.timeZoneLabel} onChange={(e) => setRadioAt(i, { timeZoneLabel: e.target.value })} style={{ width: 100 }} />
+              <input value={r.timeZoneLabel} onChange={(e) => setRadioAt(i, { timeZoneLabel: e.target.value })} placeholder="GMT+1" />
             </Field>
-            <Field label="Title">
+            <label className="f wide">
+              <span>Title</span>
               <input value={r.title} onChange={(e) => setRadioAt(i, { title: e.target.value })} />
-            </Field>
-            <Check checked={r.confirmed} onChange={(v) => setRadioAt(i, { confirmed: v })} label="Confirmed" />
-            <button type="button" onClick={() => setRadio(radio.filter((_, idx) => idx !== i))}>Remove</button>
+            </label>
+            <div className="end">
+              <Check checked={r.confirmed} onChange={(v) => setRadioAt(i, { confirmed: v })} label="Confirmed" hint="Show this entry in the app." />
+              <button type="button" className="btn small danger" onClick={() => setRadio(radio.filter((_, idx) => idx !== i))}><Icon name="trash" size={14} />Remove</button>
+            </div>
           </div>
         ))}
-        {radio.length < MAX_RADIO && (
-          <div>
-            <button type="button" onClick={() => setRadio([...radio, { ...BRIEF_RADIO, confirmed: false, title: '' }])}>Add a radio entry</button>
-          </div>
-        )}
-      </section>
+      </GlassCard>
 
-      <section style={{ display: 'grid', gap: 12 }}>
-        <h2 style={{ margin: 0 }}>Featured picks</h2>
-        <p style={{ margin: 0, opacity: 0.8 }}>Paste the id of a published item. It is shown only while it stays published.</p>
-        <Field label="Testimony id"><input value={featured.testimony} onChange={(e) => setFeatured({ ...featured, testimony: e.target.value })} /></Field>
-        <Field label="Lyrical analysis id"><input value={featured.lyrical} onChange={(e) => setFeatured({ ...featured, lyrical: e.target.value })} /></Field>
-        <Field label="Article id"><input value={featured.article} onChange={(e) => setFeatured({ ...featured, article: e.target.value })} /></Field>
-      </section>
+      <GlassCard>
+        <SectionHeader icon="users" title="Community highlights" hint={`Published featured choirs only. ${highlights.length} of ${MAX_HIGHLIGHTS} chosen.`} />
+        {choirs.length === 0 ? <EmptyState icon="users" title="No published choirs yet">Publish a group under Featured Choirs to highlight it here.</EmptyState> : null}
+        <div className="chips">
+          {choirs.map((c) => {
+            const on = highlights.includes(c.id);
+            return (
+              <button key={c.id} type="button" className="chip-check" aria-pressed={on} disabled={!on && highlights.length >= MAX_HIGHLIGHTS} onClick={() => toggleHighlight(c.id)}>
+                <Icon name={on ? 'checkCircle' : 'plus'} size={15} />{c.name}
+              </button>
+            );
+          })}
+        </div>
+      </GlassCard>
 
-      <section style={{ display: 'grid', gap: 8 }}>
-        <h2 style={{ margin: 0 }}>Community highlights</h2>
-        <p style={{ margin: 0, opacity: 0.8 }}>Only published featured choirs are listed. Choose up to {MAX_HIGHLIGHTS}.</p>
-        {choirs.length === 0 && <p style={{ margin: 0 }}>No published choirs yet.</p>}
-        {choirs.map((c) => (
-          <Check key={c.id} checked={highlights.includes(c.id)} onChange={() => toggleHighlight(c.id)} label={c.name} />
-        ))}
-      </section>
-
-      <div>
-        <button type="button" disabled={busy} onClick={() => void save()}>Save daily discovery</button>
+      <div className="save-bar">
+        <span className="small muted">Changes apply to Home for signed-in users after saving.</span>
+        <button type="button" className="btn primary" disabled={busy} onClick={() => void save()}>{busy ? 'Saving…' : 'Save daily discovery'}</button>
       </div>
-    </div>
+    </>
   );
 }

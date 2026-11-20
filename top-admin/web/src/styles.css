@@ -136,6 +136,10 @@ hr { border: 0; border-top: 1px solid var(--glass-border); margin: var(--s4) 0; 
 .row.gap { gap: var(--s3); }
 .between { justify-content: space-between; }
 .wrap-anywhere { overflow-wrap: anywhere; }
+.tabular { font-variant-numeric: tabular-nums; }
+.spinning { animation: spin 900ms linear infinite; }
+.icon-btn.small { width: 32px; height: 32px; }
+.viewer-count { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--r-pill); font-size: 12.5px; font-weight: 700; color: var(--success); background: var(--success-soft); border: 1px solid rgba(61, 220, 151, 0.4); }
 
 /* ---------------------------------------------------------------- glass primitives */
 .glass,
@@ -172,6 +176,8 @@ hr { border: 0; border-top: 1px solid var(--glass-border); margin: var(--s4) 0; 
 .card.flush { padding: 0; overflow: hidden; }
 .card.tight { padding: var(--s4); }
 .card > h2:first-child, .card > .section-head:first-child { margin-top: 0; }
+.stat-grid > .card, .grid > .card, .split > .card, .two > .card, .three > .card, .quick-grid > .card { margin-bottom: 0; }
+.split, .two, .three { margin-bottom: var(--s4); }
 .panel-strong { background: var(--glass-panel-strong); }
 
 .grid { display: grid; gap: var(--s4); grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: var(--s4); }
@@ -505,7 +511,7 @@ video.preview, .preview video { width: 100%; max-height: 340px; background: #000
 .tab.on .tab-count { background: var(--accent-soft); color: var(--accent); }
 
 /* ---------------------------------------------------------------- stat cards */
-.stat-grid { display: grid; gap: var(--s4); grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); margin-bottom: var(--s5); }
+.stat-grid { display: grid; gap: var(--s4); grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); margin-bottom: var(--s5); }
 .stat-card { padding: var(--s4) var(--s5); display: grid; gap: 6px; transition: transform var(--t-med) var(--ease), border-color var(--t-med), box-shadow var(--t-med); }
 .stat-card:hover { transform: translateY(-2px); border-color: var(--glass-border-strong); box-shadow: var(--shadow-lg), var(--inner-highlight); }
 .stat-card .head { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
@@ -658,4 +664,18 @@ video.preview, .preview video { width: 100%; max-height: 340px; background: #000
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+}
+
+/* ---------------------------------------------------------------- dense layouts on phones */
+@media (max-width: 640px) {
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); }
+  .stat-card { padding: var(--s3) var(--s4); }
+  .stat-card .value { font-size: 26px; }
+  .stat-card .ic { width: 30px; height: 30px; }
+  .stat-card .note { display: none; }
+  .quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rank-item { grid-template-columns: 26px minmax(0, 1fr) auto; }
+  .rank-thumb { display: none; }
+  .live-panel { grid-template-columns: 1fr; }
+  .page-header h1 { font-size: 22px; }
 }

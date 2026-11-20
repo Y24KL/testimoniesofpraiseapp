@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
+import { Icon } from './Icon';
 
 const STALE_MS = 90_000; // two missed heartbeats (heartbeat is every 20s on the app side)
 
@@ -29,8 +30,9 @@ export function ViewerCount({ sessionId }: { sessionId: string }) {
 
   if (count === null) return null;
   return (
-    <span className="pill ok" style={{ marginLeft: 10 }}>
-      👁 {count} watching now
+    <span className="viewer-count" aria-live="polite">
+      <Icon name="eye" size={14} />
+      {count.toLocaleString()} watching now
     </span>
   );
 }

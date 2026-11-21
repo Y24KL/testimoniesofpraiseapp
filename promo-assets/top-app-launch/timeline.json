@@ -6,192 +6,239 @@
  "vo": [
   {
    "id": "L01",
-   "start": 1.2,
-   "dur": 2.368,
+   "start": 1.0,
+   "dur": 2.347,
    "text": "Every testimony carries a story."
   },
   {
    "id": "L02",
-   "start": 4.0,
-   "dur": 4.352,
+   "start": 3.75,
+   "dur": 4.053,
    "text": "A moment when God showed up, and a song made all the difference."
   },
   {
    "id": "L03",
-   "start": 9.5,
-   "dur": 2.475,
+   "start": 8.8,
+   "dur": 2.453,
    "text": "This is the Testimonies of Praise app."
   },
   {
    "id": "L04",
-   "start": 13.3,
-   "dur": 10.923,
-   "text": "Watch powerful testimonies of healing, deliverance and miracles: real stories from people whose lives were touched by the songs of the LoveWorld Singers."
+   "start": 12.3,
+   "dur": 10.645,
+   "text": "Watch powerful testimonies of healing, deliverance, and miracles. Real stories, from people whose lives were touched by the songs of the LoveWorld Singers."
   },
   {
    "id": "L05",
-   "start": 24.8,
-   "dur": 3.712,
+   "start": 23.5,
+   "dur": 3.584,
    "text": "Prefer to read? Written testimonies are right there too."
   },
   {
    "id": "L06",
-   "start": 29.3,
-   "dur": 7.488,
-   "text": "Join the live broadcast and chat with others as it happens. Not live yet? Watch a testimony while you wait."
+   "start": 27.6,
+   "dur": 7.253,
+   "text": "Join the live broadcast, and chat with others as it happens. Not live yet? Watch a testimony while you wait."
   },
   {
    "id": "L07",
-   "start": 37.5,
-   "dur": 4.8,
+   "start": 35.4,
+   "dur": 4.629,
    "text": "When the radio is on air, keep listening, even with your screen locked."
   },
   {
    "id": "L08",
-   "start": 43.0,
-   "dur": 6.571,
-   "text": "Ask Praxiom, your AI assistant, to help you find a testimony or find your way around."
+   "start": 40.55,
+   "dur": 4.843,
+   "text": "Ask Praxiom to help you find a testimony, or find your way around."
   },
   {
    "id": "L09",
-   "start": 50.4,
-   "dur": 3.691,
+   "start": 45.9,
+   "dur": 3.584,
    "text": "Save testimonies to watch offline, wherever you are."
   },
   {
    "id": "L10",
-   "start": 55.0,
-   "dur": 6.955,
+   "start": 50.0,
+   "dur": 6.763,
    "text": "Worship with the LoveWorld Singers, discover the meaning behind the songs, and share your own testimony."
   },
   {
    "id": "L11",
-   "start": 62.9,
-   "dur": 3.925,
-   "text": "Because no one ever praised God and went away empty."
+   "start": 57.4,
+   "dur": 3.605,
+   "text": "Because no one ever praised God, and went away empty."
   },
   {
    "id": "L12",
-   "start": 67.6,
-   "dur": 4.971,
+   "start": 61.8,
+   "dur": 4.267,
    "text": "Download Testimonies of Praise, free on the LoveWorld App Store."
+  },
+  {
+   "id": "L13",
+   "start": 66.6,
+   "dur": 3.2,
+   "text": "Just scan the QR code to download the app."
+  },
+  {
+   "id": "L14",
+   "start": 70.6,
+   "dur": 1.792,
+   "text": "Thank you, and God bless you."
   }
  ],
  "captions": [
   {
-   "start": 1.2,
-   "end": 4.0,
+   "start": 1.13,
+   "end": 3.48,
    "text": "Every testimony carries a story."
   },
   {
-   "start": 4.0,
-   "end": 5.934,
+   "start": 3.88,
+   "end": 5.555,
    "text": "A moment when God showed up,"
   },
   {
-   "start": 5.934,
-   "end": 8.952,
+   "start": 5.555,
+   "end": 8.16,
    "text": "and a song made all the difference."
   },
   {
-   "start": 9.5,
-   "end": 12.575,
+   "start": 8.85,
+   "end": 11.46,
    "text": "This is the Testimonies of Praise app."
   },
   {
-   "start": 13.3,
-   "end": 16.067,
+   "start": 12.35,
+   "end": 14.855,
    "text": "Watch powerful testimonies of healing,"
   },
   {
-   "start": 16.067,
-   "end": 17.888,
-   "text": "deliverance and miracles:"
+   "start": 14.855,
+   "end": 16.83,
+   "text": "deliverance, and miracles."
   },
   {
-   "start": 17.888,
-   "end": 20.873,
-   "text": "real stories from people whose lives were"
+   "start": 16.83,
+   "end": 18.11,
+   "text": "Real stories,"
   },
   {
-   "start": 20.873,
-   "end": 24.8,
-   "text": "touched by the songs of the LoveWorld Singers."
+   "start": 18.11,
+   "end": 20.455,
+   "text": "from people whose lives were touched"
   },
   {
-   "start": 24.8,
-   "end": 29.112,
-   "text": "Prefer to read? Written testimonies are right there too."
+   "start": 20.455,
+   "end": 23.3,
+   "text": "by the songs of the LoveWorld Singers."
   },
   {
-   "start": 29.3,
-   "end": 31.225,
-   "text": "Join the live broadcast and"
+   "start": 23.54,
+   "end": 24.575,
+   "text": "Prefer to read?"
   },
   {
-   "start": 31.225,
-   "end": 33.436,
-   "text": "chat with others as it happens."
+   "start": 24.575,
+   "end": 27.34,
+   "text": "Written testimonies are right there too."
   },
   {
-   "start": 33.436,
-   "end": 37.388,
-   "text": "Not live yet? Watch a testimony while you wait."
+   "start": 27.65,
+   "end": 29.243,
+   "text": "Join the live broadcast,"
   },
   {
-   "start": 37.5,
-   "end": 40.311,
+   "start": 29.243,
+   "end": 31.33,
+   "text": "and chat with others as it happens."
+  },
+  {
+   "start": 31.33,
+   "end": 32.7,
+   "text": "Not live yet?"
+  },
+  {
+   "start": 32.7,
+   "end": 35.07,
+   "text": "Watch a testimony while you wait."
+  },
+  {
+   "start": 35.52,
+   "end": 38.185,
    "text": "When the radio is on air, keep listening,"
   },
   {
-   "start": 40.311,
-   "end": 42.9,
+   "start": 38.185,
+   "end": 40.37,
    "text": "even with your screen locked."
   },
   {
-   "start": 43.0,
-   "end": 45.425,
-   "text": "Ask Praxiom, your AI assistant,"
+   "start": 40.68,
+   "end": 43.315,
+   "text": "Ask Praxiom to help you find a testimony,"
   },
   {
-   "start": 45.425,
-   "end": 50.171,
-   "text": "to help you find a testimony or find your way around."
+   "start": 43.315,
+   "end": 45.49,
+   "text": "or find your way around."
   },
   {
-   "start": 50.4,
-   "end": 54.691,
-   "text": "Save testimonies to watch offline, wherever you are."
+   "start": 45.96,
+   "end": 48.225,
+   "text": "Save testimonies to watch offline,"
   },
   {
-   "start": 55.0,
-   "end": 57.386,
+   "start": 48.225,
+   "end": 49.68,
+   "text": "wherever you are."
+  },
+  {
+   "start": 50.04,
+   "end": 52.455,
    "text": "Worship with the LoveWorld Singers,"
   },
   {
-   "start": 57.386,
-   "end": 59.977,
+   "start": 52.455,
+   "end": 54.67,
    "text": "discover the meaning behind the songs,"
   },
   {
-   "start": 59.977,
-   "end": 62.555,
+   "start": 54.67,
+   "end": 57.01,
    "text": "and share your own testimony."
   },
   {
-   "start": 62.9,
-   "end": 67.425,
-   "text": "Because no one ever praised God and went away empty."
+   "start": 57.44,
+   "end": 59.51,
+   "text": "Because no one ever praised God,"
   },
   {
-   "start": 67.6,
-   "end": 70.046,
+   "start": 59.51,
+   "end": 61.24,
+   "text": "and went away empty."
+  },
+  {
+   "start": 61.87,
+   "end": 63.86,
    "text": "Download Testimonies of Praise,"
   },
   {
-   "start": 70.046,
-   "end": 73.171,
+   "start": 63.86,
+   "end": 66.32,
    "text": "free on the LoveWorld App Store."
+  },
+  {
+   "start": 66.67,
+   "end": 69.99,
+   "text": "Just scan the QR code to download the app."
+  },
+  {
+   "start": 70.7,
+   "end": 72.58,
+   "text": "Thank you, and God bless you."
   }
  ]
 }

@@ -26,10 +26,19 @@ Used unaltered: no recolour, no stretch; scaled uniformly with clear space, a so
 masked to the logo's own alpha.
 
 ## App visuals
-All phone screens are real device captures of the current app (from `brag-output/work-vertical/`), status bar removed:
-Home, Testimonies, Watch Live, Listen, Praxiom. The account holder's first name was painted out of the Home greeting
+All phone screens are real device captures of the current app, with the phone's own status bar removed: Home, Testimonies,
+Watch Live, Listen, Praxiom (from `brag-output/work-vertical/`), plus Written testimonies and LoveWorld Singers (screenshots
+supplied by the owner, cropped to the phone's screen). The account holder's first name was painted out of the Home greeting
 and the Menu was cropped below the profile card, so no personal data appears. Cards floating beside the phone are
 crops of those same captures (Read testimonies banner, "We're not live yet", TOP Radio card, Explore grid, menu rows).
+
+## Phone
+A realistic modern phone built in CSS: brushed-titanium rim with moving highlights, black glass bezel, side buttons,
+Dynamic Island, a 9:41 status bar, home indicator and a soft glass reflection. 19.5:9 screen.
+
+## LoveWorld AppStore
+The store's official logo from its own website header (`assets/brand/lw-appstore-logo.jpg`), shown unaltered on a
+"Download on the LoveWorld AppStore" badge.
 
 ## Motion language
 - Deep purple glows that drift slowly; gold dust particles rising (echoes the musical-note motif of the download landing page).

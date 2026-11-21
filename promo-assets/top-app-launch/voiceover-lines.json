@@ -1,14 +1,16 @@
 [
- {"id":"L01","text":"Every testimony carries a story.","say":"Every testimony carries a story."},
- {"id":"L02","text":"A moment when God showed up, and a song made all the difference.","say":"A moment when God showed up... and a song, made all the difference."},
- {"id":"L03","text":"This is the Testimonies of Praise app.","say":"This is the Testimonies of Praise app."},
- {"id":"L04","text":"Watch powerful testimonies of healing, deliverance and miracles: real stories from people whose lives were touched by the songs of the LoveWorld Singers.","say":"Watch powerful testimonies of healing, deliverance, and miracles. Real stories, from people whose lives were touched by the songs of the LoveWorld Singers."},
- {"id":"L05","text":"Prefer to read? Written testimonies are right there too.","say":"Prefer to read? Written testimonies are right there too."},
- {"id":"L06","text":"Join the live broadcast and chat with others as it happens. Not live yet? Watch a testimony while you wait.","say":"Join the live broadcast, and chat with others as it happens. Not live yet? Watch a testimony while you wait."},
- {"id":"L07","text":"When the radio is on air, keep listening, even with your screen locked.","say":"When the radio is on air, keep listening... even with your screen locked."},
- {"id":"L08","text":"Ask Praxiom, your AI assistant, to help you find a testimony or find your way around.","say":"Ask Praxium, your A.I. assistant, to help you find a testimony, or find your way around."},
- {"id":"L09","text":"Save testimonies to watch offline, wherever you are.","say":"Save testimonies to watch offline, wherever you are."},
- {"id":"L10","text":"Worship with the LoveWorld Singers, discover the meaning behind the songs, and share your own testimony.","say":"Worship with the LoveWorld Singers, discover the meaning behind the songs, and share your own testimony."},
- {"id":"L11","text":"Because no one ever praised God and went away empty.","say":"Because no one ever praised God... and went away empty."},
- {"id":"L12","text":"Download Testimonies of Praise, free on the LoveWorld App Store.","say":"Download Testimonies of Praise. Free, on the LoveWorld App Store."}
+ {"id":"L01","text":"Every testimony carries a story."},
+ {"id":"L02","text":"A moment when God showed up, and a song made all the difference."},
+ {"id":"L03","text":"This is the Testimonies of Praise app."},
+ {"id":"L04","text":"Watch powerful testimonies of healing, deliverance, and miracles. Real stories, from people whose lives were touched by the songs of the LoveWorld Singers."},
+ {"id":"L05","text":"Prefer to read? Written testimonies are right there too."},
+ {"id":"L06","text":"Join the live broadcast, and chat with others as it happens. Not live yet? Watch a testimony while you wait."},
+ {"id":"L07","text":"When the radio is on air, keep listening, even with your screen locked."},
+ {"id":"L08","text":"Ask Praxiom to help you find a testimony, or find your way around."},
+ {"id":"L09","text":"Save testimonies to watch offline, wherever you are."},
+ {"id":"L10","text":"Worship with the LoveWorld Singers, discover the meaning behind the songs, and share your own testimony."},
+ {"id":"L11","text":"Because no one ever praised God, and went away empty."},
+ {"id":"L12","text":"Download Testimonies of Praise, free on the LoveWorld App Store."},
+ {"id":"L13","text":"Just scan the QR code to download the app."},
+ {"id":"L14","text":"Thank you, and God bless you."}
 ]

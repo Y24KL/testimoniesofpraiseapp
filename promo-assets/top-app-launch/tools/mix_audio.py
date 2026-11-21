@@ -19,7 +19,7 @@ f.append(''.join(f'[v{i}]' for i in range(n)) + f"amix=inputs={n}:normalize=0,hi
 ff(*ins, '-filter_complex', ';'.join(f), '-map', '[vo]', '-ac', '1', '-ar', '48000', A('audio', 'voiceover.wav'))
 
 # 2) original sound design: soft whooshes on transitions, a gold shimmer on the logo reveals
-whoosh = [8.4, 27.1, 62.85, 71.45]; shimmer = [9.4, 64.25, 72.75]  # keep in sync with `streaks` in compose.html
+whoosh = [8.4, 27.1, 68.65, 77.25]; shimmer = [9.4, 70.05, 78.55]  # keep in sync with `streaks` in compose.html
 ins, f = [], []
 for i, t in enumerate(whoosh):
     ins += ['-f', 'lavfi', '-i', 'anoisesrc=color=pink:duration=1.6:sample_rate=48000:seed=%d' % (i + 3)]

@@ -7,8 +7,8 @@ import json, os, re
 import numpy as np, soundfile as sf
 here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VO_START = {'L01': 1.0, 'L02': 3.75, 'L03': 8.8, 'L04': 12.3, 'L05': 23.5, 'L06': 27.6, 'L07': 35.4,
-            'L08': 40.55, 'L09': 45.9, 'L10': 50.0, 'L11': 57.2, 'L12': 63.25, 'L13': 68.05, 'L14': 72.0}
-DURATION = 75.0
+            'L08': 46.35, 'L09': 51.7, 'L10': 55.8, 'L11': 63.0, 'L12': 69.05, 'L13': 73.85, 'L14': 77.8}  # after L07: scene time + 5.8 (RADIO_EXTRA in compose.html)
+DURATION = 80.8
 MAX_CHARS = 50
 
 def chunks_of(text):

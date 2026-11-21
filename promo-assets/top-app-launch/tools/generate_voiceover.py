@@ -9,7 +9,7 @@ model_dir = sys.argv[1]; voice = sys.argv[2] if len(sys.argv) > 2 else 'am_micha
 k = Kokoro(os.path.join(model_dir, 'kokoro-v1.0.onnx'), os.path.join(model_dir, 'voices-v1.0.bin'))
 out = os.path.join(here, 'audio', 'vo-lines'); os.makedirs(out, exist_ok=True)
 # Spelling hints for the TTS only. The caption text stays exactly the script (same words as spoken).
-SAY = {'Praxiom': 'Praxium', 'QR': 'Q.R.'}
+SAY = {'Praxiom': 'Praxium', 'QR': 'Q.R.', 'GMT+1': 'GMT plus one', '1 PM': 'one PM'}
 def to_speech(text):
     for a, b in SAY.items(): text = text.replace(a, b)
     return text

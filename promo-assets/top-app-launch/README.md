@@ -1,6 +1,6 @@
 # Testimonies of Praise — landscape app promo
 
-Final film: **`top-app-promo-landscape.mp4`** — 1920×1080, 16:9, 30 fps, 75 s, H.264 + AAC 48 kHz, captions burned in.
+Final film: **`top-app-promo-landscape.mp4`** — 1920×1080, 16:9, 30 fps, 80.8 s, H.264 + AAC 48 kHz, captions burned in.
 
 | File | What it is |
 |---|---|
@@ -31,7 +31,7 @@ python3 tools/generate_voiceover.py <model_dir> am_michael 0.96
 python3 tools/build_timeline.py
 python3 tools/mix_audio.py
 python3 -m http.server 8765 &              # serve this folder
-NODE_PATH=$(npm root -g) node tools/render.mjs build/part_0.mp4 0 75   # needs Playwright + Chromium
+NODE_PATH=$(npm root -g) node tools/render.mjs build/part_0.mp4 0 80.8   # needs Playwright + Chromium
 tools/assemble.sh
 ```
 Rendering can be split into parallel chunks (`... build/part_19.mp4 19 38` etc.); `assemble.sh` joins every `build/part_*.mp4`.

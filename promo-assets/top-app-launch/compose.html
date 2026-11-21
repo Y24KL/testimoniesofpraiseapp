@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>T.O.P. App Promo — Composition</title>
+<!--
+  Testimonies of Praise — landscape promo composition (1920x1080, 30 fps).
+  Deterministic: everything is a pure function of time. `window.seek(t)` draws frame t (seconds).
+  Open via a local server (python3 -m http.server) and use ?t=12.3 to inspect a frame, or ?play to preview.
+  Timing data (VO cues, captions) comes from timeline.json, built by tools/build_timeline.py.
+-->
+<style>
+@font-face{font-family:Jakarta;font-weight:400;src:url(assets/fonts/PlusJakartaSans-400.ttf)}
+@font-face{font-family:Jakarta;font-weight:500;src:url(assets/fonts/PlusJakartaSans-500.ttf)}
+@font-face{font-family:Jakarta;font-weight:600;src:url(assets/fonts/PlusJakartaSans-600.ttf)}
+@font-face{font-family:Jakarta;font-weight:700;src:url(assets/fonts/PlusJakartaSans-700.ttf)}
+@font-face{font-family:Jakarta;font-weight:800;src:url(assets/fonts/PlusJakartaSans-800.ttf)}
+:root{
+  /* Brand tokens, copied from src/constants/theme.ts */
+  --primary:#4B006E; --primaryDark:#2E0044; --primaryLight:#7A1FA2;
+  --accent:#F5C542; --accentDeep:#D99A1E; --gold1:#FFE08A;
+  --bg:#12001C; --surface:#1C0829; --card:#2A1240; --border:#3A2253;
+  --text:#FFFFFF; --muted:#CDBBDD; --subtle:#9C86B3; --live:#FF3B4E;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg)}
+body{font-family:Jakarta,sans-serif;color:var(--text);-webkit-font-smoothing:antialiased}
+#stage{position:absolute;inset:0;overflow:hidden;background:var(--bg)}
+.abs{position:absolute}
+.layer{position:absolute;inset:0;will-change:opacity,transform}
+#bgGlow{background:
+  radial-gradient(900px 700px at var(--g1x,30%) var(--g1y,35%),rgba(122,31,162,.55),transparent 70%),
+  radial-gradient(800px 600px at var(--g2x,75%) var(--g2y,70%),rgba(75,0,110,.7),transparent 70%),
+  radial-gradient(600px 500px at var(--g3x,60%) var(--g3y,20%),rgba(245,197,66,.10),transparent 70%),
+  linear-gradient(180deg,#1a0228 0%,#12001C 60%,#0b0012 100%)}
+#vignette{background:radial-gradient(1300px 820px at 50% 50%,transparent 55%,rgba(5,0,9,.75) 100%)}
+#streak{background:linear-gradient(100deg,transparent 40%,rgba(255,224,138,.10) 48%,rgba(255,255,255,.18) 50%,rgba(255,224,138,.10) 52%,transparent 60%);mix-blend-mode:screen}
+canvas{position:absolute;inset:0}
+
+/* Typography */
+.kicker{font-weight:800;font-size:22px;letter-spacing:.32em;color:var(--accent);text-transform:uppercase}
+.h1{font-weight:800;font-size:80px;line-height:1.04;letter-spacing:-.02em}
+.h2{font-weight:800;font-size:64px;line-height:1.08;letter-spacing:-.015em}
+.sub{font-weight:500;font-size:32px;line-height:1.35;color:var(--muted)}
+.gold{background:linear-gradient(100deg,var(--gold1),var(--accent) 45%,var(--accentDeep));-webkit-background-clip:text;background-clip:text;color:transparent}
+.word{display:inline-block;will-change:transform,opacity}
+.textcol{position:absolute;width:760px}
+.textcol .kicker{margin-bottom:22px}
+.textcol .sub{margin-top:26px}
+.rule{height:4px;width:90px;border-radius:4px;background:linear-gradient(90deg,var(--accent),transparent);margin-bottom:26px}
+
+/* Phone */
+#phone{position:absolute;left:0;top:0;width:428px;height:858px;border-radius:62px;padding:14px;
+  background:linear-gradient(145deg,#3a2253,#140020 40%,#2a1240);
+  box-shadow:0 0 0 2px rgba(245,197,66,.28),0 50px 120px rgba(0,0,0,.65),0 0 140px rgba(122,31,162,.45);
+  transform-origin:50% 50%;will-change:transform}
+#screen{position:relative;width:400px;height:830px;border-radius:48px;overflow:hidden;background:#12001C}
+#screen img.scr{position:absolute;left:0;top:0;width:400px;height:830px;opacity:0}
+#notch{position:absolute;left:50%;top:22px;width:110px;height:28px;margin-left:-55px;border-radius:20px;background:#07000c;z-index:5}
+#glare{position:absolute;inset:0;border-radius:48px;background:linear-gradient(120deg,rgba(255,255,255,.10),transparent 30%);pointer-events:none;z-index:6}
+.ring{position:absolute;border:3px solid var(--accent);border-radius:22px;box-shadow:0 0 24px rgba(245,197,66,.6);opacity:0;z-index:7}
+#typed{position:absolute;left:22px;top:725px;width:240px;height:32px;font:500 16px/30px Jakarta;color:#fff;z-index:7;opacity:0;white-space:nowrap;overflow:hidden;background:#1c0929;padding-left:6px}
+
+/* Cards cut from real screens */
+.card{position:absolute;left:0;top:0;transform-origin:0 0;border-radius:22px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1.5px rgba(245,197,66,.25);will-change:transform,opacity;opacity:0}
+.card img{display:block;width:100%;height:auto}
+.thumb{position:absolute;border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.55);will-change:transform,opacity,filter;opacity:0}
+.thumb img{display:block;width:100%}
+.chip{display:inline-block;padding:12px 26px;border-radius:999px;font-weight:700;font-size:28px;margin-right:14px;
+  background:rgba(245,197,66,.14);border:1.5px solid rgba(245,197,66,.45);color:var(--gold1);opacity:0}
+.livepill{display:inline-flex;align-items:center;gap:10px;padding:8px 18px;border-radius:999px;background:rgba(255,59,78,.16);border:1.5px solid rgba(255,59,78,.6);font-weight:800;font-size:20px;letter-spacing:.2em;color:#ff7280;vertical-align:middle;margin-left:18px}
+.livepill i{width:12px;height:12px;border-radius:50%;background:var(--live);display:inline-block}
+.eq{display:flex;gap:9px;align-items:flex-end;height:70px}
+.eq b{width:12px;border-radius:6px;background:linear-gradient(180deg,var(--gold1),var(--accentDeep))}
+.note{position:absolute;font-size:46px;color:var(--accent);opacity:0;text-shadow:0 0 20px rgba(245,197,66,.5)}
+
+/* Logo + CTA */
+#logo{position:absolute;width:560px;left:680px;top:250px;will-change:transform,opacity,filter}
+#logoSweep{position:absolute;inset:0;overflow:hidden;-webkit-mask:url(assets/brand/logo.png) center/contain no-repeat;mask:url(assets/brand/logo.png) center/contain no-repeat}
+#logoSweep div{position:absolute;top:-20%;bottom:-20%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.75),transparent);transform:skewX(-18deg)}
+.spaced{font-weight:800;font-size:30px;letter-spacing:.55em;color:#fff;text-align:center}
+.btn{display:inline-flex;align-items:center;gap:18px;padding:24px 40px;border-radius:999px;font-weight:800;font-size:32px;color:#2A0040;
+  background:linear-gradient(100deg,var(--gold1),var(--accent) 50%,var(--accentDeep));box-shadow:0 18px 50px rgba(245,197,66,.35)}
+#qrBox{position:absolute;width:300px;padding:18px;border-radius:26px;background:#fff;box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 3px rgba(245,197,66,.5)}
+#qrBox img{display:block;width:100%}
+
+/* Captions */
+#cap{position:absolute;left:0;right:0;bottom:46px;text-align:center;z-index:50}
+#cap span{display:inline-block;max-width:1500px;padding:12px 30px;border-radius:14px;background:rgba(10,0,16,.62);
+  font-weight:600;font-size:36px;line-height:1.3;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.6)}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bgGlow" class="layer"></div>
+  <canvas id="dust" width="1920" height="1080"></canvas>
+  <div id="streak" class="layer"></div>
+
+  <!-- S1 hook -->
+  <div id="s1" class="layer">
+    <div id="s1thumbs"></div>
+    <div id="s1a" class="abs" style="left:0;right:0;top:370px;text-align:center">
+      <div class="h1" id="s1l1"></div><div class="h1 gold" id="s1l2" style="margin-top:6px"></div>
+    </div>
+    <div id="s1b" class="abs" style="left:0;right:0;top:390px;text-align:center">
+      <div class="h2" id="s1l3"></div><div class="h2 gold" id="s1l4" style="margin-top:10px"></div>
+    </div>
+    <div id="notes"></div>
+  </div>
+
+  <!-- S2 logo reveal (logo element is shared with S11) -->
+  <div id="s2" class="layer">
+    <div id="s2name" class="abs spaced" style="left:0;right:0;top:705px">TESTIMONIES OF PRAISE</div>
+    <div id="s2app" class="abs" style="left:0;right:0;top:775px;text-align:center"><span class="kicker" style="letter-spacing:.4em">The T.O.P. app</span></div>
+  </div>
+
+  <!-- feature text columns -->
+  <div id="tWatch" class="textcol" style="left:150px;top:300px">
+    <div class="rule"></div><div class="kicker">Testimonies</div>
+    <div class="h1">Powerful<br><span class="gold">testimonies.</span></div>
+    <div style="margin-top:36px"><span class="chip" id="c1">Healing</span><span class="chip" id="c2">Deliverance</span><span class="chip" id="c3">Miracles</span></div>
+  </div>
+  <div id="tReal" class="textcol" style="left:150px;top:310px">
+    <div class="rule"></div><div class="kicker">Real stories</div>
+    <div class="h2">Lives touched by<br><span class="gold">the songs of the<br>LoveWorld Singers.</span></div>
+  </div>
+  <div id="tRead" class="textcol" style="left:150px;top:250px">
+    <div class="rule"></div><div class="kicker">Read testimonies</div>
+    <div class="h1">Prefer<br><span class="gold">to read?</span></div>
+    <div class="sub">Written stories of God’s faithfulness,<br>right there in the app.</div>
+  </div>
+  <div id="tLive" class="textcol" style="left:1010px;top:250px">
+    <div class="rule"></div><div class="kicker">Live broadcast <span class="livepill" id="livepill"><i></i>LIVE</span></div>
+    <div class="h1">Watch live.<br><span class="gold">Chat as it<br>happens.</span></div>
+  </div>
+  <div id="tListen" class="textcol" style="left:1010px;top:250px">
+    <div class="rule"></div><div class="kicker">Listen</div>
+    <div class="h1">Keep<br><span class="gold">listening.</span></div>
+    <div class="sub">When the radio is on air, it keeps<br>playing — even with your screen locked.</div>
+  </div>
+  <div id="tAI" class="textcol" style="left:150px;top:300px">
+    <div class="rule"></div><div class="kicker">AI assistant</div>
+    <div class="h1">Ask<br><span class="gold">Praxiom.</span></div>
+    <div class="sub">Find a testimony, or find your<br>way around the app.</div>
+  </div>
+  <div id="tOff" class="textcol" style="left:150px;top:180px">
+    <div class="rule"></div><div class="kicker">Downloads</div>
+    <div class="h1">Watch<br><span class="gold">offline.</span></div>
+    <div class="sub">Save testimonies and watch<br>wherever you are.</div>
+  </div>
+  <div id="tMore" class="textcol" style="left:1120px;top:330px;width:700px">
+    <div class="rule"></div><div class="kicker">And more</div>
+    <div class="h1"><span id="m1">Worship.</span><br><span id="m2" class="gold">Discover.</span><br><span id="m3">Share.</span></div>
+  </div>
+
+  <!-- cards cut from real app screens -->
+  <div id="kRead" class="card" style="width:820px"><img src="assets/screens/read-banner.png"></div>
+  <div id="kLiveRow" class="card" style="width:700px"><img src="assets/screens/row-live.png"></div>
+  <div id="kWait" class="card" style="width:760px"><img src="assets/screens/live-wait.png"></div>
+  <div id="kRadio" class="card" style="width:620px"><img src="assets/screens/radio-card.png"></div>
+  <div id="eqWrap" class="abs eq" style="opacity:0"></div>
+  <div id="kGrid" class="card" style="width:700px"><img src="assets/screens/explore-grid.png"><div class="ring" id="ringSaved"></div></div>
+  <div id="kSingers" class="card" style="width:820px"><img src="assets/screens/row-singers.png"></div>
+  <div id="kLyrical" class="card" style="width:820px"><img src="assets/screens/row-lyrical.png"></div>
+  <div id="kShare" class="card" style="width:820px"><img src="assets/screens/row-share.png"></div>
+  <div id="fan"></div>
+
+  <!-- phone with real app screens -->
+  <div id="phone"><div id="screen">
+    <div id="notch"></div>
+    <img class="scr" id="pHome" src="assets/screens/home.png">
+    <img class="scr" id="pTest" src="assets/screens/testimonies.png">
+    <img class="scr" id="pLive" src="assets/screens/live.png">
+    <img class="scr" id="pListen" src="assets/screens/listen.png">
+    <img class="scr" id="pAI" src="assets/screens/assistant.png">
+    <div id="typed"></div>
+    <div class="ring" id="ringTab"></div>
+    <div id="glare"></div>
+  </div></div>
+
+  <!-- S10 payoff -->
+  <div id="s10" class="layer">
+    <div id="mosaic"></div>
+    <div class="layer" style="background:radial-gradient(900px 500px at 50% 50%,rgba(18,0,28,.88),rgba(18,0,28,.55))"></div>
+    <div class="abs" style="left:0;right:0;top:380px;text-align:center">
+      <div class="h2" id="q1">No one ever praised God</div>
+      <div class="h2 gold" id="q2" style="margin-top:12px">and went away empty.</div>
+    </div>
+  </div>
+
+  <img id="logo" src="assets/brand/logo.png">
+  <div id="logoSweepWrap" class="abs"><div id="logoSweep"><div id="sweepBar"></div></div></div>
+
+  <!-- S11 CTA -->
+  <div id="s11" class="layer">
+    <div class="abs" style="left:150px;top:520px;width:1000px">
+      <div class="h2">Download <span class="gold">free</span> today.</div>
+      <div style="margin-top:36px"><span class="btn"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2A0040" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>LoveWorld App Store</span></div>
+      <div class="sub" style="margin-top:30px">Also on the web: <span style="color:#fff;font-weight:700">testimoniesofpraiseapp.com</span></div>
+    </div>
+    <div id="qrBox" style="left:1430px;top:430px"><img src="assets/brand/qr-lwappstore.png"></div>
+    <div class="abs kicker" id="qrLabel" style="left:1380px;width:400px;top:790px;text-align:center;letter-spacing:.22em">Scan to download</div>
+  </div>
+
+  <div id="vignette" class="layer"></div>
+  <div id="cap"><span id="capText"></span></div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const clamp = (x) => Math.max(0, Math.min(1, x));
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+const easeInOut = (x) => (x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const easeBack = (x) => { const c = 1.4; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const lerp = (a, b, x) => a + (b - a) * x;
+/** opacity window: fades in over [a, a+fi], out over [b-fo, b] */
+const win = (t, a, b, fi = .5, fo = .5) => Math.min(prog(t, a, a + fi), 1 - prog(t, b - fo, b));
+function set(el, o, tf, extra) { el.style.opacity = o; if (tf !== undefined) el.style.transform = tf; if (extra) Object.assign(el.style, extra); }
+// keyframe track: [[t, value], ...] eased between keys
+function track(t, keys, ease = easeInOut) {
+  if (t <= keys[0][0]) return keys[0][1];
+  for (let i = 1; i < keys.length; i++) if (t <= keys[i][0]) {
+    const [t0, v0] = keys[i - 1], [t1, v1] = keys[i]; const x = ease((t - t0) / (t1 - t0));
+    return Array.isArray(v0) ? v0.map((v, j) => lerp(v, v1[j], x)) : lerp(v0, v1, x);
+  }
+  return keys[keys.length - 1][1];
+}
+// seeded RNG for deterministic particles
+let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+
+// --- build dynamic elements ---
+function words(el, text) { el.innerHTML = text.split(' ').map((w) => `<span class="word">${w}</span>`).join(' '); return [...el.children]; }
+const W1 = words($('s1l1'), 'Every testimony'), W2 = words($('s1l2'), 'carries a story.');
+const W3 = words($('s1l3'), 'A moment when God showed up…'), W4 = words($('s1l4'), 'and a song made all the difference.');
+const THUMBS = [1, 2, 3, 4, 5, 6].map((i) => `assets/screens/thumb${i}.png`);
+const s1t = THUMBS.map((src, i) => { const d = document.createElement('div'); d.className = 'thumb'; d.innerHTML = `<img src="${src}">`; d.style.width = '380px'; $('s1thumbs').appendChild(d); return d; });
+const S1POS = [[120, 120, .55], [1420, 110, .5], [80, 700, .6], [1460, 690, .62], [760, 40, .38], [820, 820, .4]];
+const fan = [0, 2, 4].map((i) => { const d = document.createElement('div'); d.className = 'thumb'; d.innerHTML = `<img src="${THUMBS[i]}">`; d.style.width = '360px'; $('fan').appendChild(d); return d; });
+const mosaic = THUMBS.concat(THUMBS).map((src, i) => { const d = document.createElement('div'); d.className = 'thumb'; d.innerHTML = `<img src="${src}">`; d.style.width = '440px'; d.style.opacity = 1; $('mosaic').appendChild(d); return d; });
+const notes = ['♪', '♫', '♪', '♬', '♫', '♪'].map((n, i) => { const d = document.createElement('div'); d.className = 'note'; d.textContent = n; d.style.left = `${300 + i * 260}px`; $('notes').appendChild(d); return d; });
+for (let i = 0; i < 7; i++) $('eqWrap').appendChild(document.createElement('b'));
+const bars = [...$('eqWrap').children];
+seed = 11; const dust = Array.from({ length: 140 }, () => ({ x: rnd() * 1920, y: rnd() * 1080, r: .6 + rnd() * 2.4, s: 6 + rnd() * 22, ph: rnd() * 6.28, a: .15 + rnd() * .55 }));
+const ctx = $('dust').getContext('2d');
+
+let TL = { captions: [], duration: 74.5 };
+const BOOT = fetch('timeline.json').then((r) => r.json()).then((j) => { TL = j; });
+
+function phoneAt(x, y, s, ry, rz) { $('phone').style.transform = `translate(${x - 214}px, ${y - 429}px) perspective(1600px) rotateY(${ry}deg) rotateZ(${rz}deg) scale(${s})`; }
+function cardAt(el, o, x, y, s = 1, extra = '') { el.style.opacity = o; el.style.transform = `translate(${x}px, ${y}px) scale(${s}) ${extra}`; }
+function textIn(el, t, a, b) { // text column: rise in, drift, fade out
+  const i = easeOut(prog(t, a, a + .8)), o = prog(t, b - .5, b);
+  el.style.opacity = Math.min(i, 1 - o); el.style.transform = `translateY(${(1 - i) * 40 - o * 20}px)`;
+  el.style.visibility = (t > a - .05 && t < b + .05) ? 'visible' : 'hidden';
+}
+function wordsIn(ws, t, a, step = .12, dur = .6) { ws.forEach((w, i) => { const x = easeOut(prog(t, a + i * step, a + i * step + dur)); w.style.opacity = x; w.style.transform = `translateY(${(1 - x) * 34}px)`; w.style.filter = `blur(${(1 - x) * 8}px)`; }); }
+
+window.seek = function (t) {
+  // ---------- background ----------
+  const bg = $('bgGlow').style;
+  bg.setProperty('--g1x', `${30 + 8 * Math.sin(t * .11)}%`); bg.setProperty('--g1y', `${35 + 6 * Math.cos(t * .09)}%`);
+  bg.setProperty('--g2x', `${72 + 7 * Math.cos(t * .07)}%`); bg.setProperty('--g2y', `${68 + 6 * Math.sin(t * .1)}%`);
+  bg.setProperty('--g3x', `${55 + 15 * Math.sin(t * .05)}%`);
+  ctx.clearRect(0, 0, 1920, 1080);
+  for (const d of dust) {
+    const y = ((d.y - t * d.s) % 1080 + 1080) % 1080, x = d.x + 18 * Math.sin(t * .4 + d.ph);
+    const tw = .55 + .45 * Math.sin(t * 1.3 + d.ph * 3);
+    ctx.globalAlpha = d.a * tw; ctx.fillStyle = d.r > 2 ? '#FFE08A' : '#F5C542';
+    ctx.beginPath(); ctx.arc(x, y, d.r, 0, 6.283); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // light streaks at reveals
+  const streaks = [8.9, 28.9, 54.7, 67.2];
+  let sk = -1; for (const s of streaks) if (t >= s && t < s + 1.4) sk = (t - s) / 1.4;
+  $('streak').style.opacity = sk < 0 ? 0 : Math.sin(sk * Math.PI);
+  $('streak').style.transform = `translateX(${sk < 0 ? 0 : lerp(-1400, 1400, easeInOut(sk))}px)`;
+
+  // ---------- S1 hook (0 - 9.0) ----------
+  $('s1').style.opacity = 1 - prog(t, 8.6, 9.2);
+  $('s1').style.visibility = t < 9.3 ? 'visible' : 'hidden';
+  const sA = 1 - prog(t, 3.75, 4.15); $('s1a').style.opacity = sA;
+  $('s1a').style.transform = `scale(${1 + t * .008})`;
+  wordsIn(W1, t, 1.15, .16); wordsIn(W2, t, 2.0, .14);
+  $('s1b').style.opacity = prog(t, 3.95, 4.2);
+  $('s1b').style.transform = `scale(${1 + Math.max(0, t - 4) * .008})`;
+  wordsIn(W3, t, 4.05, .13); wordsIn(W4, t, 5.95, .11);
+  s1t.forEach((d, i) => {
+    const [x, y, depth] = S1POS[i]; const a = .3 + i * .35; const o = easeOut(prog(t, a, a + 1.4)) * .5;
+    d.style.opacity = o; d.style.filter = `blur(${(1 - depth) * 9}px) brightness(.7)`;
+    d.style.transform = `translate(${x + (t - 4) * depth * 22 * (x < 900 ? -1 : 1)}px, ${y - t * depth * 6}px) scale(${.6 + depth * .5 + t * .01}) rotate(${(i % 2 ? 4 : -4)}deg)`;
+  });
+  notes.forEach((n, i) => { const a = 4.3 + i * .5, p = prog(t, a, a + 4); n.style.opacity = Math.sin(p * Math.PI) * .8; n.style.transform = `translate(${Math.sin(p * 6 + i) * 20}px, ${900 - p * 600}px) rotate(${Math.sin(p * 4 + i) * 15}deg)`; });
+
+  // ---------- S2 logo + S11 logo (shared element) ----------
+  let lo = 0, ls = 1, lx = 680, ly = 250, lw = 560, lblur = 0;
+  if (t < 13.4) { const x = easeOut(prog(t, 8.9, 10.4)); lo = Math.min(x, 1 - prog(t, 12.6, 13.3)); ls = lerp(.82, 1, x) + (t - 9) * .006; lblur = (1 - x) * 14; ly = 255; }
+  else if (t >= 67.0) { const x = easeOut(prog(t, 67.1, 68.3)); lo = x; ls = lerp(.85, 1, x); lx = 150; ly = 120; lw = 440; lblur = (1 - x) * 10; }
+  const L = $('logo'); L.style.opacity = lo; L.style.left = `${lx}px`; L.style.top = `${ly}px`; L.style.width = `${lw}px`; L.style.filter = `blur(${lblur}px) drop-shadow(0 0 ${30 + 20 * Math.sin(t * 2)}px rgba(245,197,66,.35))`; L.style.transform = `scale(${ls})`;
+  const sw = $('logoSweepWrap'); const lh = lw * 431 / 600; Object.assign(sw.style, { left: `${lx}px`, top: `${ly}px`, width: `${lw}px`, height: `${lh}px`, opacity: lo, transform: `scale(${ls})` });
+  const swp = t < 13.4 ? prog(t, 10.0, 11.4) : prog(t, 68.4, 69.8);
+  $('sweepBar').style.left = `${lerp(-50, 130, swp)}%`; $('sweepBar').style.opacity = swp > 0 && swp < 1 ? 1 : 0;
+  $('s2').style.visibility = t > 8.5 && t < 13.5 ? 'visible' : 'hidden';
+  const n1 = easeOut(prog(t, 10.3, 11.3)); $('s2name').style.opacity = Math.min(n1, 1 - prog(t, 12.6, 13.2)); $('s2name').style.letterSpacing = `${lerp(.9, .55, n1)}em`;
+  const n2 = easeOut(prog(t, 10.9, 11.8)); $('s2app').style.opacity = Math.min(n2, 1 - prog(t, 12.6, 13.2)); $('s2app').style.transform = `translateY(${(1 - n2) * 20}px)`;
+
+  // ---------- phone choreography ----------
+  // [time, [x, y, scale, rotateY, rotateZ]]
+  const P = track(t, [
+    [13.0, [2250, 520, .95, -25, 6]], [14.2, [1360, 515, 1, -10, 0]], [24.3, [1380, 510, 1.02, -8, 0]],
+    [29.0, [1400, 510, 1.02, -8, 0]], [30.2, [560, 515, 1, 10, 0]], [42.6, [570, 510, 1.02, 8, 0]],
+    [43.8, [1360, 515, 1, -10, 0]], [49.9, [1370, 510, 1.03, -8, 0]], [51.0, [1380, 515, 1, -6, 0]],
+    [54.4, [1390, 512, 1.02, -6, 0]], [55.4, [1400, 1500, .9, -6, 8]],
+  ]);
+  phoneAt(...P);
+  $('phone').style.visibility = t > 13.0 && t < 55.5 ? 'visible' : 'hidden';
+  const scrWin = { pHome: [13.0, 18.2], pTest: [18.2, 29.9], pLive: [29.9, 37.4], pListen: [37.4, 43.4], pAI: [43.4, 50.6] };
+  for (const [id, [a, b]] of Object.entries(scrWin)) $(id).style.opacity = Math.min(prog(t, a, a + .45), 1 - prog(t, b, b + .45));
+  if (t >= 50.6) $('pHome').style.opacity = prog(t, 50.6, 51.05);
+  // gentle in-screen push so stills feel alive
+  ['pHome', 'pTest', 'pLive', 'pListen', 'pAI'].forEach((id) => { const [a] = scrWin[id]; $(id).style.transform = `scale(${1 + Math.max(0, t - a) * .004})`; $(id).style.transformOrigin = '50% 30%'; });
+  // Downloads tab ring (bottom-right tab in Home screen)
+  const rt = win(t, 51.3, 54.4, .35, .4); Object.assign($('ringTab').style, { left: '334px', top: '774px', width: '60px', height: '56px', opacity: rt, transform: `scale(${1 + .06 * Math.sin(t * 6)})` });
+  // Praxiom typing in the real input field
+  const prompt = 'Help me find a testimony.'; const nch = Math.floor(prog(t, 45.2, 47.0) * prompt.length);
+  $('typed').textContent = prompt.slice(0, nch) + (t > 45.0 && t < 50.4 && Math.floor(t * 2.5) % 2 ? '|' : '');
+  $('typed').style.opacity = win(t, 45.0, 50.5, .2, .3);
+
+  // ---------- S3 watch (13 - 24.6) ----------
+  textIn($('tWatch'), t, 13.6, 18.4);
+  [['c1', 15.0], ['c2', 16.0], ['c3', 16.9]].forEach(([id, a]) => { const x = easeBack(prog(t, a, a + .5)); $(id).style.opacity = prog(t, a, a + .25); $(id).style.transform = `scale(${.6 + .4 * x})`; });
+  textIn($('tReal'), t, 18.6, 24.6);
+  fan.forEach((d, i) => {
+    const a = 19.4 + i * .35, x = easeOut(prog(t, a, a + 1.1)), out = prog(t, 24.0, 24.6);
+    const tx = lerp(1240, [120, 430, 740][i], x), ty = lerp(420, 700 + (i === 1 ? 30 : 0), x);
+    d.style.opacity = Math.min(x, 1 - out); d.style.filter = 'none';
+    d.style.transform = `translate(${tx}px, ${ty + (t - a) * -4}px) scale(${lerp(.4, .82, x)}) rotate(${(i - 1) * 4 * x}deg)`;
+  });
+
+  // ---------- S4 read (24.6 - 29.2) ----------
+  textIn($('tRead'), t, 24.8, 29.0);
+  { const x = easeBack(prog(t, 25.2, 26.0)); cardAt($('kRead'), Math.min(prog(t, 25.2, 25.5), 1 - prog(t, 28.6, 29.1)), lerp(900, 150, x), lerp(420, 650, x) - (t - 25) * 3, lerp(.5, .86, x)); }
+
+  // ---------- S5 live (29.2 - 37.4) ----------
+  textIn($('tLive'), t, 29.9, 37.3);
+  $('livepill').style.opacity = .55 + .45 * Math.sin(t * 5);
+  { const x = easeOut(prog(t, 31.0, 31.8)); cardAt($('kLiveRow'), Math.min(x, 1 - prog(t, 33.2, 33.6)), 1010, lerp(720, 640, x), 1); }
+  { const x = easeBack(prog(t, 33.5, 34.3)); cardAt($('kWait'), Math.min(prog(t, 33.5, 33.8), 1 - prog(t, 36.9, 37.4)), lerp(900, 1010, x), lerp(520, 640, x), lerp(.5, 1, x)); }
+
+  // ---------- S6 listen (37.4 - 43) ----------
+  textIn($('tListen'), t, 37.7, 42.9);
+  { const x = easeBack(prog(t, 38.4, 39.2)); cardAt($('kRadio'), Math.min(prog(t, 38.4, 38.7), 1 - prog(t, 42.4, 42.9)), lerp(800, 1010, x), lerp(560, 650, x), lerp(.35, .52, x)); }
+  { const o = win(t, 39.0, 42.9, .4, .5); const e = $('eqWrap'); e.style.opacity = o; e.style.transform = 'translate(1380px, 790px)';
+    bars.forEach((b, i) => { b.style.height = `${18 + 50 * Math.abs(Math.sin(t * (3 + i * .7) + i))}px`; }); }
+
+  // ---------- S7 Praxiom (43 - 50.4) ----------
+  textIn($('tAI'), t, 43.8, 50.3);
+
+  // ---------- S8 offline (50.4 - 55) ----------
+  textIn($('tOff'), t, 50.6, 54.9);
+  { const x = easeBack(prog(t, 51.0, 51.8)); cardAt($('kGrid'), Math.min(prog(t, 51.0, 51.3), 1 - prog(t, 54.4, 54.9)), lerp(700, 150, x), lerp(600, 560, x), lerp(.5, 1, x)); }
+  Object.assign($('ringSaved').style, { left: '550px', top: '176px', width: '128px', height: '128px', opacity: win(t, 52.0, 54.6, .3, .4), transform: `scale(${1 + .05 * Math.sin(t * 6)})` });
+
+  // ---------- S9 more (55 - 62.8) ----------
+  textIn($('tMore'), t, 55.2, 62.6);
+  [['m1', 55.2], ['m2', 57.4], ['m3', 59.6]].forEach(([id, a]) => { const x = easeOut(prog(t, a, a + .6)); $(id).style.opacity = .18 + .82 * x; });
+  [['kSingers', 55.3, 230], ['kLyrical', 57.5, 440], ['kShare', 59.7, 650]].forEach(([id, a, y]) => {
+    const x = easeBack(prog(t, a, a + .7)); cardAt($(id), Math.min(prog(t, a, a + .3), 1 - prog(t, 62.2, 62.8)), lerp(-300, 150, x), y - (t - a) * 2, lerp(.8, 1, x));
+  });
+
+  // ---------- S10 payoff (62.8 - 67.4) ----------
+  const s10o = win(t, 62.6, 67.4, .7, .6); $('s10').style.opacity = s10o; $('s10').style.visibility = s10o > 0 ? 'visible' : 'hidden';
+  mosaic.forEach((d, i) => { const col = i % 4, row = Math.floor(i / 4); d.style.filter = 'brightness(.55) saturate(.9)';
+    d.style.transform = `translate(${-120 + col * 500 - (t - 62.6) * 28 + (row % 2) * 220}px, ${-60 + row * 330}px) rotate(-6deg)`; });
+  { const a = easeOut(prog(t, 63.0, 63.9)), b = easeOut(prog(t, 64.6, 65.5)); $('q1').style.opacity = a; $('q1').style.transform = `translateY(${(1 - a) * 30}px)`; $('q2').style.opacity = b; $('q2').style.transform = `translateY(${(1 - b) * 30}px) scale(${1 + Math.max(0, t - 65.5) * .01})`; }
+
+  // ---------- S11 CTA (67.2 - end) ----------
+  const s11o = prog(t, 67.6, 68.6); $('s11').style.opacity = s11o; $('s11').style.visibility = s11o > 0 ? 'visible' : 'hidden';
+  { const q = easeBack(prog(t, 68.6, 69.5)); $('qrBox').style.transform = `scale(${lerp(.6, 1, q)})`; $('qrBox').style.opacity = prog(t, 68.6, 68.9); $('qrLabel').style.opacity = prog(t, 69.3, 69.8); }
+
+  // ---------- captions ----------
+  const c = TL.captions.find((c) => t >= c.start && t < c.end);
+  $('capText').textContent = c ? c.text : ''; $('cap').style.opacity = c ? 1 : 0;
+
+  // final fade from black at start / to black at the very end
+  $('stage').style.filter = `brightness(${Math.min(prog(t, 0, .8), 1 - prog(t, TL.duration - .7, TL.duration))})`;
+};
+
+window.ready = Promise.all([BOOT, document.fonts.ready, ...[...document.images].map((i) => i.decode().catch(() => 0))]);
+window.ready.then(() => {
+  const q = new URLSearchParams(location.search);
+  if (q.has('play')) { const t0 = performance.now(); const loop = () => { window.seek(((performance.now() - t0) / 1000) % TL.duration); requestAnimationFrame(loop); }; loop(); }
+  else window.seek(parseFloat(q.get('t') || '0'));
+});
+</script>
+</body>
+</html>

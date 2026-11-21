@@ -41,7 +41,6 @@ export function Layout({ route, go, children }: { route: Route; go: (r: Route) =
   const meta = routeMeta(route);
   const email = auth.currentUser?.email ?? '';
   const initial = (email[0] ?? 'A').toUpperCase();
-  const queue = badgeCount(counts.notificationQueue);
 
   useEffect(() => {
     try {
@@ -158,9 +157,8 @@ export function Layout({ route, go, children }: { route: Route; go: (r: Route) =
             ) : null}
           </div>
 
-          <button type="button" className="icon-btn" aria-label={queue ? `Notification Centre, ${queue} awaiting approval` : 'Notification Centre'} title="Notifications awaiting approval" onClick={() => navigate({ name: 'notifications' })}>
+          <button type="button" className="icon-btn" aria-label="Notification Centre" title="Notification Centre" onClick={() => navigate({ name: 'notifications' })}>
             <Icon name="bell" />
-            {queue ? <span className="dot-badge">{queue > 9 ? '9+' : queue}</span> : null}
           </button>
 
           <div className="account pos-rel" ref={account.ref}>

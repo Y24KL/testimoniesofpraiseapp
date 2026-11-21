@@ -2,7 +2,7 @@
  * Unified Server-Side Relay for Testimonies of Praise (Cloudflare Workers).
  *
  * Capabilities:
- * 1. Push Notification Relay: Sends Expo push notifications using caller's Firebase admin token.
+ * 1. Notification engine (src/notify): content events, scheduled dispatch, Expo + web push, in-app inbox.
  * 2. Secure Server-Side Bunny Storage Uploads: Keeps Bunny Storage AccessKeys safe on the server.
  * 3. Media Provider Status & Verification: Inspects configured providers and verifies URL reachability.
  *
@@ -15,16 +15,12 @@ import { handleKingsChatCallback, handleKingsChatRedeem, handleKingsChatState } 
 import { AIEndpointError, createEmbeddings, enforceAiRateLimit, semanticSearch, validateSearchQuery } from './ai.js';
 import { runAssistant } from './assistant.js';
 import { searchClips } from './clips.js';
-import { runNotificationEngineFromEnv } from './engine/run.js';
+import { engineConfigured, NotifyInputError, parseEvent, publishEvent, runEngine } from './notify/index.js';
 
 // Durable Object that counts Praxiom chat requests in progress across the whole account (see praxiomGate.js).
 export { PraxiomConcurrencyGate } from './praxiomGate.js';
 
-const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
-const PREFS = new Set(['testimonies', 'live', 'announcements', 'promotions', 'choirs', 'loveworld', 'articles']);
-const TYPES = new Set(['testimony', 'written', 'live', 'announcement', 'featured', 'article', 'promotion', 'radio', 'resource', 'choir', 'loveworld']);
-const MAX_DEVICES = 5000;
-export const WORKER_VERSION = '2.4.0';
+export const WORKER_VERSION = '2.6.0';
 
 const json = (body, status, headers) =>
   new Response(JSON.stringify(body), {
@@ -85,15 +81,15 @@ export function corsHeaders(origin, allowed) {
 
 export default {
   /**
-   * Cron trigger (wrangler.toml [triggers]). Runs the notification engine. Each run is independent and
-   * idempotent: a run that finds nothing to do, or is switched off, returns at once. Logs contain counts only.
+   * Cron trigger (wrangler.toml [triggers]): one notification dispatcher run. Runs are idempotent; a run with
+   * nothing due, or with the engine switched off in settings/notificationEngine, returns at once.
    */
-  async scheduled(event, env, ctx) {
-    ctx.waitUntil(
-      runNotificationEngineFromEnv(env)
-        .then((summary) => console.log('[engine]', JSON.stringify(summary)))
-        .catch((error) => console.error('[engine] run failed', error?.message || error)),
-    );
+  async scheduled(_event, env, ctx) {
+    if (!engineConfigured(env)) {
+      console.error('[notify] FIREBASE_SERVICE_ACCOUNT is not set: the notification engine cannot run.');
+      return;
+    }
+    ctx.waitUntil(runEngine(env).catch((e) => console.error('[notify] dispatcher run failed', e?.stack || e)));
   },
 
   async fetch(request, env) {
@@ -251,6 +247,11 @@ async function handle(request, env) {
     }
   }
 
+  // Web push: the public VAPID key (safe to publish; the private key is a server secret).
+  if (request.method === 'GET' && pathname === '/api/notifications/vapid-key') {
+    return json({ publicKey: env.VAPID_PUBLIC_KEY || null }, 200, { ...cors, 'Cache-Control': 'public, max-age=3600' });
+  }
+
   if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405, cors);
   if (!isOriginAllowed) return json({ error: 'Origin not allowed.' }, 403, cors);
 
@@ -382,120 +383,37 @@ async function handle(request, env) {
   }
 
   // -------------------------------------------------------------
-  // 4) Push Notification Relay (POST /, /api/push)
+  // 4) Notification engine (admin only): content events and manual dispatch
+  //    POST / or /api/push   { pref?, title, body, data: { type, contentId? } }  -> campaign + immediate run
+  //    POST /api/notifications/dispatch                                          -> one dispatcher run
   // -------------------------------------------------------------
+  const noStore = { ...cors, 'Cache-Control': 'no-store' };
+  if (!(await verifyAdmin(auth, env))) return json({ error: 'Admins only.' }, 403, noStore);
+  if (!engineConfigured(env)) {
+    return json({ error: 'The notification engine is not configured on the server (FIREBASE_SERVICE_ACCOUNT is missing).' }, 503, noStore);
+  }
+  if (pathname === '/api/notifications/dispatch') {
+    const report = await runEngine(env);
+    return json({ ok: true, report }, 200, noStore);
+  }
   let req;
   try {
     req = await request.json();
   } catch {
-    return json({ error: 'Invalid request.' }, 400, cors);
+    return json({ error: 'Invalid request.' }, 400, noStore);
   }
-  const { pref, title, body, data } = req || {};
-  if (!PREFS.has(pref)) return json({ error: 'Unknown notification type.' }, 400, cors);
-  if (typeof title !== 'string' || !title.trim() || title.length > 100) return json({ error: 'Invalid title.' }, 400, cors);
-  if (typeof body !== 'string' || !body.trim() || body.length > 300) return json({ error: 'Invalid message.' }, 400, cors);
-  if (
-    !data ||
-    !TYPES.has(data.type) ||
-    (data.contentId !== undefined && (typeof data.contentId !== 'string' || data.contentId.length > 100))
-  ) {
-    return json({ error: 'Invalid data.' }, 400, cors);
+  let ev;
+  try {
+    ev = parseEvent(req);
+  } catch (e) {
+    if (e instanceof NotifyInputError) return json({ error: e.message }, 400, noStore);
+    throw e;
   }
-
-  // Read device tokens as caller to enforce admin permissions
-  const base = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents`;
-  const q = await fetch(`${base}:runQuery`, {
-    method: 'POST',
-    headers: { Authorization: auth, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      structuredQuery: {
-        from: [{ collectionId: 'pushTokens' }],
-        where: { fieldFilter: { field: { fieldPath: `prefs.${pref}` }, op: 'EQUAL', value: { booleanValue: true } } },
-        limit: MAX_DEVICES,
-      },
-    }),
-  });
-  if (q.status === 401 || q.status === 403) return json({ error: 'Admins only.' }, 403, cors);
-  if (!q.ok) return json({ error: 'Could not read devices.' }, 502, cors);
-
-  const rows = (await q.json()).filter((r) => r.document);
-  const devices = rows
-    .map((r) => ({ name: r.document.name, token: r.document.fields?.token?.stringValue }))
-    .filter((d) => typeof d.token === 'string' && d.token.startsWith('Expo'));
-  if (devices.length === 0) {
-    console.log(`[push] no devices opted in to "${pref}" (rows read: ${rows.length})`);
-    return json({ sent: 0, failed: 0, removed: 0, devices: 0 }, 200, cors);
-  }
-
-  // Send through Expo in batches of 100 with high priority and notification channels
-  let sent = 0;
-  let failed = 0;
-  const reasons = {}; // Expo error code -> count (e.g. InvalidCredentials = FCM key missing on EAS)
-  const ticketIds = []; // Expo ticket ids: look up delivery receipts at /--/api/v2/push/getReceipts
-  let firstMessage = '';
-  const dead = [];
-  const message = (d) => ({ to: d.token, title, body, data, sound: 'default', channelId: 'default', priority: 'high', _displayInForeground: true });
-  const countTickets = (tickets, chunk) =>
-    tickets.forEach((t, idx) => {
-      if (t.status === 'ok') {
-        sent += 1;
-        if (t.id && ticketIds.length < 20) ticketIds.push(t.id);
-      }
-      else {
-        failed += 1;
-        const reason = t.details?.error || 'Unknown';
-        reasons[reason] = (reasons[reason] || 0) + 1;
-        if (!firstMessage) firstMessage = String(t.message || '').slice(0, 300);
-        if (reason === 'DeviceNotRegistered') dead.push(chunk[idx].name);
-      }
-    });
-  // Sends one batch. Expo rejects a whole request whose tokens belong to different Expo projects
-  // (PUSH_TOO_MANY_EXPERIENCE_IDS), e.g. phones that installed a build from another project. In that
-  // case it lists the tokens per project, and each project's tokens are sent as their own request.
-  const sendBatch = async (chunk, allowSplit = true) => {
-    let res;
-    try {
-      res = await fetch(EXPO_PUSH_URL, {
-        method: 'POST',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify(chunk.map(message)),
-      });
-    } catch {
-      failed += chunk.length;
-      return;
-    }
-    if (res.ok) {
-      countTickets((await res.json()).data || [], chunk);
-      return;
-    }
-    const text = await res.text().catch(() => '');
-    let err = null;
-    try {
-      err = JSON.parse(text)?.errors?.[0] ?? null;
-    } catch {
-      /* not JSON */
-    }
-    if (allowSplit && err?.code === 'PUSH_TOO_MANY_EXPERIENCE_IDS' && err.details && typeof err.details === 'object') {
-      const byToken = new Map(chunk.map((d) => [d.token, d]));
-      const groups = Object.entries(err.details).map(([project, tokens]) => [project, (tokens || []).map((t) => byToken.get(t)).filter(Boolean)]);
-      console.log(`[push] tokens span ${groups.length} Expo projects: ${groups.map(([p, g]) => `${p}=${g.length}`).join(', ')}; sending each separately`);
-      for (const [, group] of groups) if (group.length) await sendBatch(group, false);
-      return;
-    }
-    console.error(`[push] Expo push API HTTP ${res.status}: ${text.slice(0, 300)}`);
-    failed += chunk.length;
-  };
-  for (let i = 0; i < devices.length; i += 100) await sendBatch(devices.slice(i, i + 100));
-
-
-  // Tidy up invalid tokens
-  let removed = 0;
-  for (const name of dead.slice(0, 40)) {
-    const d = await fetch(`https://firestore.googleapis.com/v1/${name}`, { method: 'DELETE', headers: { Authorization: auth } });
-    if (d.ok) removed += 1;
-  }
-
-  // Visible with `npx wrangler tail`; contains no tokens or secrets.
-  console.log(`[push] pref=${pref} devices=${devices.length} sent=${sent} failed=${failed}` + (failed ? ` reasons=${JSON.stringify(reasons)} first="${firstMessage}"` : '') + (ticketIds.length ? ` tickets=${ticketIds.join(',')}` : ''));
-  return json({ sent, failed, removed, devices: devices.length, ...(failed ? { reasons, firstError: firstMessage } : {}) }, 200, cors);
+  const { campaignId, created, report } = await publishEvent(env, ev);
+  console.log(`[notify] event type=${ev.type} campaign=${campaignId} created=${created} queued=${report.queued} sent=${report.sent}`);
+  return json(
+    { ok: true, engine: true, campaignId, created, duplicate: !created, queued: report.queued, sent: report.sent, inApp: report.inApp, failed: report.failed },
+    200,
+    noStore,
+  );
 }

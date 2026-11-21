@@ -12,6 +12,7 @@ BUNNY_STORAGE_ZONE_NAME = "top-media-storage"
 FIREBASE_PROJECT_ID = "testimoniesofpraiseapp"
 # Sender for verification-code emails (must be a sender verified with Resend or Brevo)
 MAIL_FROM = "Testimonies of Praise <gtrusouth116@gmail.com>"
+VAPID_PUBLIC_KEY = ""
 
 
 # NOTE ON SECRETS:
@@ -32,8 +33,8 @@ class_name = "PraxiomConcurrencyGate"
 tag = "praxiom-gate-v1"
 new_sqlite_classes = ["PraxiomConcurrencyGate"]
 
-# Notification engine: scans for new content and sends approved notifications. The engine does nothing
-# until settings/notifications.enabled is true in Firestore (the kill switch fails closed).
+# Notification engine (src/notify): every run fans out due campaigns and sends due queue items. Content
+# published from the admin portal also runs it at once. Switch: settings/notificationEngine.enabled = false.
 [triggers]
 crons = ["*/2 * * * *"]
 

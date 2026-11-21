@@ -115,10 +115,9 @@ async function loadActivity(): Promise<Activity[]> {
   });
 }
 
-const PENDING_TASKS: { key: 'submissions' | 'choirRequests' | 'feedback' | 'sponsorships' | 'reports' | 'notificationQueue'; label: string; icon: IconName; route: Route }[] = [
+const PENDING_TASKS: { key: 'submissions' | 'choirRequests' | 'feedback' | 'sponsorships' | 'reports'; label: string; icon: IconName; route: Route }[] = [
   { key: 'submissions', label: 'Testimony submissions to review', icon: 'inbox', route: { name: 'submissions' } },
   { key: 'choirRequests', label: 'Choir feature requests', icon: 'userPlus', route: { name: 'choirRequests' } },
-  { key: 'notificationQueue', label: 'Notifications awaiting approval', icon: 'bell', route: { name: 'notifications' } },
   { key: 'reports', label: 'Open content reports', icon: 'flag', route: { name: 'reports' } },
   { key: 'feedback', label: 'New user feedback', icon: 'messageCircle', route: { name: 'userFeedback' } },
   { key: 'sponsorships', label: 'Sponsorship receipts to verify', icon: 'heart', route: { name: 'sponsorships' } },

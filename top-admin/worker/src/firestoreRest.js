@@ -12,7 +12,7 @@
  *
  * Dates are written as Firestore timestamps and read back as Date objects.
  */
-import { FIRESTORE_SCOPE, getGoogleAccessToken } from '../googleAuth.js';
+import { FIRESTORE_SCOPE, getGoogleAccessToken } from './googleAuth.js';
 
 const MAX_BATCH = 400;
 

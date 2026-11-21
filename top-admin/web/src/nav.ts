@@ -2,7 +2,7 @@ import type { IconName } from './components/Icon';
 import type { Route } from './types';
 
 /** Pending-work counters shown beside sidebar entries and on the dashboard. */
-export type CountKey = 'submissions' | 'choirRequests' | 'feedback' | 'sponsorships' | 'reports' | 'notificationQueue';
+export type CountKey = 'submissions' | 'choirRequests' | 'feedback' | 'sponsorships' | 'reports';
 
 export interface NavItem {
   name: Route['name'];
@@ -56,7 +56,7 @@ export const NAV: NavGroup[] = [
     title: 'Communication',
     items: [
       { name: 'announcements', label: 'Announcements', icon: 'send' },
-      { name: 'notifications', label: 'Notification Centre', icon: 'bell', count: 'notificationQueue' },
+      { name: 'notifications', label: 'Notification Centre', icon: 'bell' },
     ],
   },
   { title: 'System', items: [{ name: 'data', label: 'Data Management', icon: 'database' }] },

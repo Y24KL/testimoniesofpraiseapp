@@ -851,3 +851,7 @@ textarea.body-input { font-family: inherit; line-height: 1.65; font-size: 15px; 
 .table-card table { min-width: 680px; }
 @media (max-width: 640px) { .table-card .table-wrap { border-radius: 0; } .main { padding-left: 16px; padding-right: 16px; } }
 .title-cell { min-width: 200px; }
+
+/* Simple list without bullets (Notification Centre time slots). */
+.plain-list { list-style: none; margin: 8px 0 12px; padding: 0; display: grid; gap: 6px; }
+.plain-list li { color: var(--text-2, inherit); }

@@ -1,6 +1,6 @@
 /**
- * Firestore security-rules tests for the notification engine collections and personal discovery data
- * (T.O.P. 2.0, Phase 1), run against the emulator with the production rules file.
+ * Firestore security-rules tests for the notification engine collections (worker src/notify) and personal
+ * discovery data, run against the emulator with the production rules file.
  *
  *   npm run test:rules
  */
@@ -21,18 +21,19 @@ const reset = async () => {
   await env.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore();
     await setDoc(doc(db, 'admins/admin1'), { role: 'admin' });
-    await setDoc(doc(db, 'settings/notifications'), { enabled: false, updatedAt: new Date() });
-    await setDoc(doc(db, 'notification_queue/testimony:t1:all:push'), { status: 'pending', title: 'NEW TESTIMONY', body: 'Healing from Lagos', category: 'testimonies', type: 'testimony', contentId: 't1' });
-    await setDoc(doc(db, 'notification_queue/live:s1:all:push'), { status: 'approved', decidedBy: 'admin1', decidedAt: new Date(), title: 'WE ARE LIVE', body: 'Join now', category: 'live', type: 'live', contentId: 's1' });
-    await setDoc(doc(db, 'notification_history/h1'), { type: 'testimony', sent: 3 });
-    await setDoc(doc(db, 'settings/notificationEngine'), { cursor: {} });
-    await setDoc(doc(db, 'notificationCounters/alice'), { total: 1 });
+    await setDoc(doc(db, 'settings/notificationEngine'), { enabled: true });
+    await setDoc(doc(db, 'notificationCampaigns/ev_testimony_t1'), { status: 'scheduled', title: 'T', body: 'B', category: 'testimonies', dueAt: 1 });
+    await setDoc(doc(db, 'notificationCampaigns/ev_live_done'), { status: 'finished', title: 'L', body: 'B', category: 'live' });
+    await setDoc(doc(db, 'notificationQueue/q1'), { uid: 'alice', status: 'scheduled', dueAt: 1 });
+    await setDoc(doc(db, 'notificationStats/2026-11-21'), { events: { notification_sent: 3 } });
+    await setDoc(doc(db, 'notificationLedger/alice'), { entries: {} });
     await setDoc(doc(db, 'users/alice/private/discovery'), { interests: ['healing'], optOut: false, updatedAt: new Date() });
   });
 };
 
 const activity = (uid = 'alice', extra = {}) => ({ uid, type: 'view', contentType: 'testimony', contentId: 't1', ts: serverTimestamp(), source: 'home', ...extra });
 const discovery = (extra = {}) => ({ interests: ['healing', 'worship'], optOut: false, updatedAt: serverTimestamp(), ...extra });
+const engineCfg = (extra = {}) => ({ enabled: false, updatedAt: serverTimestamp(), updatedBy: 'admin1', ...extra });
 
 let passed = 0;
 const test = async (name, fn) => {
@@ -42,84 +43,70 @@ const test = async (name, fn) => {
   console.log(`  ✔ ${name}`);
 };
 
-// ---------------- notification queue ----------------
-await test('an admin can approve a pending entry', async () => {
-  await assertSucceeds(updateDoc(doc(admin, 'notification_queue/testimony:t1:all:push'), { status: 'approved', decidedBy: 'admin1', decidedAt: serverTimestamp() }));
+// ---------------- engine config ----------------
+await test('an admin can switch the engine off and change windows and timezone', async () => {
+  await assertSucceeds(setDoc(doc(admin, 'settings/notificationEngine'), engineCfg()));
+  await assertSucceeds(setDoc(doc(admin, 'settings/notificationEngine'), engineCfg({ enabled: true, windows: [{ time: '08:00', categories: ['dailyPraise'] }], defaultTimezone: 'Africa/Lagos' })));
 });
 
-await test('an admin can cancel a pending or approved entry', async () => {
-  await assertSucceeds(updateDoc(doc(admin, 'notification_queue/testimony:t1:all:push'), { status: 'cancelled', decidedBy: 'admin1', decidedAt: serverTimestamp() }));
-  await assertSucceeds(updateDoc(doc(admin, 'notification_queue/live:s1:all:push'), { status: 'cancelled', decidedBy: 'admin1', decidedAt: serverTimestamp() }));
+await test('engine config is validated: types, fields, server time and the acting admin', async () => {
+  await assertFails(setDoc(doc(admin, 'settings/notificationEngine'), engineCfg({ enabled: 'no' })));
+  await assertFails(setDoc(doc(admin, 'settings/notificationEngine'), engineCfg({ cursor: {} })));
+  await assertFails(setDoc(doc(admin, 'settings/notificationEngine'), engineCfg({ updatedAt: new Date() })));
+  await assertFails(setDoc(doc(admin, 'settings/notificationEngine'), engineCfg({ updatedBy: 'someone' })));
+  await assertFails(setDoc(doc(admin, 'settings/notificationEngine'), engineCfg({ windows: Array.from({ length: 13 }, () => ({})) })));
 });
 
-await test('an admin cannot change the message, audience or recipient of an entry', async () => {
-  await assertFails(updateDoc(doc(admin, 'notification_queue/testimony:t1:all:push'), { status: 'approved', decidedBy: 'admin1', decidedAt: serverTimestamp(), body: 'Changed copy' }));
+await test('non-admins cannot read or change the engine config', async () => {
+  await assertFails(getDoc(doc(alice, 'settings/notificationEngine')));
+  await assertFails(setDoc(doc(alice, 'settings/notificationEngine'), engineCfg({ updatedBy: 'alice' })));
+  await assertFails(getDoc(doc(anon, 'settings/notificationEngine')));
 });
 
-await test('approval must be recorded as the deciding admin, at server time', async () => {
-  await assertFails(updateDoc(doc(admin, 'notification_queue/testimony:t1:all:push'), { status: 'approved', decidedBy: 'someone', decidedAt: serverTimestamp() }));
-  await assertFails(updateDoc(doc(admin, 'notification_queue/testimony:t1:all:push'), { status: 'approved', decidedBy: 'admin1', decidedAt: new Date() }));
+// ---------------- campaigns ----------------
+await test('an admin can cancel a campaign that has not finished', async () => {
+  await assertSucceeds(updateDoc(doc(admin, 'notificationCampaigns/ev_testimony_t1'), { status: 'cancelled', cancelledAt: serverTimestamp(), cancelledBy: 'admin1' }));
 });
 
-await test('an approved entry cannot go back to pending or be re-approved', async () => {
-  await assertFails(updateDoc(doc(admin, 'notification_queue/live:s1:all:push'), { status: 'pending', decidedBy: 'admin1', decidedAt: serverTimestamp() }));
-  await assertFails(updateDoc(doc(admin, 'notification_queue/live:s1:all:push'), { status: 'approved', decidedBy: 'admin1', decidedAt: serverTimestamp() }));
+await test('a finished campaign cannot be cancelled, and nothing else can be edited', async () => {
+  await assertFails(updateDoc(doc(admin, 'notificationCampaigns/ev_live_done'), { status: 'cancelled', cancelledAt: serverTimestamp(), cancelledBy: 'admin1' }));
+  await assertFails(updateDoc(doc(admin, 'notificationCampaigns/ev_testimony_t1'), { status: 'cancelled', cancelledAt: serverTimestamp(), cancelledBy: 'admin1', title: 'Changed' }));
+  await assertFails(updateDoc(doc(admin, 'notificationCampaigns/ev_testimony_t1'), { status: 'scheduled', cancelledAt: serverTimestamp(), cancelledBy: 'admin1' }));
+  await assertFails(updateDoc(doc(admin, 'notificationCampaigns/ev_testimony_t1'), { status: 'cancelled', cancelledAt: new Date(), cancelledBy: 'admin1' }));
 });
 
-await test('clients cannot create or delete queue entries, and non-admins cannot read them', async () => {
-  await assertFails(setDoc(doc(admin, 'notification_queue/forged'), { status: 'approved', title: 'x' }));
-  await assertFails(deleteDoc(doc(admin, 'notification_queue/testimony:t1:all:push')));
-  await assertFails(getDoc(doc(alice, 'notification_queue/testimony:t1:all:push')));
-  await assertFails(updateDoc(doc(alice, 'notification_queue/testimony:t1:all:push'), { status: 'approved', decidedBy: 'alice', decidedAt: serverTimestamp() }));
+await test('clients cannot create or delete campaigns; users cannot read them', async () => {
+  await assertFails(setDoc(doc(admin, 'notificationCampaigns/forged'), { status: 'scheduled', title: 'x' }));
+  await assertFails(deleteDoc(doc(admin, 'notificationCampaigns/ev_testimony_t1')));
+  await assertSucceeds(getDocs(collection(admin, 'notificationCampaigns')));
+  await assertFails(getDocs(collection(alice, 'notificationCampaigns')));
+  await assertFails(updateDoc(doc(alice, 'notificationCampaigns/ev_testimony_t1'), { status: 'cancelled', cancelledAt: serverTimestamp(), cancelledBy: 'alice' }));
 });
 
-// ---------------- settings and state ----------------
-await test('an admin can flip the kill switch with a bool and server time', async () => {
-  await assertSucceeds(setDoc(doc(admin, 'settings/notifications'), { enabled: true, updatedAt: serverTimestamp() }));
+// ---------------- queue, stats, ledger ----------------
+await test('admins read the queue and stats; nobody writes them', async () => {
+  await assertSucceeds(getDocs(collection(admin, 'notificationQueue')));
+  await assertSucceeds(getDoc(doc(admin, 'notificationStats/2026-11-21')));
+  await assertFails(updateDoc(doc(admin, 'notificationQueue/q1'), { status: 'sent' }));
+  await assertFails(setDoc(doc(admin, 'notificationStats/2026-11-21'), { forged: 1 }));
 });
 
-await test('the kill switch must be a boolean and carry server time', async () => {
-  await assertFails(setDoc(doc(admin, 'settings/notifications'), { enabled: 'true', updatedAt: serverTimestamp() }));
-  await assertFails(setDoc(doc(admin, 'settings/notifications'), { enabled: true, updatedAt: new Date() }));
-  await assertFails(setDoc(doc(admin, 'settings/notifications'), { enabled: true, updatedAt: serverTimestamp(), surveillance: 'on' }));
+await test('users cannot read the queue (it names other people) or the stats', async () => {
+  await assertFails(getDoc(doc(alice, 'notificationQueue/q1')));
+  await assertFails(getDocs(collection(alice, 'notificationQueue')));
+  await assertFails(getDoc(doc(alice, 'notificationStats/2026-11-21')));
 });
 
-await test('only admins read the kill switch; nobody else can change it', async () => {
-  await assertFails(getDoc(doc(alice, 'settings/notifications')));
-  await assertSucceeds(getDoc(doc(admin, 'settings/notifications')));
-  await assertFails(setDoc(doc(alice, 'settings/notifications'), { enabled: true, updatedAt: serverTimestamp() }));
+await test('the send ledger is server only, even for admins and its owner', async () => {
+  await assertFails(getDoc(doc(admin, 'notificationLedger/alice')));
+  await assertFails(getDoc(doc(alice, 'notificationLedger/alice')));
+  await assertFails(setDoc(doc(alice, 'notificationLedger/alice'), { entries: {} }));
 });
 
-await test('engine cursors are server-only, even for admins', async () => {
-  await assertSucceeds(getDoc(doc(admin, 'settings/notificationEngine')));
-  await assertFails(setDoc(doc(admin, 'settings/notificationEngine'), { cursor: { x: 1 } }));
-});
-
-await test('history and AI logs are readable by admins only and never written by clients', async () => {
-  await assertSucceeds(getDocs(collection(admin, 'notification_history')));
-  await assertFails(getDocs(collection(alice, 'notification_history')));
-  await assertFails(setDoc(doc(admin, 'notification_history/h2'), { sent: 999 }));
-  await assertFails(setDoc(doc(admin, 'ai_requests/r1'), { purpose: 'copy' }));
-});
-
-await test('delivery records are readable by admins only and never written by clients', async () => {
-  await env.withSecurityRulesDisabled(async (ctx) => {
-    await setDoc(doc(ctx.firestore(), 'notification_deliveries/q__alice'), { queueKey: 'q', uid: 'alice', status: 'sent' });
-  });
-  await assertSucceeds(getDocs(collection(admin, 'notification_deliveries')));
-  await assertFails(getDocs(collection(alice, 'notification_deliveries')));
-  await assertFails(setDoc(doc(admin, 'notification_deliveries/forged'), { status: 'sent' }));
-});
-
-await test('the engine run lock is invisible to clients', async () => {
-  await assertFails(getDoc(doc(admin, 'notificationLocks/engine')));
-  await assertFails(setDoc(doc(admin, 'notificationLocks/engine'), { expiresAt: new Date() }));
-});
-
-await test('frequency counters are never readable or writable by clients', async () => {
-  await assertFails(getDoc(doc(alice, 'notificationCounters/alice')));
-  await assertFails(getDoc(doc(admin, 'notificationCounters/alice')));
-  await assertFails(setDoc(doc(alice, 'notificationCounters/alice'), { total: 0 }));
+await test('the retired engine collections are closed', async () => {
+  await assertFails(getDocs(collection(admin, 'notification_queue')));
+  await assertFails(getDoc(doc(admin, 'settings/notifications')));
+  await assertFails(setDoc(doc(admin, 'settings/notifications'), { enabled: true, updatedAt: serverTimestamp() }));
 });
 
 // ---------------- user activity ----------------

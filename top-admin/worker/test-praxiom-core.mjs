@@ -1,13 +1,11 @@
 /**
- * Tests for the notification engine's deterministic policy, AI output validation, and the Praxiom retry and
- * concurrency rules. No network: Praxiom and the Durable Object are replaced by fakes.
+ * Tests for Praxiom support code: AI notification copy validation, structured output, retry rules and the
+ * account-wide concurrency gate. No network: Praxiom and the Durable Object are replaced by fakes.
  *
- *   node test-engine.mjs
+ *   node test-praxiom-core.mjs
  */
 import assert from 'node:assert/strict';
-import { localMinuteOfDay, isInQuietHours, nextSendableUtc, capDecision, engineAllows, dedupeKey, mayEnqueue, DEFAULT_OFFSET_MINUTES } from './src/engine/policy.js';
-import { selectAudience, isUsableDevice } from './src/engine/audience.js';
-import { validatePushCopy } from './src/engine/copy.js';
+import { validatePushCopy } from './src/notify/copy.js';
 import { parseModelJson, validateModelOutput } from './src/structured.js';
 import { retryDecision, parseRetryAfter, applyLeaseAction, invalidLeaseRequest } from './src/praxiomPolicy.js';
 import { PraxiomConcurrencyGate, acquireChatSlot, resetLocalGateForTests } from './src/praxiomGate.js';
@@ -20,125 +18,6 @@ const test = async (name, fn) => {
   passed += 1;
   console.log(`  ✔ ${name}`);
 };
-
-const MIN = 60000;
-const utc = (h, m = 0) => Date.UTC(2026, 10, 18, h, m); // 18 Nov 2026, UTC
-const quiet = { startMin: 22 * 60, endMin: 7 * 60 };
-const LAGOS = 60; // UTC+1
-
-// ---------------- policy ----------------
-await test('local minute of day applies the offset and wraps past midnight', async () => {
-  assert.equal(localMinuteOfDay(utc(23, 30), LAGOS), 0 * 60 + 30);
-  assert.equal(localMinuteOfDay(utc(12, 0), LAGOS), 13 * 60);
-  assert.equal(localMinuteOfDay(utc(0, 0), -300), 19 * 60);
-});
-
-await test('quiet hours that wrap midnight are detected in local time', async () => {
-  assert.equal(isInQuietHours(utc(20, 59), LAGOS, quiet), false); // 21:59 local: not yet
-  assert.equal(isInQuietHours(utc(21, 0), LAGOS, quiet), true); // 22:00 local: starts
-  assert.equal(isInQuietHours(utc(21, 30), LAGOS, quiet), true); // 22:30 local
-  assert.equal(isInQuietHours(utc(5, 59), LAGOS, quiet), true); // 06:59 local
-  assert.equal(isInQuietHours(utc(6, 0), LAGOS, quiet), false); // 07:00 local: ends
-  assert.equal(isInQuietHours(utc(12, 0), LAGOS, quiet), false);
-});
-
-await test('quiet hours are off when disabled or empty', async () => {
-  assert.equal(isInQuietHours(utc(23, 0), LAGOS, { ...quiet, enabled: false }), false);
-  assert.equal(isInQuietHours(utc(23, 0), LAGOS, null), false);
-  assert.equal(isInQuietHours(utc(23, 0), LAGOS, { startMin: 600, endMin: 600 }), false);
-});
-
-await test('a message inside quiet hours is moved to the end of quiet hours', async () => {
-  const at = utc(21, 30); // 22:30 local
-  assert.equal(nextSendableUtc(at, LAGOS, quiet), utc(6, 0) + 24 * 60 * MIN); // 07:00 local, the next morning
-  assert.equal(nextSendableUtc(utc(12, 0), LAGOS, quiet), utc(12, 0));
-});
-
-await test('frequency caps apply to the day total and to each category', async () => {
-  const caps = { maxPerDay: 3, perCategoryPerDay: { promotions: 1 } };
-  assert.deepEqual(capDecision({ total: 2, byCategory: {} }, 'live', caps), { allowed: true });
-  assert.equal(capDecision({ total: 3, byCategory: {} }, 'live', caps).reason, 'daily_cap');
-  assert.equal(capDecision({ total: 1, byCategory: { promotions: 1 } }, 'promotions', caps).reason, 'category_cap');
-  assert.equal(capDecision({ total: 1, byCategory: { promotions: 1 } }, 'live', caps).allowed, true);
-  assert.equal(capDecision(undefined, 'live', {}).allowed, true, 'no caps means no limit');
-});
-
-await test('the kill switch fails closed and can switch off one category', async () => {
-  assert.equal(engineAllows(undefined, 'live').reason, 'engine_disabled');
-  assert.equal(engineAllows({ enabled: 'true' }, 'live').reason, 'engine_disabled', 'string "true" is not enabled');
-  assert.equal(engineAllows({ enabled: false }, 'live').reason, 'engine_disabled');
-  assert.equal(engineAllows({ enabled: true, categories: { promotions: { enabled: false } } }, 'promotions').reason, 'category_disabled');
-  assert.equal(engineAllows({ enabled: true, categories: { promotions: { enabled: false } } }, 'live').allowed, true);
-});
-
-await test('dedupe keys are stable, sanitised and differ by segment and channel', async () => {
-  const a = dedupeKey({ type: 'testimony', contentId: 'abc', segment: 'all' });
-  assert.equal(a, dedupeKey({ type: 'testimony', contentId: 'abc', segment: 'all', channel: 'push' }));
-  assert.notEqual(a, dedupeKey({ type: 'testimony', contentId: 'abc', segment: 'lagos' }));
-  assert.equal(dedupeKey({ type: 'live', contentId: 'a/b c', segment: 'x' }).includes('/'), false, 'no path separators in ids');
-});
-
-await test('a queue entry blocks duplicates, except a failed one that may be retried', async () => {
-  assert.equal(mayEnqueue(undefined), true);
-  assert.equal(mayEnqueue('failed'), true);
-  for (const status of ['pending', 'approved', 'sending', 'sent', 'cancelled']) assert.equal(mayEnqueue(status), false, status);
-});
-
-// ---------------- audience ----------------
-const device = (uid, extra = {}) => ({
-  token: `ExponentPushToken[${uid}-${Math.random().toString(36).slice(2, 8)}]`,
-  uid,
-  platform: 'android',
-  prefs: { testimonies: true, live: true, announcements: true, promotions: false, choirs: true, loveworld: true, articles: true },
-  ...extra,
-});
-
-await test('audience keeps only devices opted in to the category', async () => {
-  const devices = [device('a'), device('b', { prefs: { ...device('b').prefs, live: false } })];
-  const result = selectAudience(devices, { category: 'live', nowUtcMs: utc(12), caps: {} });
-  assert.deepEqual(result.recipients.map((r) => r.uid), ['a']);
-  assert.equal(result.skipped.prefOff, 1);
-});
-
-await test('invalid devices are excluded and never reach a send', async () => {
-  const bad = [
-    { token: 'https://evil.example', uid: 'x', platform: 'android', prefs: { live: true } },
-    device('y', { platform: 'web' }),
-    device('z', { utcOffsetMinutes: 5000 }),
-    device('', {}),
-  ];
-  const result = selectAudience(bad, { category: 'live', nowUtcMs: utc(12), caps: {} });
-  assert.equal(result.recipients.length, 0);
-  assert.equal(result.skipped.invalid, 4);
-  assert.equal(isUsableDevice(bad[0]), false);
-});
-
-await test('a token appearing twice is counted once', async () => {
-  const d = device('a');
-  const result = selectAudience([d, { ...d }], { category: 'live', nowUtcMs: utc(12), caps: {} });
-  assert.equal(result.recipients.length, 1);
-  assert.equal(result.skipped.duplicate, 1);
-});
-
-await test('the frequency cap is per person, so several devices count once', async () => {
-  const devices = [device('a'), device('a')];
-  const sent = { a: { total: 2, byCategory: {} } };
-  const result = selectAudience(devices, { category: 'live', nowUtcMs: utc(12), caps: { maxPerDay: 2 }, sentLast24h: sent });
-  assert.equal(result.recipients.length, 0);
-  assert.equal(result.skipped.cap, 2);
-});
-
-await test('people in quiet hours are deferred to the morning, not dropped', async () => {
-  const result = selectAudience([device('a', { utcOffsetMinutes: LAGOS })], { category: 'live', nowUtcMs: utc(21, 30), quiet, caps: {} });
-  assert.equal(result.recipients.length, 1);
-  assert.equal(result.deferred, 1);
-  assert.equal(result.recipients[0].sendAfterUtc, utc(6, 0) + 24 * 60 * MIN);
-});
-
-await test('a device with no timezone uses the default offset', async () => {
-  const result = selectAudience([device('a')], { category: 'live', nowUtcMs: utc(21, 30), quiet, caps: {}, defaultOffsetMinutes: DEFAULT_OFFSET_MINUTES });
-  assert.equal(result.recipients[0].sendAfterUtc, utc(6, 0) + 24 * 60 * MIN);
-});
 
 // ---------------- AI copy validation ----------------
 const facts = { title: 'Healing Testimony from Lagos', allowedNumbers: ['1', '13', '12:00'] };
@@ -316,4 +195,4 @@ await test('the idempotency key is sent with every attempt of one request', asyn
   assert.equal(PRAXIOM_BASE_URL.endsWith('/v1'), true);
 });
 
-console.log(`\nengine and praxiom policy: ${passed} tests passed`);
+console.log(`\npraxiom core (copy, structured output, retries, gate): ${passed} tests passed`);

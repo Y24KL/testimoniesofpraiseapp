@@ -1,91 +1,85 @@
 import { useEffect, useState } from 'react';
-import { collection, doc, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, type Timestamp } from 'firebase/firestore';
+import { collection, doc, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { fmtDate } from '../lib';
-import { Check, Field, Message } from '../components/Field';
+import { Check, Message } from '../components/Field';
 import { Icon } from '../components/Icon';
-import { usePendingCounts } from '../hooks/usePendingCounts';
-import { EmptyState, ErrorState, FilterTabs, GlassCard, LoadingList, PageHeader, SectionHeader, StatusBadge, type BadgeKind } from '../components/ui';
+import { EmptyState, ErrorState, GlassCard, LoadingList, PageHeader, SectionHeader, StatCard, StatusBadge, type BadgeKind, type Metric } from '../components/ui';
 
-/** Categories the engine can send. Must match PUSH_CATEGORIES in top-admin/worker/src/engine/copy.js. */
-const CATEGORIES = ['testimonies', 'live', 'announcements', 'promotions', 'choirs', 'loveworld', 'articles'] as const;
+/**
+ * Monitors and controls the notification engine that runs on the Worker (top-admin/worker/src/notify).
+ * Data: settings/notificationEngine (config), notificationCampaigns (one per published item or
+ * announcement), notificationStats/{UTC day} (counters). Engine timestamps are milliseconds.
+ */
 
-interface Settings {
+interface EngineConfig {
   enabled: boolean;
-  categories: Record<string, { enabled: boolean }>;
-  quietHours: { enabled: boolean; startMin: number; endMin: number };
-  maxPerDay: number;
-  perCategoryPerDay: Record<string, number>;
+  windows: { id?: string; time: string; categories: string[] }[] | null;
+  defaultTimezone: string | null;
 }
 
-interface QueueEntry {
+type CampaignStatus = 'scheduled' | 'fanning_out' | 'queued' | 'finished' | 'cancelled' | 'expired' | 'invalid';
+
+interface Campaign {
   id: string;
-  status: 'pending' | 'approved' | 'sending' | 'sent' | 'failed' | 'cancelled';
-  type: string;
-  contentId: string;
-  category: string;
   title: string;
   body: string;
-  copySource: 'template' | 'ai';
-  sendAfter?: Timestamp;
-  createdAt?: Timestamp;
-  decidedBy?: string | null;
-}
-
-interface HistoryEntry {
-  id: string;
-  title: string;
+  type: string;
   category: string;
-  sent: number;
-  failed: number;
-  noDevice: number;
-  capped: number;
-  removedTokens: number;
-  completedAt?: Timestamp;
+  status: CampaignStatus;
+  delivery?: 'immediate' | 'window';
+  source?: string;
+  createdAt?: number;
+  counts?: Partial<Record<'queued' | 'notQueued' | 'sent' | 'inApp' | 'skipped' | 'failed' | 'expired', number>>;
 }
 
-const DEFAULT_SETTINGS: Settings = {
-  enabled: false,
-  categories: Object.fromEntries(CATEGORIES.map((c) => [c, { enabled: true }])),
-  quietHours: { enabled: true, startMin: 22 * 60, endMin: 7 * 60 },
-  maxPerDay: 3,
-  perCategoryPerDay: {},
+type Stats = {
+  events?: Record<string, number>;
+  channels?: Record<string, number>;
+  deferReasons?: Record<string, number>;
+  tickets?: Record<string, number>;
 };
 
-const toMinutes = (hhmm: string) => {
-  const [h, m] = hhmm.split(':').map(Number);
-  return Number.isInteger(h) && Number.isInteger(m) ? h * 60 + m : 0;
-};
-const toHHMM = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+/** Delivery windows the engine uses when none are configured (worker src/notify/engine.js DEFAULT_WINDOWS). */
+const DEFAULT_WINDOWS = [
+  { time: '08:00', categories: ['dailyPraise'] },
+  { time: '11:30', categories: ['testimonies'] },
+  { time: '14:30', categories: ['loveworldMusic', 'lyricalAnalysis'] },
+  { time: '17:30', categories: ['community', 'featuredChoirs', 'articles', 'announcements'] },
+  { time: '20:00', categories: ['live', '*'] },
+];
+
+const CANCELLABLE: CampaignStatus[] = ['scheduled', 'fanning_out', 'queued'];
+const STATUS_BADGE: Record<CampaignStatus, BadgeKind> = { scheduled: 'info', fanning_out: 'info', queued: 'ok', finished: 'ok', cancelled: 'draft', expired: 'draft', invalid: 'bad' };
+const STATUS_LABEL: Record<CampaignStatus, string> = { scheduled: 'Starting', fanning_out: 'Sending', queued: 'Delivering', finished: 'Finished', cancelled: 'Cancelled', expired: 'Expired', invalid: 'Invalid' };
+
+const utcDay = () => new Date().toISOString().slice(0, 10);
+const sum = (o?: Record<string, number>) => Object.values(o ?? {}).reduce((a, b) => a + (Number(b) || 0), 0);
+const metric = (stats: Stats | null | undefined, value: (s: Stats) => number): Metric =>
+  stats === undefined ? { state: 'loading' } : { state: 'ready', value: stats ? value(stats) : 0 };
+const when = (ms?: number) => (typeof ms === 'number' ? new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—');
 
 export function NotificationCentre() {
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
-  const [loaded, setLoaded] = useState(false);
-  const [queue, setQueue] = useState<QueueEntry[] | null>(null);
-  const [history, setHistory] = useState<HistoryEntry[] | null>(null);
-  const [lastRun, setLastRun] = useState<Date | null>(null);
+  const [config, setConfig] = useState<EngineConfig | null>(null);
+  const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
+  const [stats, setStats] = useState<Stats | null | undefined>(undefined);
+  const [loadErr, setLoadErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
-  const [view, setView] = useState<'pending' | 'approved' | 'recent' | 'history'>('pending');
-  const { refresh: refreshCounts } = usePendingCounts();
 
   useEffect(
     () =>
       onSnapshot(
-        doc(db, 'settings', 'notifications'),
+        doc(db, 'settings', 'notificationEngine'),
         (s) => {
-          const d = (s.data() ?? {}) as Partial<Settings>;
-          setSettings({
-            enabled: d.enabled === true,
-            categories: { ...DEFAULT_SETTINGS.categories, ...(d.categories ?? {}) },
-            quietHours: d.quietHours ?? DEFAULT_SETTINGS.quietHours,
-            maxPerDay: typeof d.maxPerDay === 'number' ? d.maxPerDay : DEFAULT_SETTINGS.maxPerDay,
-            perCategoryPerDay: d.perCategoryPerDay ?? {},
+          const d = s.data() ?? {};
+          setConfig({
+            enabled: d.enabled !== false,
+            windows: Array.isArray(d.windows) && d.windows.length ? d.windows : null,
+            defaultTimezone: typeof d.defaultTimezone === 'string' ? d.defaultTimezone : null,
           });
-          setLoaded(true);
         },
-        (e) => setErr(e.message),
+        (e) => setLoadErr(e.message),
       ),
     [],
   );
@@ -93,9 +87,9 @@ export function NotificationCentre() {
   useEffect(
     () =>
       onSnapshot(
-        query(collection(db, 'notification_queue'), orderBy('createdAt', 'desc'), limit(50)),
-        (s) => setQueue(s.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<QueueEntry, 'id'>) }))),
-        (e) => setErr(e.message),
+        query(collection(db, 'notificationCampaigns'), orderBy('createdAt', 'desc'), limit(30)),
+        (s) => setCampaigns(s.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Campaign, 'id'>) }))),
+        (e) => setLoadErr(e.message),
       ),
     [],
   );
@@ -103,41 +97,23 @@ export function NotificationCentre() {
   useEffect(
     () =>
       onSnapshot(
-        query(collection(db, 'notification_history'), orderBy('completedAt', 'desc'), limit(20)),
-        (s) => setHistory(s.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<HistoryEntry, 'id'>) }))),
-        () => setHistory([]),
+        doc(db, 'notificationStats', utcDay()),
+        (s) => setStats(s.exists() ? (s.data() as Stats) : null),
+        () => setStats(null),
       ),
     [],
   );
 
-  useEffect(
-    () =>
-      onSnapshot(doc(db, 'settings', 'notificationEngine'), (s) => {
-        const ts = s.data()?.lastRunAt as Timestamp | undefined;
-        setLastRun(ts ? ts.toDate() : null);
-      }, () => setLastRun(null)),
-    [],
-  );
-
-  const flash = (message: string) => {
-    setOk(message);
-    setErr('');
-  };
-
-  const saveSettings = async (next: Settings) => {
+  const setEnabled = async (enabled: boolean) => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return setErr('You are signed out.');
+    if (!enabled && !window.confirm('Switch the notification engine off? No notifications will be sent until it is switched back on.')) return;
     setBusy(true);
     setErr('');
+    setOk('');
     try {
-      // The full document is written, because the Firestore rules accept only these keys.
-      await setDoc(doc(db, 'settings', 'notifications'), {
-        enabled: next.enabled,
-        categories: next.categories,
-        quietHours: next.quietHours,
-        maxPerDay: next.maxPerDay,
-        perCategoryPerDay: next.perCategoryPerDay,
-        updatedAt: serverTimestamp(),
-      });
-      flash(next.enabled ? 'Saved. The engine is on.' : 'Saved. The engine is off.');
+      await setDoc(doc(db, 'settings', 'notificationEngine'), { enabled, updatedAt: serverTimestamp(), updatedBy: uid }, { merge: true });
+      setOk(enabled ? 'The notification engine is on.' : 'The notification engine is off. Nothing will be sent.');
     } catch (e) {
       setErr(`Could not save: ${(e as Error).message}`);
     } finally {
@@ -145,189 +121,121 @@ export function NotificationCentre() {
     }
   };
 
-  const decide = async (entry: QueueEntry, status: 'approved' | 'cancelled') => {
+  const cancel = async (c: Campaign) => {
     const uid = auth.currentUser?.uid;
     if (!uid) return setErr('You are signed out.');
+    if (!window.confirm(`Cancel “${c.title}”? People who have not received it yet will not get it.`)) return;
     setBusy(true);
     setErr('');
+    setOk('');
     try {
-      await updateDoc(doc(db, 'notification_queue', entry.id), { status, decidedBy: uid, decidedAt: serverTimestamp() });
-      flash(status === 'approved' ? 'Approved. It will send at the next run, within quiet hours and caps.' : 'Cancelled.');
-      refreshCounts();
+      await updateDoc(doc(db, 'notificationCampaigns', c.id), { status: 'cancelled', cancelledAt: serverTimestamp(), cancelledBy: uid });
+      setOk('Cancelled. Anyone still waiting for it will not receive it.');
     } catch (e) {
-      setErr(`Could not update: ${(e as Error).message}`);
+      setErr(`Could not cancel: ${(e as Error).message}`);
     } finally {
       setBusy(false);
     }
   };
 
-  if (!loaded) {
+  if (loadErr) {
     return (
       <>
         <PageHeader eyebrow="Communication" title="Notification Centre" />
-        {err ? <ErrorState title="Couldn’t load notification settings" message={err} /> : <GlassCard><LoadingList rows={4} /></GlassCard>}
+        <ErrorState title="Couldn’t load the notification engine" message={loadErr} />
       </>
     );
   }
 
-  const pending = (queue ?? []).filter((q) => q.status === 'pending');
-  const approved = (queue ?? []).filter((q) => q.status === 'approved');
-  const recent = (queue ?? []).filter((q) => q.status !== 'pending' && q.status !== 'approved');
-  const sections: { id: typeof view; label: string; count?: number }[] = [
-    { id: 'pending', label: 'Awaiting approval', count: queue ? pending.length : undefined },
-    { id: 'approved', label: 'Approved', count: queue ? approved.length : undefined },
-    { id: 'recent', label: 'Recent outcomes', count: queue ? recent.length : undefined },
-    { id: 'history', label: 'Delivery history', count: history ? history.length : undefined },
-  ];
+  const windows = config?.windows ?? DEFAULT_WINDOWS;
 
   return (
     <>
       <PageHeader
         eyebrow="Communication"
         title="Notification Centre"
-        sub={<>New content is queued here, and nothing is sent until you approve it. Last engine run: <b style={{ color: 'var(--text)' }}>{lastRun ? lastRun.toLocaleString() : 'not yet'}</b>.</>}
+        sub="Published content is sent to phones straight away, within each person’s settings, quiet hours and daily limit. Live broadcasts always send at once."
       />
 
       {err ? <Message kind="err">{err}</Message> : null}
       {ok ? <Message kind="ok">{ok}</Message> : null}
+      {config && !config.enabled ? <Message kind="warn">The notification engine is off. Nothing is being sent.</Message> : null}
+
+      <div className="stat-grid">
+        <StatCard icon="send" label="Sent today" metric={metric(stats, (s) => s.events?.notification_sent ?? 0)} note="Push and in-app (UTC day)" gold />
+        <StatCard icon="smartphone" label="Pushes today" metric={metric(stats, (s) => s.channels?.push ?? 0)} />
+        <StatCard icon="bell" label="In-app only" metric={metric(stats, (s) => s.channels?.in_app ?? 0)} note="App was open" />
+        <StatCard icon="clock" label="Held for later" metric={metric(stats, (s) => sum(s.deferReasons))} note="Quiet hours or daily limit" />
+        <StatCard icon="alert" label="Failed today" metric={metric(stats, (s) => s.events?.notification_failed ?? 0)} />
+      </div>
 
       <div className="editor-layout">
         <div>
-          <div className="toolbar">
-            <FilterTabs label="Queue sections" value={view} onChange={setView} options={sections} />
-          </div>
-
-          {view !== 'history' && queue === null ? <GlassCard><LoadingList rows={3} /></GlassCard> : null}
-
-          {view === 'pending' && queue !== null ? (
-            pending.length === 0 ? (
-              <GlassCard><EmptyState icon="checkCircle" title="Nothing is waiting for approval">New testimonies, articles and other content queue here automatically.</EmptyState></GlassCard>
+          <GlassCard className="table-card">
+            <SectionHeader icon="activity" title="Recent notifications" hint="One row per published item or announcement" />
+            {campaigns === null ? (
+              <div style={{ padding: 20 }}><LoadingList rows={4} /></div>
+            ) : campaigns.length === 0 ? (
+              <EmptyState icon="send" title="No notifications yet">Publish a testimony or send an announcement and it appears here.</EmptyState>
             ) : (
-              pending.map((q) => <QueueCard key={q.id} entry={q} busy={busy} onApprove={() => void decide(q, 'approved')} onCancel={() => void decide(q, 'cancelled')} />)
-            )
-          ) : null}
-
-          {view === 'approved' && queue !== null ? (
-            approved.length === 0 ? (
-              <GlassCard><EmptyState icon="clock" title="Nothing approved and waiting">Approved notifications send at the next engine run, within quiet hours and caps.</EmptyState></GlassCard>
-            ) : (
-              approved.map((q) => <QueueCard key={q.id} entry={q} busy={busy} onCancel={() => void decide(q, 'cancelled')} />)
-            )
-          ) : null}
-
-          {view === 'recent' && queue !== null ? (
-            recent.length === 0 ? (
-              <GlassCard><EmptyState icon="activity" title="No decisions yet">Sent, failed and cancelled notifications appear here.</EmptyState></GlassCard>
-            ) : (
-              recent.map((q) => <QueueCard key={q.id} entry={q} busy />)
-            )
-          ) : null}
-
-          {view === 'history' ? (
-            <GlassCard className="table-card">
-              {history === null ? (
-                <div style={{ padding: 20 }}><LoadingList rows={3} /></div>
-              ) : history.length === 0 ? (
-                <EmptyState icon="send" title="No completed notifications yet">Each send is recorded here with its delivery counts.</EmptyState>
-              ) : (
-                <div className="table-wrap">
-                  <table>
-                    <thead><tr><th>Notification</th><th>Sent</th><th>Failed</th><th>No device</th><th>Capped</th><th>Dead tokens</th><th>Completed</th></tr></thead>
-                    <tbody>
-                      {history.map((h) => (
-                        <tr key={h.id}>
-                          <td className="title-cell"><b>{h.title}</b><div className="small muted">{h.category}</div></td>
-                          <td className="tabular" style={{ color: 'var(--success)', fontWeight: 700 }}>{h.sent}</td>
-                          <td className="tabular" style={h.failed ? { color: 'var(--danger)', fontWeight: 700 } : undefined}>{h.failed}</td>
-                          <td className="tabular">{h.noDevice}</td>
-                          <td className="tabular">{h.capped}</td>
-                          <td className="tabular">{h.removedTokens}</td>
-                          <td className="small muted nowrap">{h.completedAt ? fmtDate(h.completedAt) : '—'}</td>
+              <div className="table-wrap">
+                <table>
+                  <thead><tr><th>Notification</th><th>Status</th><th>Phones</th><th>Sent</th><th>In-app</th><th>Not sent</th><th>Failed</th><th>Created</th><th /></tr></thead>
+                  <tbody>
+                    {campaigns.map((c) => {
+                      const n = c.counts ?? {};
+                      return (
+                        <tr key={c.id}>
+                          <td className="title-cell"><b>{c.title}</b><div className="small muted">{c.category}{c.delivery === 'window' ? ' · time slot' : ''}</div></td>
+                          <td><StatusBadge kind={STATUS_BADGE[c.status] ?? 'draft'}>{STATUS_LABEL[c.status] ?? c.status}</StatusBadge></td>
+                          <td className="tabular">{n.queued ?? 0}</td>
+                          <td className="tabular" style={{ color: 'var(--success)', fontWeight: 700 }}>{n.sent ?? 0}</td>
+                          <td className="tabular">{n.inApp ?? 0}</td>
+                          <td className="tabular" title="Category off, already seen, expired or limited">{(n.notQueued ?? 0) + (n.skipped ?? 0) + (n.expired ?? 0)}</td>
+                          <td className="tabular" style={n.failed ? { color: 'var(--danger)', fontWeight: 700 } : undefined}>{n.failed ?? 0}</td>
+                          <td className="small muted nowrap">{when(c.createdAt)}</td>
+                          <td>
+                            {CANCELLABLE.includes(c.status) ? (
+                              <button type="button" className="btn small ghost" disabled={busy} onClick={() => void cancel(c)}><Icon name="x" size={14} />Cancel</button>
+                            ) : null}
+                          </td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </GlassCard>
-          ) : null}
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </GlassCard>
         </div>
 
         <aside className="editor-side">
           <GlassCard aria-labelledby="engine-controls">
-            <SectionHeader icon="cpu" title="Engine controls" as="h3" />
-            <div className={`engine-switch ${settings.enabled ? 'on' : ''}`}>
-              <Check
-                checked={settings.enabled}
-                disabled={busy}
-                onChange={(v) => setSettings({ ...settings, enabled: v })}
-                label="Notification engine on"
-                hint="Off stops all automatic notifications; approved items wait."
-              />
-            </div>
-            <Check checked={settings.quietHours.enabled} onChange={(v) => setSettings({ ...settings, quietHours: { ...settings.quietHours, enabled: v } })} label="Use quiet hours" hint="Local time on each person’s phone." />
-            <div className="two">
-              <Field label="Quiet from">
-                <input type="time" value={toHHMM(settings.quietHours.startMin)} disabled={!settings.quietHours.enabled} onChange={(e) => setSettings({ ...settings, quietHours: { ...settings.quietHours, startMin: toMinutes(e.target.value) } })} />
-              </Field>
-              <Field label="Until">
-                <input type="time" value={toHHMM(settings.quietHours.endMin)} disabled={!settings.quietHours.enabled} onChange={(e) => setSettings({ ...settings, quietHours: { ...settings.quietHours, endMin: toMinutes(e.target.value) } })} />
-              </Field>
-            </div>
-            <Field label="Most notifications per person per day">
-              <input type="number" min={0} max={10} value={settings.maxPerDay} onChange={(e) => setSettings({ ...settings, maxPerDay: Math.max(0, Math.min(10, Number(e.target.value) || 0)) })} />
-            </Field>
-            <div className="f" style={{ marginBottom: 12 }}>
-              <span>Categories</span>
-              <div className="chips">
-                {CATEGORIES.map((c) => {
-                  const on = settings.categories[c]?.enabled !== false;
-                  return (
-                    <button key={c} type="button" className="chip-check" aria-pressed={on} onClick={() => setSettings({ ...settings, categories: { ...settings.categories, [c]: { enabled: !on } } })}>
-                      <Icon name={on ? 'checkCircle' : 'x'} size={14} />{c}
-                    </button>
-                  );
-                })}
+            <SectionHeader icon="cpu" title="Engine" as="h3" />
+            {config === null ? (
+              <LoadingList rows={2} />
+            ) : (
+              <div className={`engine-switch ${config.enabled ? 'on' : ''}`}>
+                <Check checked={config.enabled} disabled={busy} onChange={(v) => void setEnabled(v)} label="Notification engine on" hint="Off stops every automatic and manual notification at once." />
               </div>
-            </div>
-            <button type="button" className="btn primary block" disabled={busy} onClick={() => void saveSettings(settings)}>
-              {busy ? <span className="spin sm" aria-hidden="true" /> : <Icon name="check" size={16} />}Save engine settings
-            </button>
+            )}
+            <p className="small muted" style={{ marginTop: 12 }}>
+              Each person controls their own categories, quiet hours (default 22:00–07:00) and daily limit (default 3) in the app.
+            </p>
+          </GlassCard>
+
+          <GlassCard aria-labelledby="engine-windows">
+            <SectionHeader icon="clock" title="Scheduled time slots" as="h3" />
+            <p className="small muted">Used only for scheduled campaigns. Published content and live broadcasts do not wait for a slot.</p>
+            <ul className="plain-list small">
+              {windows.map((w) => (
+                <li key={`${w.time}-${w.categories.join(',')}`}><b className="tabular">{w.time}</b> · {w.categories.map((c) => (c === '*' ? 'anything else' : c)).join(', ')}</li>
+              ))}
+            </ul>
+            <p className="small muted">Timezone when a phone has none: {config?.defaultTimezone ?? 'Africa/Lagos'}</p>
           </GlassCard>
         </aside>
       </div>
     </>
-  );
-}
-
-const QUEUE_BADGE: Record<QueueEntry['status'], BadgeKind> = { pending: 'warn', approved: 'info', sending: 'info', sent: 'ok', failed: 'bad', cancelled: 'draft' };
-
-function QueueCard({ entry, busy, onApprove, onCancel }: { entry: QueueEntry; busy: boolean; onApprove?: () => void; onCancel?: () => void }) {
-  return (
-    <GlassCard as="article" className="item-card queue-card">
-      <div className="item-head">
-        <div className="row gap" style={{ gap: 8 }}>
-          <StatusBadge kind={QUEUE_BADGE[entry.status] ?? 'draft'}>{entry.status.charAt(0).toUpperCase() + entry.status.slice(1)}</StatusBadge>
-          <span className="tag">{entry.category}</span>
-          <span className={`tag ${entry.copySource === 'ai' ? 'gold' : ''}`}><Icon name={entry.copySource === 'ai' ? 'sparkles' : 'fileText'} size={11} />{entry.copySource === 'ai' ? 'AI copy (validated)' : 'Template copy'}</span>
-        </div>
-        <span className="small muted nowrap">{entry.createdAt ? `Queued ${fmtDate(entry.createdAt)}` : ''}</span>
-      </div>
-      <div className="push-card">
-        <img src="/logo.png" alt="" />
-        <div style={{ minWidth: 0 }}>
-          <div className="app"><span>Testimonies of Praise</span></div>
-          <div className="pt">{entry.title}</div>
-          <div className="pb">{entry.body}</div>
-        </div>
-      </div>
-      <div className="context-line">{entry.type} · <code>{entry.contentId}</code>{entry.sendAfter ? ` · not before ${fmtDate(entry.sendAfter)}` : ''}</div>
-      {onApprove || onCancel ? (
-        <div className="actions">
-          {onApprove ? <button type="button" className="btn small success" disabled={busy} onClick={onApprove}><Icon name="check" size={14} />Approve</button> : null}
-          {onCancel ? <button type="button" className="btn small ghost" disabled={busy} onClick={onCancel}><Icon name="x" size={14} />Cancel</button> : null}
-        </div>
-      ) : null}
-    </GlassCard>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, doc, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { Check, Message } from '../components/Field';
 import { Icon } from '../components/Icon';
@@ -32,6 +32,31 @@ interface Campaign {
   counts?: Partial<Record<'queued' | 'notQueued' | 'sent' | 'inApp' | 'skipped' | 'failed' | 'expired', number>>;
 }
 
+/** One person's failed delivery (notificationQueue item with status "failed"). */
+interface Failure {
+  id: string;
+  uid?: string;
+  title?: string;
+  category?: string;
+  lastError?: string;
+  attempts?: number;
+  finishedAt?: number;
+}
+
+/** Plain-language meaning of the delivery errors the engine records. */
+const FAILURE_HELP: Record<string, string> = {
+  WebPushNotConfigured: 'A website (browser) subscription, but web push is not set up on the server (VAPID keys missing).',
+  NoDevices: 'The person had no usable device left when it was sent (app removed or signed out).',
+  DeviceNotRegistered: 'The app was uninstalled or notifications were reset on that phone. The token has been removed.',
+  SubscriptionGone: 'The browser subscription expired. It has been removed.',
+  InvalidCredentials: 'Expo could not use the push credentials for this app build (FCM/APNs keys on Expo).',
+  MessageTooBig: 'The notification text was too long.',
+  MessageRateExceeded: 'Too many notifications to that device in a short time.',
+  NetworkError: 'The push service could not be reached after several tries.',
+  interrupted: 'A send was interrupted (Worker restart) and was not retried.',
+};
+const failureHelp = (code?: string) => (code ? FAILURE_HELP[code] ?? (code.startsWith('HTTP_') ? `The push service answered ${code.slice(5)}.` : code) : 'Unknown');
+
 type Stats = {
   events?: Record<string, number>;
   channels?: Record<string, number>;
@@ -62,6 +87,7 @@ export function NotificationCentre() {
   const [config, setConfig] = useState<EngineConfig | null>(null);
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
   const [stats, setStats] = useState<Stats | null | undefined>(undefined);
+  const [failures, setFailures] = useState<Failure[] | null>(null);
   const [loadErr, setLoadErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -90,6 +116,21 @@ export function NotificationCentre() {
         query(collection(db, 'notificationCampaigns'), orderBy('createdAt', 'desc'), limit(30)),
         (s) => setCampaigns(s.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Campaign, 'id'>) }))),
         (e) => setLoadErr(e.message),
+      ),
+    [],
+  );
+
+  useEffect(
+    () =>
+      onSnapshot(
+        query(collection(db, 'notificationQueue'), where('status', '==', 'failed'), limit(50)),
+        (s) =>
+          setFailures(
+            s.docs
+              .map((d) => ({ id: d.id, ...(d.data() as Omit<Failure, 'id'>) }))
+              .sort((a, b) => (Number(b.finishedAt) || 0) - (Number(a.finishedAt) || 0)),
+          ),
+        () => setFailures([]),
       ),
     [],
   );
@@ -202,6 +243,32 @@ export function NotificationCentre() {
                         </tr>
                       );
                     })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </GlassCard>
+
+          <GlassCard className="table-card">
+            <SectionHeader icon="alert" title="Failed deliveries" hint="One row per person a notification could not reach, newest first" />
+            {failures === null ? (
+              <div style={{ padding: 20 }}><LoadingList rows={2} /></div>
+            ) : failures.length === 0 ? (
+              <EmptyState icon="checkCircle" title="No failed deliveries">Every notification reached the people it was meant for.</EmptyState>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead><tr><th>Notification</th><th>Reason</th><th>Person</th><th>Tries</th><th>When</th></tr></thead>
+                  <tbody>
+                    {failures.map((f) => (
+                      <tr key={f.id}>
+                        <td className="title-cell"><b>{f.title ?? '—'}</b><div className="small muted">{f.category ?? ''}</div></td>
+                        <td><code>{f.lastError ?? 'Unknown'}</code><div className="small muted">{failureHelp(f.lastError)}</div></td>
+                        <td className="small muted" title={f.uid}><code>{f.uid ? `${f.uid.slice(0, 6)}…` : '—'}</code></td>
+                        <td className="tabular">{f.attempts ?? 1}</td>
+                        <td className="small muted nowrap">{when(f.finishedAt)}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>

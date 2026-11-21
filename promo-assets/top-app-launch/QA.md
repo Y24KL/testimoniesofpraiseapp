@@ -5,7 +5,7 @@
 |---|---|
 | Container / codecs | MP4, H.264 (yuv420p, CRF 16) + AAC 256 kb/s 48 kHz |
 | Resolution / aspect | 1920×1080, 16:9 landscape |
-| Frame rate / frames | 30 fps, 2,235 frames = 74.5 s (video and audio both 74.500 s) |
+| Frame rate / frames | 30 fps, 2,250 frames = 75 s (video and audio both 75.000 s) |
 | Black frames | Only 0–0.27 s (intentional fade from black) |
 | Chunk seams (rendered in 4 parallel parts) | Frames on both sides of 19 s, 38 s, 57 s checked visually: continuous |
 | Captions vs voice | Caption text is the narration script word for word; breaks snapped to detected pauses. 2,432 of 2,435 speech frames (20 ms) are under a caption; the 3 uncovered are breath edges |

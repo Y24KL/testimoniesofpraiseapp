@@ -204,9 +204,10 @@ canvas{position:absolute;inset:0}
   <div id="s10" class="layer">
     <div id="mosaic"></div>
     <div class="layer" style="background:radial-gradient(900px 500px at 50% 50%,rgba(18,0,28,.88),rgba(18,0,28,.55))"></div>
-    <div class="abs" style="left:0;right:0;top:380px;text-align:center">
+    <div class="abs" style="left:0;right:0;top:330px;text-align:center">
       <div class="h2" id="q1">No one ever praised God</div>
       <div class="h2 gold" id="q2" style="margin-top:12px">and went away empty.</div>
+      <div class="h2" id="q3" style="margin-top:44px;font-size:52px;color:var(--muted)">He always blesses you for praising Him.</div>
     </div>
   </div>
 
@@ -300,7 +301,7 @@ window.seek = function (t) {
   }
   ctx.globalAlpha = 1;
   // light streaks at the big transitions (keep in sync with `whoosh` in tools/mix_audio.py)
-  const streaks = [8.5, 27.2, 61.5, 70.1];
+  const streaks = [8.5, 27.2, 62.95, 71.55];
   let sk = -1; for (const s of streaks) if (t >= s && t < s + 1.4) sk = (t - s) / 1.4;
   $('streak').style.opacity = sk < 0 ? 0 : Math.sin(sk * Math.PI);
   $('streak').style.transform = `translateX(${sk < 0 ? 0 : lerp(-1400, 1400, easeInOut(sk))}px)`;
@@ -324,11 +325,11 @@ window.seek = function (t) {
   // ---------- logo: S2 reveal, CTA, end card (one shared element) ----------
   let lo = 0, ls = 1, lx = 680, ly = 255, lw = 560, lblur = 0;
   if (t < 12.4) { const x = easeOut(prog(t, 8.6, 10.0)); lo = Math.min(x, 1 - prog(t, 11.6, 12.2)); ls = lerp(.82, 1, x) + (t - 8.6) * .006; lblur = (1 - x) * 14; }
-  else if (t >= 61.4 && t < 70.4) { const x = easeOut(prog(t, 61.5, 62.7)); lo = Math.min(x, 1 - prog(t, 69.9, 70.4)); ls = lerp(.85, 1, x); lx = 150; ly = 90; lw = 440; lblur = (1 - x) * 10; }
-  else if (t >= 70.4) { const x = easeOut(prog(t, 70.4, 71.6)); lo = x; ls = lerp(.85, 1, x) + (t - 70.4) * .006; lx = 740; ly = 140; lw = 440; lblur = (1 - x) * 10; }
+  else if (t >= 62.85 && t < 71.85) { const x = easeOut(prog(t, 63.35, 64.45)); lo = Math.min(x, 1 - prog(t, 71.35, 71.85)); ls = lerp(.85, 1, x); lx = 150; ly = 90; lw = 440; lblur = (1 - x) * 10; }
+  else if (t >= 71.85) { const x = easeOut(prog(t, 71.85, 73.05)); lo = x; ls = lerp(.85, 1, x) + (t - 71.85) * .006; lx = 740; ly = 140; lw = 440; lblur = (1 - x) * 10; }
   const L = $('logo'); L.style.opacity = lo; L.style.left = `${lx}px`; L.style.top = `${ly}px`; L.style.width = `${lw}px`; L.style.filter = `blur(${lblur}px) drop-shadow(0 0 ${30 + 20 * Math.sin(t * 2)}px rgba(245,197,66,.35))`; L.style.transform = `scale(${ls})`;
   const sw = $('logoSweepWrap'); const lh = lw * 431 / 600; Object.assign(sw.style, { left: `${lx}px`, top: `${ly}px`, width: `${lw}px`, height: `${lh}px`, opacity: lo, transform: `scale(${ls})` });
-  const swp = t < 12.4 ? prog(t, 9.6, 11.0) : t < 70.4 ? prog(t, 62.8, 64.2) : prog(t, 71.4, 72.8);
+  const swp = t < 12.4 ? prog(t, 9.6, 11.0) : t < 71.85 ? prog(t, 64.25, 65.65) : prog(t, 72.85, 74.25);
   $('sweepBar').style.left = `${lerp(-50, 130, swp)}%`; $('sweepBar').style.opacity = swp > 0 && swp < 1 ? 1 : 0;
   $('s2').style.visibility = t > 8.4 && t < 12.3 ? 'visible' : 'hidden';
   const n1 = easeOut(prog(t, 9.9, 10.9)); $('s2name').style.opacity = Math.min(n1, 1 - prog(t, 11.6, 12.2)); $('s2name').style.letterSpacing = `${lerp(.9, .55, n1)}em`;
@@ -397,23 +398,23 @@ window.seek = function (t) {
     const x = easeBack(prog(t, a, a + .7)); cardAt($(id), Math.min(prog(t, a, a + .3), 1 - prog(t, 56.8, 57.4)), lerp(-300, 150, x), y - (t - a) * 2, lerp(.7, .86, x));
   });
 
-  // ---------- S10 payoff (57.1 - 61.6) ----------
-  const s10o = win(t, 57.1, 61.7, .7, .6); $('s10').style.opacity = s10o; $('s10').style.visibility = s10o > 0 ? 'visible' : 'hidden';
+  // ---------- S10 payoff (57.1 - 63.2) ----------
+  const s10o = win(t, 57.1, 63.3, .7, .6); $('s10').style.opacity = s10o; $('s10').style.visibility = s10o > 0 ? 'visible' : 'hidden';
   mosaic.forEach((d, i) => { const col = i % 4, row = Math.floor(i / 4); d.style.filter = 'brightness(.55) saturate(.9)';
     d.style.transform = `translate(${-120 + col * 500 - (t - 57.1) * 28 + (row % 2) * 220}px, ${-60 + row * 330}px) rotate(-6deg)`; });
-  { const a = easeOut(prog(t, 57.5, 58.4)), b = easeOut(prog(t, 59.4, 60.3)); $('q1').style.opacity = a; $('q1').style.transform = `translateY(${(1 - a) * 30}px)`; $('q2').style.opacity = b; $('q2').style.transform = `translateY(${(1 - b) * 30}px) scale(${1 + Math.max(0, t - 60.3) * .01})`; }
+  { const a = easeOut(prog(t, 57.3, 58.2)), b = easeOut(prog(t, 58.5, 59.4)), c = easeOut(prog(t, 59.95, 60.85)); $('q1').style.opacity = a; $('q1').style.transform = `translateY(${(1 - a) * 30}px)`; $('q2').style.opacity = b; $('q2').style.transform = `translateY(${(1 - b) * 30}px)`; $('q3').style.opacity = c; $('q3').style.transform = `translateY(${(1 - c) * 30}px)`; }
 
-  // ---------- S11 CTA (61.5 - 70.4) ----------
-  const s11o = Math.min(prog(t, 61.8, 62.8), 1 - prog(t, 69.9, 70.4)); $('s11').style.opacity = s11o; $('s11').style.visibility = s11o > 0 ? 'visible' : 'hidden';
-  { const b = easeBack(prog(t, 63.4, 64.2)); $('storeBadge').style.transform = `scale(${lerp(.7, 1, b)})`; $('storeBadge').style.opacity = prog(t, 63.4, 63.7); $('storeBadge').style.transformOrigin = '0 50%'; }
-  { const q = easeBack(prog(t, 64.4, 65.3)); const pulse = t > 66.6 && t < 70 ? 1 + .035 * Math.sin((t - 66.6) * 5) : 1;
-    $('qrBox').style.transform = `scale(${lerp(.6, 1, q) * pulse})`; $('qrBox').style.opacity = prog(t, 64.4, 64.7);
-    const lq = easeOut(prog(t, 66.6, 67.3)); $('qrLabel').style.opacity = lq; $('qrLabel').style.transform = `translateY(${(1 - lq) * 20}px)`;
-    $('qrBox').style.setProperty('--glow', `${20 + win(t, 66.6, 70.0, .3, .4) * (25 + 20 * Math.sin(t * 5))}px`); }
+  // ---------- S11 CTA (62.95 - 71.85) ----------
+  const s11o = Math.min(prog(t, 63.25, 64.25), 1 - prog(t, 71.35, 71.85)); $('s11').style.opacity = s11o; $('s11').style.visibility = s11o > 0 ? 'visible' : 'hidden';
+  { const b = easeBack(prog(t, 64.85, 65.65)); $('storeBadge').style.transform = `scale(${lerp(.7, 1, b)})`; $('storeBadge').style.opacity = prog(t, 64.85, 65.15); $('storeBadge').style.transformOrigin = '0 50%'; }
+  { const q = easeBack(prog(t, 65.85, 66.75)); const pulse = t > 68.05 && t < 71.45 ? 1 + .035 * Math.sin((t - 68.05) * 5) : 1;
+    $('qrBox').style.transform = `scale(${lerp(.6, 1, q) * pulse})`; $('qrBox').style.opacity = prog(t, 65.85, 66.15);
+    const lq = easeOut(prog(t, 68.05, 68.75)); $('qrLabel').style.opacity = lq; $('qrLabel').style.transform = `translateY(${(1 - lq) * 20}px)`;
+    $('qrBox').style.setProperty('--glow', `${20 + win(t, 68.05, 71.45, .3, .4) * (25 + 20 * Math.sin(t * 5))}px`); }
 
-  // ---------- S12 end card (70.4 - end) ----------
-  const s12o = prog(t, 70.4, 71.0); $('s12').style.opacity = s12o; $('s12').style.visibility = s12o > 0 ? 'visible' : 'hidden';
-  { const a = easeOut(prog(t, 70.7, 71.5)), b = easeOut(prog(t, 71.3, 72.1)); $('ty1').style.opacity = a; $('ty1').style.transform = `translateY(${(1 - a) * 30}px)`; $('ty2').style.opacity = b; $('ty2').style.transform = `translateY(${(1 - b) * 30}px)`; }
+  // ---------- S12 end card (71.85 - end) ----------
+  const s12o = prog(t, 71.85, 72.45); $('s12').style.opacity = s12o; $('s12').style.visibility = s12o > 0 ? 'visible' : 'hidden';
+  { const a = easeOut(prog(t, 72.15, 72.95)), b = easeOut(prog(t, 72.75, 73.55)); $('ty1').style.opacity = a; $('ty1').style.transform = `translateY(${(1 - a) * 30}px)`; $('ty2').style.opacity = b; $('ty2').style.transform = `translateY(${(1 - b) * 30}px)`; }
 
   // ---------- captions (word-for-word with the narration) ----------
   const c = TL.captions.find((c) => t >= c.start && t < c.end);

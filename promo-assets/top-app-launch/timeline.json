@@ -2,7 +2,7 @@
  "fps": 30,
  "width": 1920,
  "height": 1080,
- "duration": 74.5,
+ "duration": 75.0,
  "vo": [
   {
    "id": "L01",
@@ -66,25 +66,25 @@
   },
   {
    "id": "L11",
-   "start": 57.4,
-   "dur": 3.605,
-   "text": "Because no one ever praised God, and went away empty."
+   "start": 57.2,
+   "dur": 5.611,
+   "text": "No one ever praised God and went away empty. He always blesses you for praising Him."
   },
   {
    "id": "L12",
-   "start": 61.8,
+   "start": 63.25,
    "dur": 4.267,
    "text": "Download Testimonies of Praise, free on the LoveWorld App Store."
   },
   {
    "id": "L13",
-   "start": 66.6,
+   "start": 68.05,
    "dur": 3.2,
    "text": "Just scan the QR code to download the app."
   },
   {
    "id": "L14",
-   "start": 70.6,
+   "start": 72.0,
    "dur": 1.792,
    "text": "Thank you, and God bless you."
   }
@@ -211,33 +211,33 @@
    "text": "and share your own testimony."
   },
   {
-   "start": 57.44,
-   "end": 59.51,
-   "text": "Because no one ever praised God,"
+   "start": 57.24,
+   "end": 59.915,
+   "text": "No one ever praised God and went away empty."
   },
   {
-   "start": 59.51,
-   "end": 61.24,
-   "text": "and went away empty."
+   "start": 59.915,
+   "end": 63.07,
+   "text": "He always blesses you for praising Him."
   },
   {
-   "start": 61.87,
-   "end": 63.86,
+   "start": 63.32,
+   "end": 65.31,
    "text": "Download Testimonies of Praise,"
   },
   {
-   "start": 63.86,
-   "end": 66.32,
+   "start": 65.31,
+   "end": 67.77,
    "text": "free on the LoveWorld App Store."
   },
   {
-   "start": 66.67,
-   "end": 69.99,
+   "start": 68.12,
+   "end": 71.44,
    "text": "Just scan the QR code to download the app."
   },
   {
-   "start": 70.7,
-   "end": 72.58,
+   "start": 72.1,
+   "end": 73.98,
    "text": "Thank you, and God bless you."
   }
  ]

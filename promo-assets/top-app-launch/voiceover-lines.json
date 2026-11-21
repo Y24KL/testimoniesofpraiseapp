@@ -1,16 +1,58 @@
 [
- {"id":"L01","text":"Every testimony carries a story."},
- {"id":"L02","text":"A moment when God showed up, and a song made all the difference."},
- {"id":"L03","text":"This is the Testimonies of Praise app."},
- {"id":"L04","text":"Watch powerful testimonies of healing, deliverance, and miracles. Real stories, from people whose lives were touched by the songs of the LoveWorld Singers."},
- {"id":"L05","text":"Prefer to read? Written testimonies are right there too."},
- {"id":"L06","text":"Join the live broadcast, and chat with others as it happens. Not live yet? Watch a testimony while you wait."},
- {"id":"L07","text":"When the radio is on air, keep listening, even with your screen locked."},
- {"id":"L08","text":"Ask Praxiom to help you find a testimony, or find your way around."},
- {"id":"L09","text":"Save testimonies to watch offline, wherever you are."},
- {"id":"L10","text":"Worship with the LoveWorld Singers, discover the meaning behind the songs, and share your own testimony."},
- {"id":"L11","text":"Because no one ever praised God, and went away empty."},
- {"id":"L12","text":"Download Testimonies of Praise, free on the LoveWorld App Store."},
- {"id":"L13","text":"Just scan the QR code to download the app."},
- {"id":"L14","text":"Thank you, and God bless you."}
+ {
+  "id": "L01",
+  "text": "Every testimony carries a story."
+ },
+ {
+  "id": "L02",
+  "text": "A moment when God showed up, and a song made all the difference."
+ },
+ {
+  "id": "L03",
+  "text": "This is the Testimonies of Praise app."
+ },
+ {
+  "id": "L04",
+  "text": "Watch powerful testimonies of healing, deliverance, and miracles. Real stories, from people whose lives were touched by the songs of the LoveWorld Singers."
+ },
+ {
+  "id": "L05",
+  "text": "Prefer to read? Written testimonies are right there too."
+ },
+ {
+  "id": "L06",
+  "text": "Join the live broadcast, and chat with others as it happens. Not live yet? Watch a testimony while you wait."
+ },
+ {
+  "id": "L07",
+  "text": "When the radio is on air, keep listening, even with your screen locked."
+ },
+ {
+  "id": "L08",
+  "text": "Ask Praxiom to help you find a testimony, or find your way around."
+ },
+ {
+  "id": "L09",
+  "text": "Save testimonies to watch offline, wherever you are."
+ },
+ {
+  "id": "L10",
+  "text": "Worship with the LoveWorld Singers, discover the meaning behind the songs, and share your own testimony."
+ },
+ {
+  "id": "L11",
+  "text": "No one ever praised God and went away empty. He always blesses you for praising Him."
+ },
+ {
+  "id": "L12",
+  "text": "Download Testimonies of Praise, free on the LoveWorld App Store."
+ },
+ {
+  "id": "L13",
+  "text": "Just scan the QR code to download the app."
+ },
+ {
+  "id": "L14",
+  "text": "Thank you, and God bless you."
+ }
 ]

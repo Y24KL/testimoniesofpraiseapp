@@ -39,7 +39,10 @@ function parseEvent(req) {
     if (!fromPref) throw new NotifyInputError("Unknown notification type.");
     if (type === "announcement" || type === "featured" || type === "promotion") category = fromPref;
   }
-  return { type, contentId: contentId || null, title: r.title.trim(), body: r.body.trim(), category };
+  if (r.urgent !== void 0 && typeof r.urgent !== "boolean") throw new NotifyInputError("Invalid urgency.");
+  // Only announcements may be urgent (they then skip the daily limit; categories and quiet hours still apply).
+  const urgent = r.urgent === true && category === "announcements";
+  return { type, contentId: contentId || null, title: r.title.trim(), body: r.body.trim(), category, ...(urgent ? { urgent: true } : {}) };
 }
 async function publishEvent(env, ev, { fetchFn = fetch, now = Date.now() } = {}) {
   const store = makeStore(env, fetchFn);

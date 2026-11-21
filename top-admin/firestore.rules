@@ -238,7 +238,8 @@ service cloud.firestore {
         && (!('articles' in p) || p.articles is bool);
     }
     function validPushToken(d) {
-      return d.keys().hasOnly(['token', 'uid', 'platform', 'prefs', 'updatedAt', 'timeZone', 'utcOffsetMinutes', 'appVersion'])
+      // credFailures is written by the notification engine (wrong-project builds); clients may keep it.
+      return d.keys().hasOnly(['token', 'uid', 'platform', 'prefs', 'updatedAt', 'timeZone', 'utcOffsetMinutes', 'appVersion', 'credFailures'])
         && d.token is string && d.token.size() >= 10 && d.token.size() <= 200
         && d.token.matches('^Expo(nent)?PushToken\\[.+\\]$')
         && d.uid is string && d.uid == request.auth.uid
@@ -247,7 +248,8 @@ service cloud.firestore {
         && d.updatedAt == request.time
         && (!('timeZone' in d) || (d.timeZone is string && d.timeZone.size() >= 1 && d.timeZone.size() <= 64))
         && (!('utcOffsetMinutes' in d) || (d.utcOffsetMinutes is int && d.utcOffsetMinutes >= -840 && d.utcOffsetMinutes <= 840))
-        && (!('appVersion' in d) || (d.appVersion is string && d.appVersion.size() <= 30));
+        && (!('appVersion' in d) || (d.appVersion is string && d.appVersion.size() <= 30))
+        && (!('credFailures' in d) || (d.credFailures is int && d.credFailures >= 0 && d.credFailures <= 10));
     }
     match /pushTokens/{token} {
       allow create, update: if signedIn() && validPushToken(request.resource.data);

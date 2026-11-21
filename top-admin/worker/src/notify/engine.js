@@ -15,6 +15,10 @@ var DAILY_MAX_OPTIONS = [1, 3, 5];
 var FREQUENCY_TO_MAX = { light: 1, balanced: 3, frequent: 5 };
 var MIN_INTERVAL_OPTIONS = [120, 180, 240];
 var HARD_MIN_INTERVAL_MIN = 120;
+var MAX_LIVE_PER_DAY = 2;
+var CRED_FAILURE_LIMIT = 3;
+/** The item's lane; items queued before lanes existed are derived from their category. */
+var laneOf = (item) => (item.lane === "live" || item.lane === "urgent" ? item.lane : item.category === "live" ? "live" : "normal");
 var DEFAULT_TIMEZONE = "Africa/Lagos";
 var DEFAULT_CATEGORIES = Object.fromEntries(CATEGORIES.map((c) => [c, true]));
 var DEFAULT_SETTINGS = {
@@ -328,6 +332,8 @@ function normalizeCampaign(id, raw, now) {
     dedupeKey: str(r.dedupeKey, 150) || (contentId ? `${category}:${contentId}` : `campaign:${id}`),
     delivery: r.delivery === "immediate" || r.delivery === "window" ? r.delivery : category === "live" ? "immediate" : "window",
     audienceUids: audience && audience.length ? audience : null,
+    // Lane: "live" broadcasts and admin-flagged "urgent" announcements have their own limits (see evaluate).
+    lane: category === "live" ? "live" : r.urgent === true && category === "announcements" ? "urgent" : "normal",
     status,
     cursor: typeof r.cursor === "string" ? r.cursor : null,
     source: str(r.source, 40) || "admin"
@@ -366,6 +372,7 @@ function buildQueueItem(c, uid, s, now, windows) {
       priority: c.priority,
       dedupeKey: c.dedupeKey,
       delivery: c.delivery,
+      lane: c.lane,
       status: "scheduled",
       createdAt: now,
       sentAt: null,
@@ -383,20 +390,24 @@ function normalizeLedger(raw) {
     const o = obj(v);
     const at = num(o.at);
     if (at === null || typeof o.day !== "string") continue;
-    entries[k] = { at, day: o.day, key: typeof o.key === "string" ? o.key : "", cat: o.cat || "community" };
+    entries[k] = { at, day: o.day, key: typeof o.key === "string" ? o.key : "", cat: o.cat || "community", lane: o.lane === "live" || o.lane === "urgent" ? o.lane : "normal" };
   }
   return { entries };
 }
+// countToday counts only normal notifications, so live broadcasts and urgent announcements never use up
+// the daily limit; liveToday counts live broadcasts for their own cap.
 function ledgerStats(l, day) {
   let countToday = 0;
+  let liveToday = 0;
   let lastSentAt = 0;
   const keys = /* @__PURE__ */ new Set();
   for (const e of Object.values(l.entries)) {
-    if (e.day === day) countToday += 1;
+    if (e.day === day && e.lane === "normal") countToday += 1;
+    if (e.day === day && e.lane === "live") liveToday += 1;
     if (e.at > lastSentAt) lastSentAt = e.at;
     if (e.key) keys.add(e.key);
   }
-  return { countToday, lastSentAt, keys };
+  return { countToday, liveToday, lastSentAt, keys };
 }
 function ledgerWith(l, id, entry, now) {
   const entries = {};
@@ -441,7 +452,11 @@ function evaluate(item, s, ledger, now, ctx) {
     if (item.deferrals >= MAX_DEFERRALS) return { action: "skip", status: "skipped", reason: "too_many_deferrals" };
     return { action: "defer", until: at, reason };
   };
-  if (st.countToday >= s.dailyMax) return wrap(zonedTimeToUtc(addDays(day, 1), 0, s.timezone), "daily_cap");
+  const lane = laneOf(item);
+  // Live broadcasts: outside the daily limit, at most MAX_LIVE_PER_DAY a day (a late one is useless, so skip).
+  if (lane === "live" && st.liveToday >= MAX_LIVE_PER_DAY) return { action: "skip", status: "skipped", reason: "live_cap" };
+  // Urgent announcements skip the daily limit; normal notifications wait for tomorrow when it is reached.
+  if (lane === "normal" && st.countToday >= s.dailyMax) return wrap(zonedTimeToUtc(addDays(day, 1), 0, s.timezone), "daily_cap");
   // The 2-hour gap only paces time-slot campaigns; content sent on publish is not held back by it.
   if (item.delivery !== "immediate" && st.lastSentAt && now - st.lastSentAt < minGapMs(s)) return wrap(st.lastSentAt + minGapMs(s), "spacing");
   const qEnd = quietHoursEnd(now, s);
@@ -470,7 +485,7 @@ function toTokenRow(d) {
   const web = typeof w.endpoint === "string" && /^https:\/\//.test(w.endpoint) && typeof keys.p256dh === "string" && typeof keys.auth === "string" ? { endpoint: w.endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } } : null;
   const kind = web ? "web" : /^Expo(nent)?PushToken\[/.test(token) ? "expo" : null;
   if (!kind) return null;
-  return { id: d.id, uid, kind, token, web, prefs: r.prefs ? obj(r.prefs) : null, updatedAt: num(r.updatedAtMs) ?? num(r.updatedAt) ?? 0 };
+  return { id: d.id, uid, kind, token, web, prefs: r.prefs ? obj(r.prefs) : null, updatedAt: num(r.updatedAtMs) ?? num(r.updatedAt) ?? 0, credFailures: num(r.credFailures) ?? 0 };
 }
 function legacyFor(rows) {
   const withPrefs = rows.filter((r) => r.prefs).sort((a, b) => b.updatedAt - a.updatedAt);
@@ -671,7 +686,7 @@ async function dispatchDue(store, sender, cfg, now, o, rep, stats) {
   }
   if (plain.length) await store.commit(plain, false);
   if (!claims.length) return;
-  const nextLedger = (c) => ledgerWith(c.ledger, c.item.data.notificationId, { at: now, day: c.day, key: c.item.data.dedupeKey, cat: c.item.data.category }, now);
+  const nextLedger = (c) => ledgerWith(c.ledger, c.item.data.notificationId, { at: now, day: c.day, key: c.item.data.dedupeKey, cat: c.item.data.category, lane: laneOf(c.item.data) }, now);
   const claimWrites = (c) => {
     const it = c.item.data;
     const next = nextLedger(c);
@@ -697,6 +712,9 @@ async function dispatchDue(store, sender, cfg, now, o, rep, stats) {
   const results = won.map(() => []);
   const tickets = won.map(() => []);
   const deadTokens = /* @__PURE__ */ new Set();
+  // Tokens Expo cannot use with this project's credentials (typically an old build from another Expo
+  // project). After CRED_FAILURE_LIMIT such failures in a row the token is removed.
+  const credFailed = /* @__PURE__ */ new Set();
   const inboxWrites = [];
   won.forEach(({ c }, i) => {
     const it = c.item.data;
@@ -732,6 +750,7 @@ async function dispatchDue(store, sender, cfg, now, o, rep, stats) {
       if (r.status === "error") {
         stats.add(`tickets.${r.code.replace(/[^A-Za-z0-9_]/g, "_")}`);
         if (r.tokenGone) deadTokens.add(m.tokenId);
+        else if (r.code === "InvalidCredentials") credFailed.add(m.tokenId);
       } else stats.add("tickets.ok");
     });
   }
@@ -780,6 +799,13 @@ async function dispatchDue(store, sender, cfg, now, o, rep, stats) {
       rep.failed += 1;
     }
   });
+  if (credFailed.size) {
+    const rows = new Map([...tokenMap.values()].flat().map((t) => [t.id, t]));
+    for (const id of credFailed) {
+      if ((rows.get(id)?.credFailures ?? 0) + 1 >= CRED_FAILURE_LIMIT) deadTokens.add(id);
+      else out.push({ col: COL.tokens, id, kind: "update", data: {}, inc: { credFailures: 1 } });
+    }
+  }
   for (const id of deadTokens) out.push({ col: COL.tokens, id, kind: "delete" });
   rep.tokensRemoved += deadTokens.size;
   if (out.length) await store.commit(out, false);
@@ -873,7 +899,8 @@ function eventCampaign(ev, now) {
       contentId: ev.contentId ?? null,
       publishAt: now,
       expiresAt: now + DEFAULT_EXPIRY_HOURS[category] * HOUR,
-      priority: DEFAULT_PRIORITY[category],
+      priority: ev.urgent === true ? 95 : DEFAULT_PRIORITY[category],
+      ...(ev.urgent === true ? { urgent: true } : {}),
       dedupeKey: key,
       // Send on publish: every content event goes out straight away instead of waiting for a time slot.
       delivery: "immediate",

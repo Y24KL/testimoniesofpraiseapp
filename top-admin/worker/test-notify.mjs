@@ -232,7 +232,68 @@ await test('a live broadcast is delivered immediately', async () => {
   assert.equal(sender.sent[0].data.type, 'live');
 });
 
+// ---------------- lanes: urgent and live ----------------
+const announcement = (title, urgent = false) => ({ type: 'announcement', title, body: 'Please read this.', category: 'announcements', ...(urgent ? { urgent: true } : {}) });
+
+await test('an urgent announcement skips the daily limit; a normal one waits', async () => {
+  const store = memoryStore({ 'pushTokens/a1': device('a', 'a1'), 'notificationSettings/a': { dailyMax: 1 } });
+  const sender = fakeSender();
+  await publish(store, testimony('t1'));
+  await run(store, sender);
+  await publish(store, announcement('Service moved to 6pm', true), NOW + 5 * 60000);
+  await run(store, sender, NOW + 5 * 60000);
+  await publish(store, announcement('Weekly update'), NOW + 10 * 60000);
+  const rep = await run(store, sender, NOW + 10 * 60000);
+  assert.deepEqual(sender.sent.map((m) => m.title), ['A testimony of healing', 'Service moved to 6pm']);
+  assert.equal(rep.deferred, 1, 'the normal announcement waits for tomorrow');
+});
+
+await test('urgent notifications do not use up the daily limit', async () => {
+  const store = memoryStore({ 'pushTokens/a1': device('a', 'a1'), 'notificationSettings/a': { dailyMax: 1 } });
+  const sender = fakeSender();
+  await publish(store, announcement('Urgent one', true));
+  await run(store, sender);
+  await publish(store, testimony('t1'), NOW + 5 * 60000);
+  await run(store, sender, NOW + 5 * 60000);
+  assert.equal(sender.sent.length, 2);
+});
+
+await test('live broadcasts are outside the daily limit, at most 2 a day', async () => {
+  const store = memoryStore({ 'pushTokens/a1': device('a', 'a1'), 'notificationSettings/a': { dailyMax: 1 } });
+  const sender = fakeSender();
+  await publish(store, testimony('t1'));
+  await run(store, sender);
+  let last;
+  for (const [i, title] of ['Morning service', 'Evening service', 'Night vigil'].entries()) {
+    const at = NOW + (i + 1) * 10 * 60000;
+    await publish(store, { type: 'live', title, body: 'Join us live now.', category: 'live' }, at);
+    last = await run(store, sender, at);
+  }
+  assert.deepEqual(sender.sent.map((m) => m.title), ['A testimony of healing', 'Morning service', 'Evening service']);
+  assert.equal(last.skipped, 1, 'the third live broadcast that day is skipped');
+});
+
+await test('only announcements can be urgent', () => {
+  assert.equal(parseEvent({ pref: 'announcements', title: 'T', body: 'B', urgent: true, data: { type: 'announcement' } }).urgent, true);
+  assert.equal(parseEvent({ pref: 'testimonies', title: 'T', body: 'B', urgent: true, data: { type: 'testimony' } }).urgent, undefined);
+  assert.throws(() => parseEvent({ pref: 'announcements', title: 'T', body: 'B', urgent: 'yes', data: { type: 'announcement' } }), NotifyInputError);
+});
+
 // ---------------- failures ----------------
+await test('a token Expo cannot use (InvalidCredentials) is removed after 3 failures', async () => {
+  const store = memoryStore({ 'pushTokens/old': device('a', 'old'), 'pushTokens/b1': device('b', 'b1') });
+  const sender = fakeSender((m) => (m.to === tok('old') ? { status: 'error', code: 'InvalidCredentials', retryable: false, tokenGone: false } : null));
+  for (let i = 1; i <= 3; i += 1) {
+    const at = NOW + i * 10 * 60000;
+    await publish(store, testimony(`t${i}`), at);
+    await run(store, sender, at);
+    if (i < 3) assert.equal(store.doc('pushTokens/old').credFailures, i, `failure ${i} counted`);
+  }
+  assert.equal(store.doc('pushTokens/old'), null, 'removed after the third failure');
+  assert.ok(store.doc('pushTokens/b1'), 'healthy devices are untouched');
+  assert.equal(sender.sent.length, 3, 'the healthy device got all three');
+});
+
 await test('a dead device token is removed and not retried', async () => {
   const store = memoryStore({ 'pushTokens/a1': device('a', 'a1') });
   const sender = fakeSender(() => ({ status: 'error', code: 'DeviceNotRegistered', retryable: false, tokenGone: true }));

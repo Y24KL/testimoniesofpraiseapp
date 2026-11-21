@@ -200,3 +200,13 @@ automatic content pushes; admin sends). `killSwitch` stops all sends at once.
 | **B2** | Firestore indexes in `firebase.indexes.json` are not deployed (only rules were published) | Deploy indexes with the CLI before 2a ships |
 | **B3** | Default operating mode | **automatic** with templates (matches "send on publish"); AI copy in **review** until 50 approved without edits |
 | **B4** | Praxiom concurrency (2 in flight per account) shared with the assistant | One copy call per content item, never per user; gate in the Worker |
+
+## 7d. Phase 3a status (2026-11-21): priority lanes and token clean-up
+
+- Every notification has a lane. **normal** counts toward the daily limit (5). **urgent** (admin-ticked
+  announcements only) skips the daily limit; categories and a person's own quiet hours still apply.
+  **live** broadcasts are outside the daily limit, at most 2 a day (a third is skipped as `live_cap`).
+- Admin Announcements has an **Urgent** option with a stronger confirmation.
+- A device that fails with `InvalidCredentials` (a build from another Expo project) gets `credFailures`
+  counted on its token and is removed after 3; rules allow that field so the app can still refresh it.
+- Worker 2.9.0; rules deployed; 22 engine tests, 23 notification rules tests.

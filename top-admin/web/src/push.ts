@@ -12,6 +12,8 @@ export interface PushRequest {
   title: string;
   body: string;
   data: { type: string; contentId?: string };
+  /** Announcements only: skips each person's daily limit (categories and their quiet hours still apply). */
+  urgent?: boolean;
 }
 
 /**

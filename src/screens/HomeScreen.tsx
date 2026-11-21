@@ -16,6 +16,7 @@ import { PromotionCard } from '@/components/PromotionCard';
 import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
 import { DailyDiscovery } from '@/components/DailyDiscovery';
+import { PersonalHome } from '@/components/PersonalHome';
 import { Skeleton } from '@/components/SkeletonCard';
 import { IconButton } from '@/components/TopBar';
 import { VideoCard } from '@/components/VideoCard';
@@ -137,7 +138,9 @@ export function HomeScreen() {
 
   const openTestimony = (id: string) => nav.navigate('TestimonyDetails', { id });
   const refreshing = latest.refreshing || feat.refreshing;
+  const [personalRefresh, setPersonalRefresh] = useState(0);
   const onRefresh = () => {
+    setPersonalRefresh((n) => n + 1);
     void feat.refresh();
     void latest.refresh();
     loadExtras();
@@ -199,6 +202,8 @@ export function HomeScreen() {
             )}
           </Pressable>
         ) : null}
+
+        <PersonalHome refreshKey={personalRefresh} />
 
         <DailyDiscovery />
 

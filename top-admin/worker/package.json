@@ -5,7 +5,7 @@
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
-    "test": "node test.mjs && node test-auth.mjs && node test-ai.mjs && node test-praxiom.mjs && node test-assistant-praxiom.mjs && node test-praxiom-core.mjs && node test-firestore-rest.mjs && node test-notify.mjs && node test-tags.mjs && node test-media.mjs && node test-assistant-phase3.mjs"
+    "test": "node test.mjs && node test-auth.mjs && node test-ai.mjs && node test-praxiom.mjs && node test-assistant-praxiom.mjs && node test-praxiom-core.mjs && node test-firestore-rest.mjs && node test-notify.mjs && node test-tags.mjs && node test-recommend.mjs && node test-media.mjs && node test-assistant-phase3.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"

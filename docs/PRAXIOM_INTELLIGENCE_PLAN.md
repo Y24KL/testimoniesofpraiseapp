@@ -174,6 +174,24 @@ automatic content pushes; admin sends). `killSwitch` stops all sends at once.
   Management lists untagged items, suggests in batches of 8 and saves only rows the admin confirms.
 - Worker 2.7.0 deployed; rules deployed.
 
+## 7c. Phase 2c status (2026-11-21): personal home
+
+- `POST /api/ai/home` (signed-in caller) returns Continue, For you, New in your interests, Featured you
+  haven't seen, and the person's interests. Every read uses the **caller's token**, so the rules limit it
+  to their own interests/history/activity and published content; nothing is written; assistant chats are
+  never read. Content pool (published only) cached 30 minutes at the edge; each person's result cached
+  5 minutes (pull-to-refresh may bypass once a minute). No KV writes.
+- Scoring as in §4, without popularity (no view counts exist yet; "Featured" uses the editors' flag). Learned
+  interests need ≥ 3 events on ≥ 2 days. Max 2 per topic and 3 per type; slots 5 and 10 explore. Exposure
+  ("shown but not opened") is kept on the device and sent with the request.
+- Continue lists unfinished items (≥ 10 s in) only if they are still published.
+- Opt-out returns editorial sections only and ignores activity.
+- App: `src/components/PersonalHome.tsx` on the home screen with an interests sheet (12 topics +
+  personal-recommendations switch). Website: `web/src/components/PersonalHome.tsx` with a dialog.
+  Both cache 6 hours per account and fall back silently to the rest of the home screen.
+- New index: `user_activity (uid, ts desc)`. Worker 2.8.0. 17 tests in `test-recommend.mjs`.
+- Not yet: popularity signal (needs view counts, Phase 5); Praxiom re-ranking (deterministic only for now).
+
 ## 8. Blockers and decisions
 
 | # | Decision | Recommendation |

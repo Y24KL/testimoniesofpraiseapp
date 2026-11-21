@@ -22,6 +22,7 @@ import { useAudioPlayer } from '../audio/AudioPlayerContext';
 import { audioTrack, radioTrack } from '../audio/tracks';
 import { ErrorState } from '../components/ErrorState';
 import { Logo } from '../components/Logo';
+import { PersonalHome } from '../components/PersonalHome';
 import { useAuth } from '../context/AuthContext';
 import { useDownloads } from '../context/DownloadsContext';
 import { useLive, useTestimonies } from '../hooks/useContent';
@@ -200,6 +201,8 @@ export function HomePage({ onMenu, onOpenPromotion }: Props) {
             ) : null}
           </div>
         ) : null}
+
+        <PersonalHome />
 
         <SectionHead title="Explore" />
         <nav className="explore" aria-label="Explore">

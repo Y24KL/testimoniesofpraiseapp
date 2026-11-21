@@ -17,11 +17,12 @@ import { runAssistant } from './assistant.js';
 import { searchClips } from './clips.js';
 import { engineConfigured, NotifyInputError, parseEvent, publishEvent, runEngine } from './notify/index.js';
 import { MAX_ITEMS_PER_REQUEST, suggestTags } from './tags.js';
+import { homeSections } from './recommend.js';
 
 // Durable Object that counts Praxiom chat requests in progress across the whole account (see praxiomGate.js).
 export { PraxiomConcurrencyGate } from './praxiomGate.js';
 
-export const WORKER_VERSION = '2.7.0';
+export const WORKER_VERSION = '2.8.0';
 
 const json = (body, status, headers) =>
   new Response(JSON.stringify(body), {
@@ -231,6 +232,19 @@ async function handle(request, env) {
         }
         const embedded = await createEmbeddings(env, [body.text]);
         result = { embedding: embedded.embeddings[0], dimensions: embedded.dimensions, model: embedded.model };
+      } else if (pathname === '/api/ai/home') {
+        // Personal home sections for the signed-in caller. Reads use the caller's own token (rules apply).
+        // A per-person edge cache (5 minutes) absorbs repeat calls without Firestore reads or KV writes.
+        const cache = globalThis.caches?.default;
+        const key = new Request(`https://cache.top.internal/home/v1/${encodeURIComponent(caller.uid)}`);
+        const hit = cache ? await cache.match(key).then((r) => r?.json()).catch(() => null) : null;
+        // Pull-to-refresh may bypass the cache, but at most once a minute.
+        if (hit && (!body.refresh || Date.now() - (Number(hit.generatedAt) || 0) < 60000)) {
+          result = hit;
+        } else {
+          result = await homeSections(env, authorization, caller.uid, body);
+          if (cache) await cache.put(key, new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=300' } })).catch(() => undefined);
+        }
       } else if (pathname === '/api/ai/suggest-tags') {
         // Admin only: interest-tag suggestions for content (Praxiom, with a keyword fallback).
         if (!(await verifyAdmin(authorization, env))) return json({ error: 'Admins only.' }, 403, { ...cors, 'Cache-Control': 'no-store' });

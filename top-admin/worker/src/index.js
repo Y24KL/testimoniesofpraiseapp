@@ -22,7 +22,7 @@ import { homeSections } from './recommend.js';
 // Durable Object that counts Praxiom chat requests in progress across the whole account (see praxiomGate.js).
 export { PraxiomConcurrencyGate } from './praxiomGate.js';
 
-export const WORKER_VERSION = '2.9.0';
+export const WORKER_VERSION = '2.10.0';
 
 const json = (body, status, headers) =>
   new Response(JSON.stringify(body), {
@@ -432,10 +432,11 @@ async function handle(request, env) {
     if (e instanceof NotifyInputError) return json({ error: e.message }, 400, noStore);
     throw e;
   }
-  const { campaignId, created, report } = await publishEvent(env, ev);
-  console.log(`[notify] event type=${ev.type} campaign=${campaignId} created=${created} queued=${report.queued} sent=${report.sent}`);
+  const { campaignId, created, held, copySource, report } = await publishEvent(env, ev);
+  console.log(`[notify] event type=${ev.type} campaign=${campaignId} created=${created} held=${held ?? '-'} copy=${copySource ?? '-'} queued=${report.queued} sent=${report.sent}`);
   return json(
-    { ok: true, engine: true, campaignId, created, duplicate: !created, queued: report.queued, sent: report.sent, inApp: report.inApp, failed: report.failed },
+    // held: "review" (an AI draft awaits approval) or "manual" (manual mode: nothing sent for published content)
+    { ok: true, engine: true, campaignId, created, duplicate: !created && !held, held: held ?? null, copySource: copySource ?? null, queued: report.queued, sent: report.sent, inApp: report.inApp, failed: report.failed },
     200,
     noStore,
   );

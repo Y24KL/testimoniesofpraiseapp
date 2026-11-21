@@ -1,8 +1,8 @@
 import { addDoc, collection, deleteField, doc, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
-import { pushEnabled, sendPush } from './push';
+import { describePush, pushEnabled, sendPush } from './push';
 
-export type NotifyResult = { status: 'sent' | 'in-app-only' | 'skipped' } | { status: 'failed'; message: string };
+export type NotifyResult = { status: 'sent' | 'in-app-only' | 'skipped' } | { status: 'failed' | 'held'; message: string };
 
 /** Adds an entry to the app's in-app notification list. */
 export function addFeed(entry: { title: string; message: string; type: string; contentId?: string }) {
@@ -33,15 +33,17 @@ export async function notifyTestimonyPublished(id: string): Promise<NotifyResult
 
   const title = 'NEW TESTIMONY AVAILABLE';
   const message = 'A new testimony has just been added to Testimonies of Praise.';
+  let note = '';
   if (pushEnabled) {
     const r = await sendPush({ pref: 'testimonies', title, body: message, data: { type: 'testimony', contentId: id } });
     if (!r.ok) {
       await updateDoc(ref, { pushSentAt: deleteField() }).catch(() => undefined);
       return { status: 'failed', message: r.error };
     }
+    if (r.engine?.held) note = describePush(r);
   }
   await addFeed({ title, message, type: 'testimony', contentId: id });
-  return { status: pushEnabled ? 'sent' : 'in-app-only' };
+  return note ? { status: 'held', message: note } : { status: pushEnabled ? 'sent' : 'in-app-only' };
 }
 
 /** Push + in-app notice for a newly published written testimony (sent once per testimony). */
@@ -57,26 +59,30 @@ export async function notifyWrittenPublished(id: string, writtenTitle: string): 
 
   const title = 'NEW WRITTEN TESTIMONY';
   const message = writtenTitle || 'A new written testimony has been published on Testimonies of Praise.';
+  let note = '';
   if (pushEnabled) {
     const r = await sendPush({ pref: 'testimonies', title, body: message, data: { type: 'written', contentId: id } });
     if (!r.ok) {
       await updateDoc(ref, { pushSentAt: deleteField() }).catch(() => undefined);
       return { status: 'failed', message: r.error };
     }
+    if (r.engine?.held) note = describePush(r);
   }
   await addFeed({ title, message, type: 'written', contentId: id });
-  return { status: pushEnabled ? 'sent' : 'in-app-only' };
+  return note ? { status: 'held', message: note } : { status: pushEnabled ? 'sent' : 'in-app-only' };
 }
 
 export async function notifyLiveStarted(liveTitle: string): Promise<NotifyResult> {
   const title = 'WE ARE LIVE';
   const message = liveTitle || 'Join the live broadcast now.';
+  let note = '';
   if (pushEnabled) {
     const r = await sendPush({ pref: 'live', title, body: message, data: { type: 'live' } });
     if (!r.ok) return { status: 'failed', message: r.error };
+    if (r.engine?.held) note = describePush(r);
   }
   await addFeed({ title, message, type: 'live' });
-  return { status: pushEnabled ? 'sent' : 'in-app-only' };
+  return note ? { status: 'held', message: note } : { status: pushEnabled ? 'sent' : 'in-app-only' };
 }
 
 export async function notifyArticlePublished(id: string, articleTitle: string): Promise<NotifyResult> {
@@ -91,39 +97,45 @@ export async function notifyArticlePublished(id: string, articleTitle: string): 
 
   const title = 'NEW UPDATE PUBLISHED';
   const message = articleTitle || 'A new article has been published on Testimonies of Praise.';
+  let note = '';
   if (pushEnabled) {
     const r = await sendPush({ pref: 'articles', title, body: message, data: { type: 'article', contentId: id } });
     if (!r.ok) {
       await updateDoc(ref, { pushSentAt: deleteField() }).catch(() => undefined);
       return { status: 'failed', message: r.error };
     }
+    if (r.engine?.held) note = describePush(r);
   }
   await addFeed({ title, message, type: 'article', contentId: id });
-  return { status: pushEnabled ? 'sent' : 'in-app-only' };
+  return note ? { status: 'held', message: note } : { status: pushEnabled ? 'sent' : 'in-app-only' };
 }
 
 /** Push + in-app notice for a featured choir or group that has just been added to the showcase. */
 export async function notifyChoirFeatured(id: string, groupName: string): Promise<NotifyResult> {
   const title = 'NEW FEATURED CHOIR';
   const message = groupName ? `${groupName} has been featured on Testimonies of Praise. Watch now.` : 'A choir or group has been featured on Testimonies of Praise.';
+  let note = '';
   if (pushEnabled) {
     const r = await sendPush({ pref: 'choirs', title, body: message, data: { type: 'choir', contentId: id } });
     if (!r.ok) return { status: 'failed', message: r.error };
+    if (r.engine?.held) note = describePush(r);
   }
   await addFeed({ title, message, type: 'choir', contentId: id });
-  return { status: pushEnabled ? 'sent' : 'in-app-only' };
+  return note ? { status: 'held', message: note } : { status: pushEnabled ? 'sent' : 'in-app-only' };
 }
 
 /** Push + in-app notice for a newly published LoveWorld Singers video. */
 export async function notifyLoveworldPublished(id: string, videoTitle: string): Promise<NotifyResult> {
   const title = 'NEW LOVEWORLD SINGERS VIDEO';
   const message = videoTitle || 'A new Worship with your LoveWorld Singers video is now available.';
+  let note = '';
   if (pushEnabled) {
     const r = await sendPush({ pref: 'loveworld', title, body: message, data: { type: 'loveworld', contentId: id } });
     if (!r.ok) return { status: 'failed', message: r.error };
+    if (r.engine?.held) note = describePush(r);
   }
   await addFeed({ title, message, type: 'loveworld', contentId: id });
-  return { status: pushEnabled ? 'sent' : 'in-app-only' };
+  return note ? { status: 'held', message: note } : { status: pushEnabled ? 'sent' : 'in-app-only' };
 }
 
 export function describe(r: NotifyResult): string {
@@ -132,5 +144,6 @@ export function describe(r: NotifyResult): string {
     case 'in-app-only': return 'Added to the app’s notification list. (Push isn’t set up, so no push was sent.)';
     case 'skipped': return 'A notification was already sent for this one.';
     case 'failed': return `The push notification failed: ${r.message}`;
+    case 'held': return r.message;
   }
 }

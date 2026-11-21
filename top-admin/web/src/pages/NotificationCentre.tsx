@@ -3,6 +3,7 @@ import { collection, doc, limit, onSnapshot, orderBy, query, serverTimestamp, se
 import { auth, db } from '../firebase';
 import { Check, Message } from '../components/Field';
 import { Icon } from '../components/Icon';
+import { dispatchNow } from '../push';
 import { EmptyState, ErrorState, GlassCard, LoadingList, PageHeader, SectionHeader, StatCard, StatusBadge, type BadgeKind, type Metric } from '../components/ui';
 
 /**
@@ -15,9 +16,15 @@ interface EngineConfig {
   enabled: boolean;
   windows: { id?: string; time: string; categories: string[] }[] | null;
   defaultTimezone: string | null;
+  copyMode: CopyMode;
+  aiCopy: boolean;
+  targeting: Targeting;
 }
 
-type CampaignStatus = 'scheduled' | 'fanning_out' | 'queued' | 'finished' | 'cancelled' | 'expired' | 'invalid';
+type CopyMode = 'review' | 'automatic' | 'manual';
+type Targeting = 'everyone' | 'interested_first' | 'interested_only';
+
+type CampaignStatus = 'awaiting_approval' | 'scheduled' | 'fanning_out' | 'queued' | 'finished' | 'cancelled' | 'expired' | 'invalid';
 
 interface Campaign {
   id: string;
@@ -28,6 +35,11 @@ interface Campaign {
   status: CampaignStatus;
   delivery?: 'immediate' | 'window';
   source?: string;
+  copySource?: 'ai' | 'edited' | 'template';
+  template?: { title: string; body: string };
+  draft?: { title: string; body: string };
+  draftError?: string;
+  tags?: string[];
   createdAt?: number;
   counts?: Partial<Record<'queued' | 'notQueued' | 'sent' | 'inApp' | 'skipped' | 'failed' | 'expired', number>>;
 }
@@ -73,9 +85,9 @@ const DEFAULT_WINDOWS = [
   { time: '20:00', categories: ['live', '*'] },
 ];
 
-const CANCELLABLE: CampaignStatus[] = ['scheduled', 'fanning_out', 'queued'];
-const STATUS_BADGE: Record<CampaignStatus, BadgeKind> = { scheduled: 'info', fanning_out: 'info', queued: 'ok', finished: 'ok', cancelled: 'draft', expired: 'draft', invalid: 'bad' };
-const STATUS_LABEL: Record<CampaignStatus, string> = { scheduled: 'Starting', fanning_out: 'Sending', queued: 'Delivering', finished: 'Finished', cancelled: 'Cancelled', expired: 'Expired', invalid: 'Invalid' };
+const CANCELLABLE: CampaignStatus[] = ['awaiting_approval', 'scheduled', 'fanning_out', 'queued'];
+const STATUS_BADGE: Record<CampaignStatus, BadgeKind> = { awaiting_approval: 'warn', scheduled: 'info', fanning_out: 'info', queued: 'ok', finished: 'ok', cancelled: 'draft', expired: 'draft', invalid: 'bad' };
+const STATUS_LABEL: Record<CampaignStatus, string> = { awaiting_approval: 'Awaiting approval', scheduled: 'Starting', fanning_out: 'Sending', queued: 'Delivering', finished: 'Finished', cancelled: 'Cancelled', expired: 'Expired', invalid: 'Invalid' };
 
 const utcDay = () => new Date().toISOString().slice(0, 10);
 const sum = (o?: Record<string, number>) => Object.values(o ?? {}).reduce((a, b) => a + (Number(b) || 0), 0);
@@ -103,6 +115,9 @@ export function NotificationCentre() {
             enabled: d.enabled !== false,
             windows: Array.isArray(d.windows) && d.windows.length ? d.windows : null,
             defaultTimezone: typeof d.defaultTimezone === 'string' ? d.defaultTimezone : null,
+            copyMode: d.copyMode === 'automatic' || d.copyMode === 'manual' ? d.copyMode : 'review',
+            aiCopy: d.aiCopy !== false,
+            targeting: d.targeting === 'everyone' || d.targeting === 'interested_only' ? d.targeting : 'interested_first',
           });
         },
         (e) => setLoadErr(e.message),
@@ -162,6 +177,44 @@ export function NotificationCentre() {
     }
   };
 
+  const saveSetting = async (patch: Partial<Pick<EngineConfig, 'copyMode' | 'aiCopy' | 'targeting'>>, message: string) => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return setErr('You are signed out.');
+    setBusy(true);
+    setErr('');
+    setOk('');
+    try {
+      await setDoc(doc(db, 'settings', 'notificationEngine'), { ...patch, updatedAt: serverTimestamp(), updatedBy: uid }, { merge: true });
+      setOk(message);
+    } catch (e) {
+      setErr(`Could not save: ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Sends a draft that awaits approval, with the AI text, an edited text or the template. */
+  const approve = async (c: Campaign, copy: { title: string; body: string }, copySource: 'ai' | 'edited' | 'template') => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return setErr('You are signed out.');
+    const title = copy.title.trim();
+    const body = copy.body.trim();
+    if (!title || !body) return setErr('The title and message cannot be empty.');
+    if (title.length > 100 || body.length > 300) return setErr('Keep the title under 100 characters and the message under 300.');
+    setBusy(true);
+    setErr('');
+    setOk('');
+    try {
+      await updateDoc(doc(db, 'notificationCampaigns', c.id), { status: 'scheduled', dueAt: 0, title, body, copySource, approvedBy: uid, approvedAt: serverTimestamp() });
+      await dispatchNow();
+      setOk(`Approved. “${title}” is being sent now.`);
+    } catch (e) {
+      setErr(`Could not approve: ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const cancel = async (c: Campaign) => {
     const uid = auth.currentUser?.uid;
     if (!uid) return setErr('You are signed out.');
@@ -189,6 +242,7 @@ export function NotificationCentre() {
   }
 
   const windows = config?.windows ?? DEFAULT_WINDOWS;
+  const awaiting = (campaigns ?? []).filter((c) => c.status === 'awaiting_approval');
 
   return (
     <>
@@ -212,6 +266,13 @@ export function NotificationCentre() {
 
       <div className="editor-layout">
         <div>
+          {awaiting.length ? (
+            <GlassCard>
+              <SectionHeader icon="sparkles" title={`Awaiting approval (${awaiting.length})`} hint="Praxiom wrote these from the published content. Nothing is sent until you choose." />
+              {awaiting.map((c) => <DraftCard key={c.id} campaign={c} busy={busy} onApprove={approve} onCancel={cancel} />)}
+            </GlassCard>
+          ) : null}
+
           <GlassCard className="table-card">
             <SectionHeader icon="activity" title="Recent notifications" hint="One row per published item or announcement" />
             {campaigns === null ? (
@@ -227,7 +288,13 @@ export function NotificationCentre() {
                       const n = c.counts ?? {};
                       return (
                         <tr key={c.id}>
-                          <td className="title-cell"><b>{c.title}</b><div className="small muted">{c.category}{c.delivery === 'window' ? ' · time slot' : ''}</div></td>
+                          <td className="title-cell">
+                            <b>{c.title}</b>
+                            <div className="small muted">
+                              {c.category}{c.delivery === 'window' ? ' · time slot' : ''}
+                              {c.copySource === 'ai' ? ' · Praxiom' : c.copySource === 'edited' ? ' · Praxiom, edited' : c.copySource === 'template' && c.source === 'event' ? ' · template' : ''}
+                            </div>
+                          </td>
                           <td><StatusBadge kind={STATUS_BADGE[c.status] ?? 'draft'}>{STATUS_LABEL[c.status] ?? c.status}</StatusBadge></td>
                           <td className="tabular">{n.queued ?? 0}</td>
                           <td className="tabular" style={{ color: 'var(--success)', fontWeight: 700 }}>{n.sent ?? 0}</td>
@@ -291,6 +358,34 @@ export function NotificationCentre() {
             </p>
           </GlassCard>
 
+          <GlassCard aria-labelledby="praxiom-settings">
+            <SectionHeader icon="sparkles" title="Praxiom" as="h3" />
+            {config === null ? (
+              <LoadingList rows={3} />
+            ) : (
+              <>
+                <Check checked={config.aiCopy} disabled={busy} onChange={(v) => void saveSetting({ aiCopy: v }, v ? 'Praxiom will write messages for published content.' : 'Praxiom is off. Published content uses the standard template.')} label="Praxiom writes the messages" hint="From the published item’s own title, description and topics only. Every message is checked; anything doubtful falls back to the template." />
+                <div className="f" style={{ marginTop: 12 }}>
+                  <span>When content is published</span>
+                  <select value={config.copyMode} disabled={busy} onChange={(e) => void saveSetting({ copyMode: e.target.value as CopyMode }, 'Saved.')}>
+                    <option value="review">Review: Praxiom’s message waits for my approval</option>
+                    <option value="automatic">Automatic: send Praxiom’s message straight away</option>
+                    <option value="manual">Manual: don’t notify; I’ll send announcements myself</option>
+                  </select>
+                </div>
+                <div className="f" style={{ marginTop: 12 }}>
+                  <span>Who hears first</span>
+                  <select value={config.targeting} disabled={busy} onChange={(e) => void saveSetting({ targeting: e.target.value as Targeting }, 'Saved.')}>
+                    <option value="interested_first">Interested people first, everyone else 3 hours later</option>
+                    <option value="interested_only">Only people interested in that topic</option>
+                    <option value="everyone">Everyone at once</option>
+                  </select>
+                </div>
+                <p className="small muted" style={{ marginTop: 12 }}>Topics come from the item’s interest tags and each person’s chosen interests. People without interests, untagged content, announcements and live broadcasts always go to everyone.</p>
+              </>
+            )}
+          </GlassCard>
+
           <GlassCard aria-labelledby="engine-windows">
             <SectionHeader icon="clock" title="Scheduled time slots" as="h3" />
             <p className="small muted">Used only for scheduled campaigns. Published content and live broadcasts do not wait for a slot.</p>
@@ -304,5 +399,69 @@ export function NotificationCentre() {
         </aside>
       </div>
     </>
+  );
+}
+
+/** One Praxiom draft awaiting approval: the draft next to the template, with approve, edit, template and cancel. */
+function DraftCard({ campaign: c, busy, onApprove, onCancel }: {
+  campaign: Campaign;
+  busy: boolean;
+  onApprove: (c: Campaign, copy: { title: string; body: string }, source: 'ai' | 'edited' | 'template') => Promise<void>;
+  onCancel: (c: Campaign) => Promise<void>;
+}) {
+  const draft = c.draft ?? { title: c.title, body: c.body };
+  const template = c.template ?? { title: c.title, body: c.body };
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(draft.title);
+  const [body, setBody] = useState(draft.body);
+  return (
+    <article className="item-card" style={{ padding: '14px 0', borderTop: '1px solid var(--glass-border)' }}>
+      <div className="row" style={{ justifyContent: 'space-between', gap: 12, alignItems: 'baseline', flexWrap: 'wrap' }}>
+        <span className="small muted">{c.category}{c.tags?.length ? ` · ${c.tags.join(', ')}` : ''}</span>
+        <span className="small muted nowrap">{when(c.createdAt)}</span>
+      </div>
+      <div className="two" style={{ marginTop: 8 }}>
+        <div className="push-card" style={{ margin: 0 }}>
+          <img src="/logo.png" alt="" />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div className="app"><span>Praxiom’s message</span></div>
+            {editing ? (
+              <>
+                <input type="text" value={title} maxLength={100} onChange={(e) => setTitle(e.target.value)} aria-label="Title" style={{ width: '100%', marginBottom: 6 }} />
+                <textarea value={body} maxLength={300} onChange={(e) => setBody(e.target.value)} aria-label="Message" style={{ width: '100%', minHeight: 70 }} />
+              </>
+            ) : (
+              <>
+                <div className="pt">{draft.title}</div>
+                <div className="pb">{draft.body}</div>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="push-card" style={{ margin: 0, opacity: 0.75 }}>
+          <img src="/logo.png" alt="" />
+          <div style={{ minWidth: 0 }}>
+            <div className="app"><span>Standard template</span></div>
+            <div className="pt">{template.title}</div>
+            <div className="pb">{template.body}</div>
+          </div>
+        </div>
+      </div>
+      <div className="actions" style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {editing ? (
+          <>
+            <button type="button" className="btn small success" disabled={busy} onClick={() => void onApprove(c, { title, body }, 'edited')}><Icon name="send" size={14} />Send edited message</button>
+            <button type="button" className="btn small ghost" disabled={busy} onClick={() => { setEditing(false); setTitle(draft.title); setBody(draft.body); }}>Discard edits</button>
+          </>
+        ) : (
+          <>
+            <button type="button" className="btn small success" disabled={busy} onClick={() => void onApprove(c, draft, 'ai')}><Icon name="check" size={14} />Approve and send</button>
+            <button type="button" className="btn small ghost" disabled={busy} onClick={() => setEditing(true)}><Icon name="edit" size={14} />Edit</button>
+            <button type="button" className="btn small ghost" disabled={busy} onClick={() => void onApprove(c, template, 'template')}><Icon name="fileText" size={14} />Use template instead</button>
+          </>
+        )}
+        <button type="button" className="btn small ghost" disabled={busy} onClick={() => void onCancel(c)}><Icon name="x" size={14} />Don’t send</button>
+      </div>
+    </article>
   );
 }

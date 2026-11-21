@@ -1,4 +1,5 @@
 import { te } from './senders.js';
+import { sanitizeTags } from '../tags.js';
 
 var CATEGORIES = [
   "dailyPraise",
@@ -17,6 +18,10 @@ var MIN_INTERVAL_OPTIONS = [120, 180, 240];
 var HARD_MIN_INTERVAL_MIN = 120;
 var MAX_LIVE_PER_DAY = 2;
 var CRED_FAILURE_LIMIT = 3;
+var COPY_MODES = ["review", "automatic", "manual"];
+var TARGETING = ["everyone", "interested_first", "interested_only"];
+/** How long people whose interests do not match wait when "interested first" is on. */
+var LATER_MS = 3 * 60 * 60 * 1000;
 /** The item's lane; items queued before lanes existed are derived from their category. */
 var laneOf = (item) => (item.lane === "live" || item.lane === "urgent" ? item.lane : item.category === "live" ? "live" : "normal");
 var DEFAULT_TIMEZONE = "Africa/Lagos";
@@ -258,7 +263,11 @@ function normalizeEngineConfig(raw) {
   return {
     enabled: r.enabled !== false,
     windows: windows.length ? windows : DEFAULT_WINDOWS,
-    defaultTimezone: isValidTimeZone(r.defaultTimezone) ? r.defaultTimezone : DEFAULT_TIMEZONE
+    defaultTimezone: isValidTimeZone(r.defaultTimezone) ? r.defaultTimezone : DEFAULT_TIMEZONE,
+    // Phase 3c: how copy for published content is handled, whether Praxiom writes it, and who hears first.
+    copyMode: COPY_MODES.includes(r.copyMode) ? r.copyMode : "review",
+    aiCopy: r.aiCopy !== false,
+    targeting: TARGETING.includes(r.targeting) ? r.targeting : "interested_first"
   };
 }
 function nextWindowSlot(afterMs, tz, category, windows) {
@@ -317,7 +326,7 @@ function normalizeCampaign(id, raw, now) {
   const pr = num(r.priority);
   const contentId = str(r.contentId, 100) || null;
   const audience = Array.isArray(r.audienceUids) ? r.audienceUids.filter((u) => typeof u === "string" && u && u.length <= 128).slice(0, 30) : null;
-  const status = ["scheduled", "fanning_out", "queued", "cancelled", "expired", "invalid"].includes(r.status) ? r.status : "scheduled";
+  const status = ["awaiting_approval", "scheduled", "fanning_out", "queued", "cancelled", "expired", "invalid"].includes(r.status) ? r.status : "scheduled";
   return {
     id,
     title,
@@ -334,6 +343,8 @@ function normalizeCampaign(id, raw, now) {
     audienceUids: audience && audience.length ? audience : null,
     // Lane: "live" broadcasts and admin-flagged "urgent" announcements have their own limits (see evaluate).
     lane: category === "live" ? "live" : r.urgent === true && category === "announcements" ? "urgent" : "normal",
+    // The published item's interest tags, used for "interested people first / only".
+    tags: sanitizeTags(r.tags),
     status,
     cursor: typeof r.cursor === "string" ? r.cursor : null,
     source: str(r.source, 40) || "admin"
@@ -487,6 +498,17 @@ function toTokenRow(d) {
   if (!kind) return null;
   return { id: d.id, uid, kind, token, web, prefs: r.prefs ? obj(r.prefs) : null, updatedAt: num(r.updatedAtMs) ?? num(r.updatedAt) ?? 0, credFailures: num(r.credFailures) ?? 0 };
 }
+/**
+ * Does this person's chosen interests match the content's tags? true / false, or null when we cannot tell
+ * (no interests chosen, or personal recommendations switched off): those people are treated as before.
+ */
+function interestMatch(discovery, tags) {
+  const d = obj(discovery);
+  if (d.optOut === true) return null;
+  const interests = sanitizeTags(d.interests, 20);
+  if (!interests.length) return null;
+  return tags.some((t) => interests.includes(t));
+}
 function legacyFor(rows) {
   const withPrefs = rows.filter((r) => r.prefs).sort((a, b) => b.updatedAt - a.updatedAt);
   return withPrefs[0]?.prefs ?? null;
@@ -569,17 +591,32 @@ async function fanOut(store, cfg, now, o, rep, stats) {
       for (const t of tokens) byUid.set(t.uid, [...byUid.get(t.uid) ?? [], t]);
       const uids = [...byUid.keys()];
       const settings = uids.length ? await store.get(COL.settings, uids) : /* @__PURE__ */ new Map();
+      // Interest targeting (Phase 3c): only for normal content with tags, and only when switched on.
+      const targeted = c.lane === "normal" && c.tags.length > 0 && cfg.targeting !== "everyone" && typeof store.getPaths === "function";
+      const discovery = targeted && uids.length ? await store.getPaths(uids.map((u) => `users/${u}/private/discovery`)) : null;
       const creates = [];
       const items = [];
       let notQueued = 0;
       for (const uid of uids) {
         const s = normalizeSettings(settings.get(uid)?.data, legacyFor(byUid.get(uid) ?? []), cfg.defaultTimezone);
+        const match = discovery ? interestMatch(discovery.get(`users/${uid}/private/discovery`)?.data, c.tags) : null;
+        if (match === false && cfg.targeting === "interested_only") {
+          notQueued += 1;
+          stats.add(reasonKey("not_interested"));
+          continue;
+        }
         const r = buildQueueItem(c, uid, s, now, cfg.windows);
         if ("skip" in r) {
           notQueued += 1;
           stats.add(reasonKey(r.skip));
           continue;
         }
+        if (match === false && r.item.dueAt + LATER_MS < c.expiresAt) {
+          // Interested people first: everyone else with the category on gets it a little later the same day.
+          r.item.dueAt += LATER_MS;
+          r.item.scheduledAt = r.item.dueAt;
+          r.item.targeting = "later";
+        } else if (match === true) r.item.targeting = "interested";
         items.push(r.item);
         creates.push({ col: COL.queue, id: r.item.notificationId, kind: "create", data: r.item });
       }
@@ -913,4 +950,4 @@ function eventCampaign(ev, now) {
   };
 }
 
-export { num, obj, str, hash, typeToCategory, prefToCategory, ROUTE_TYPES, COL, runDispatcher, eventCampaign, normalizeSettings, evaluate, buildQueueItem, normalizeLedger, HARD_MIN_INTERVAL_MIN, DEFAULT_WINDOWS };
+export { num, obj, str, hash, typeToCategory, prefToCategory, ROUTE_TYPES, COL, runDispatcher, eventCampaign, normalizeSettings, normalizeEngineConfig, evaluate, buildQueueItem, normalizeLedger, HARD_MIN_INTERVAL_MIN, DEFAULT_WINDOWS };

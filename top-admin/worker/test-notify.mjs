@@ -8,7 +8,7 @@
  */
 import assert from 'node:assert/strict';
 import { COL, eventCampaign, evaluate, normalizeLedger, normalizeSettings, runDispatcher } from './src/notify/engine.js';
-import { parseEvent, NotifyInputError } from './src/notify/index.js';
+import { parseEvent, NotifyInputError, createCampaign } from './src/notify/index.js';
 
 let passed = 0;
 const test = async (name, fn) => {
@@ -54,6 +54,9 @@ function memoryStore(initial = {}) {
     },
     async dueQuery(col, field, max, limit) {
       return inCol(col).filter((d) => typeof d.data[field] === 'number' && d.data[field] <= max).sort((a, b) => a.data[field] - b.data[field]).slice(0, limit);
+    },
+    async getPaths(paths) {
+      return new Map(paths.map((p) => { const d = docs.get(p); return [p, d ? { id: p.split('/').pop(), data: structuredClone(d.data), version: d.version } : null]; }));
     },
     async whereIn(col, field, values) {
       return inCol(col).filter((d) => values.includes(d.data[field]));
@@ -349,6 +352,148 @@ await test('admin event input is validated', () => {
   assert.throws(() => parseEvent({ title: 'T', body: 'B', data: { type: 'nope' } }), NotifyInputError);
   assert.throws(() => parseEvent({ pref: 'nope', title: 'T', body: 'B', data: { type: 'testimony' } }), NotifyInputError);
   assert.throws(() => parseEvent({ title: '', body: 'B', data: { type: 'testimony' } }), NotifyInputError);
+});
+
+// ---------------- Phase 3c: Praxiom copy, modes, targeting ----------------
+const PX = { PRAXIOM_API_KEY: 'px_test' };
+const HEALED = { title: 'Healed of malaria', description: 'Sister Ada was healed after the church prayed with her.', isPublished: true, tags: ['healing'] };
+const chatSaying = (title, body, seen = []) => async (_env, req) => { seen.push(req); return { text: JSON.stringify({ title, body }) }; };
+const goodChat = (seen) => chatSaying('A testimony of healing', 'Watch "Healed of malaria" and see how God answered the church’s prayers.', seen);
+const contentEv = { type: 'testimony', contentId: 't1', title: 'NEW TESTIMONY AVAILABLE', body: 'A new testimony has just been added.', category: 'testimonies' };
+const approve = (store, id, copy) => store.commit([{ col: COL.campaigns, id, kind: 'update', data: { status: 'scheduled', dueAt: 0, title: copy.title, body: copy.body, copySource: 'ai' } }], false);
+
+await test('review mode (default): a valid Praxiom draft waits for approval and nothing is sent', async () => {
+  const store = memoryStore({ 'pushTokens/a1': device('a', 'a1'), 'testimonies/t1': HEALED });
+  const sender = fakeSender();
+  const out = await createCampaign(store, PX, contentEv, { now: NOW, chat: goodChat() });
+  assert.equal(out.held, 'review');
+  const c = store.doc(`notificationCampaigns/${out.campaignId}`);
+  assert.equal(c.status, 'awaiting_approval');
+  assert.equal(c.dueAt, undefined);
+  assert.deepEqual(c.template, { title: contentEv.title, body: contentEv.body });
+  assert.equal(c.draft.title, 'A testimony of healing');
+  assert.deepEqual(c.tags, ['healing']);
+  await run(store, sender);
+  assert.equal(sender.sent.length, 0);
+  await approve(store, out.campaignId, c.draft);
+  await run(store, sender, NOW + 60000);
+  assert.equal(sender.sent.length, 1);
+  assert.equal(sender.sent[0].title, 'A testimony of healing');
+});
+
+await test('a draft that invents a fact is rejected and the template goes out at once', async () => {
+  const store = memoryStore({ 'pushTokens/a1': device('a', 'a1'), 'testimonies/t1': HEALED });
+  const out = await createCampaign(store, PX, contentEv, { now: NOW, chat: chatSaying('Healed in 3 days', 'Watch "Healed of malaria": healed in 3 days!') });
+  assert.equal(out.held, null);
+  const c = store.doc(`notificationCampaigns/${out.campaignId}`);
+  assert.equal(c.status, 'scheduled');
+  assert.equal(c.title, contentEv.title);
+  assert.equal(c.copySource, 'template');
+  assert.match(c.draftError, /number/);
+});
+
+await test('sensitive words are allowed only when the content itself uses them', async () => {
+  const store = memoryStore({ 'testimonies/t1': { ...HEALED, description: 'A miracle: Sister Ada was healed after prayer.' } });
+  const out = await createCampaign(store, PX, contentEv, { now: NOW, chat: chatSaying('A miracle of healing', 'Watch "Healed of malaria", a miracle after prayer.') });
+  assert.equal(out.held, 'review');
+  const store2 = memoryStore({ 'testimonies/t1': HEALED });
+  const out2 = await createCampaign(store2, PX, contentEv, { now: NOW, chat: chatSaying('A miracle of healing', 'Watch "Healed of malaria", a miracle after prayer.') });
+  assert.equal(out2.held, null, 'the content never says "miracle", so the draft is refused');
+});
+
+await test('automatic mode uses a valid draft straight away', async () => {
+  const store = memoryStore({ 'pushTokens/a1': device('a', 'a1'), 'testimonies/t1': HEALED, 'settings/notificationEngine': { copyMode: 'automatic' } });
+  const sender = fakeSender();
+  const out = await createCampaign(store, PX, contentEv, { now: NOW, chat: goodChat() });
+  assert.equal(out.copySource, 'ai');
+  await run(store, sender);
+  assert.equal(sender.sent[0].title, 'A testimony of healing');
+});
+
+await test('manual mode sends nothing for published content, but announcements still go out', async () => {
+  const store = memoryStore({ 'pushTokens/a1': device('a', 'a1'), 'testimonies/t1': HEALED, 'settings/notificationEngine': { copyMode: 'manual' } });
+  const sender = fakeSender();
+  const out = await createCampaign(store, PX, contentEv, { now: NOW, chat: goodChat() });
+  assert.equal(out.held, 'manual');
+  assert.equal(store.col('notificationCampaigns').length, 0);
+  await createCampaign(store, PX, { type: 'announcement', title: 'Service at 6', body: 'Join us.', category: 'announcements' }, { now: NOW });
+  await run(store, sender);
+  assert.equal(sender.sent.length, 1);
+});
+
+await test('with Praxiom switched off, or not configured, the template goes out at once', async () => {
+  let called = false;
+  const chat = async () => { called = true; return { text: '{}' }; };
+  const off = memoryStore({ 'testimonies/t1': HEALED, 'settings/notificationEngine': { aiCopy: false } });
+  assert.equal((await createCampaign(off, PX, contentEv, { now: NOW, chat })).held, null);
+  const noKey = memoryStore({ 'testimonies/t1': HEALED });
+  assert.equal((await createCampaign(noKey, {}, contentEv, { now: NOW, chat })).held, null);
+  assert.equal(called, false);
+});
+
+await test('Praxiom gets only the item’s public facts, once per item, and never for a duplicate', async () => {
+  const seen = [];
+  const store = memoryStore({ 'pushTokens/a1': device('secret-uid', 'a1'), 'testimonies/t1': HEALED });
+  await createCampaign(store, PX, contentEv, { now: NOW, chat: goodChat(seen) });
+  await createCampaign(store, PX, contentEv, { now: NOW + 1000, chat: goodChat(seen) });
+  assert.equal(seen.length, 1);
+  const sent = JSON.stringify(seen[0].messages);
+  assert.ok(sent.includes('Healed of malaria'));
+  assert.equal(sent.includes('secret-uid'), false);
+  assert.equal(sent.includes('ExponentPushToken'), false);
+});
+
+await test('announcements and live broadcasts are never drafted or held', async () => {
+  let called = false;
+  const store = memoryStore({});
+  const out = await createCampaign(store, PX, { type: 'live', title: 'We are live', body: 'Join now.', category: 'live' }, { now: NOW, chat: async () => { called = true; return { text: '{}' }; } });
+  assert.equal(out.held, null);
+  assert.equal(called, false);
+});
+
+const people = (extra = {}) => memoryStore({
+  'pushTokens/a1': device('a', 'a1'), 'users/a/private/discovery': { interests: ['healing'] },
+  'pushTokens/b1': device('b', 'b1'), 'users/b/private/discovery': { interests: ['finances'] },
+  'pushTokens/c1': device('c', 'c1'),
+  'pushTokens/d1': device('d', 'd1'), 'users/d/private/discovery': { interests: ['finances'], optOut: true },
+  'testimonies/t1': HEALED,
+  ...extra,
+});
+const sentTo = (sender) => sender.sent.map((m) => m.to.replace(/ExponentPushToken\[|\]/g, '')).sort();
+
+await test('interested first (default): matching people now, others 3 hours later', async () => {
+  const store = people({ 'settings/notificationEngine': { aiCopy: false } });
+  const sender = fakeSender();
+  await createCampaign(store, PX, contentEv, { now: NOW });
+  await run(store, sender);
+  assert.deepEqual(sentTo(sender), ['a1', 'c1', 'd1'], 'healing fan now; no interests and opted-out are treated as before');
+  await run(store, sender, NOW + 3 * H + 60000);
+  assert.deepEqual(sentTo(sender), ['a1', 'b1', 'c1', 'd1'], 'the finances fan gets it later the same day');
+});
+
+await test('interested only: people whose interests do not match are not notified', async () => {
+  const store = people({ 'settings/notificationEngine': { aiCopy: false, targeting: 'interested_only' } });
+  const sender = fakeSender();
+  await createCampaign(store, PX, contentEv, { now: NOW });
+  await run(store, sender);
+  await run(store, sender, NOW + 4 * H);
+  assert.deepEqual(sentTo(sender), ['a1', 'c1', 'd1']);
+});
+
+await test('notify everyone: interests are ignored', async () => {
+  const store = people({ 'settings/notificationEngine': { aiCopy: false, targeting: 'everyone' } });
+  const sender = fakeSender();
+  await createCampaign(store, PX, contentEv, { now: NOW });
+  await run(store, sender);
+  assert.equal(sender.sent.length, 4);
+});
+
+await test('untagged content and announcements are never targeted', async () => {
+  const store = people({ 'testimonies/t1': { ...HEALED, tags: [] }, 'settings/notificationEngine': { aiCopy: false, targeting: 'interested_only' } });
+  const sender = fakeSender();
+  await createCampaign(store, PX, contentEv, { now: NOW });
+  await run(store, sender);
+  assert.equal(sender.sent.length, 4);
 });
 
 console.log(`\nnotification engine: ${passed} tests passed`);

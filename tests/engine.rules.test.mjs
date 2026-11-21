@@ -24,6 +24,7 @@ const reset = async () => {
     await setDoc(doc(db, 'settings/notificationEngine'), { enabled: true });
     await setDoc(doc(db, 'notificationCampaigns/ev_testimony_t1'), { status: 'scheduled', title: 'T', body: 'B', category: 'testimonies', dueAt: 1 });
     await setDoc(doc(db, 'notificationCampaigns/ev_live_done'), { status: 'finished', title: 'L', body: 'B', category: 'live' });
+    await setDoc(doc(db, 'notificationCampaigns/ev_draft'), { status: 'awaiting_approval', title: 'NEW TESTIMONY', body: 'Template', template: { title: 'NEW TESTIMONY', body: 'Template' }, draft: { title: 'AI title', body: 'AI body' }, category: 'testimonies', copySource: 'template' });
     await setDoc(doc(db, 'notificationQueue/q1'), { uid: 'alice', status: 'scheduled', dueAt: 1 });
     await setDoc(doc(db, 'notificationStats/2026-11-21'), { events: { notification_sent: 3 } });
     await setDoc(doc(db, 'notificationLedger/alice'), { entries: {} });
@@ -81,6 +82,44 @@ await test('clients cannot create or delete campaigns; users cannot read them', 
   await assertSucceeds(getDocs(collection(admin, 'notificationCampaigns')));
   await assertFails(getDocs(collection(alice, 'notificationCampaigns')));
   await assertFails(updateDoc(doc(alice, 'notificationCampaigns/ev_testimony_t1'), { status: 'cancelled', cancelledAt: serverTimestamp(), cancelledBy: 'alice' }));
+});
+
+// ---------------- Praxiom drafts: approval and settings ----------------
+const approval = (extra = {}) => ({ status: 'scheduled', dueAt: 0, title: 'AI title', body: 'AI body', copySource: 'ai', approvedBy: 'admin1', approvedAt: serverTimestamp(), ...extra });
+
+await test('an admin can approve a draft with the AI text, an edited text or the template', async () => {
+  await assertSucceeds(updateDoc(doc(admin, 'notificationCampaigns/ev_draft'), approval()));
+  await reset();
+  await assertSucceeds(updateDoc(doc(admin, 'notificationCampaigns/ev_draft'), approval({ title: 'Edited', body: 'Edited body', copySource: 'edited' })));
+  await reset();
+  await assertSucceeds(updateDoc(doc(admin, 'notificationCampaigns/ev_draft'), approval({ title: 'NEW TESTIMONY', body: 'Template', copySource: 'template' })));
+});
+
+await test('approval cannot change anything else, schedule for later, or skip its checks', async () => {
+  const ref = doc(admin, 'notificationCampaigns/ev_draft');
+  await assertFails(updateDoc(ref, approval({ category: 'live' })));
+  await assertFails(updateDoc(ref, approval({ dueAt: 99999999999999 })));
+  await assertFails(updateDoc(ref, approval({ title: '' })));
+  await assertFails(updateDoc(ref, approval({ body: 'x'.repeat(301) })));
+  await assertFails(updateDoc(ref, approval({ copySource: 'praxiom' })));
+  await assertFails(updateDoc(ref, approval({ approvedBy: 'someone' })));
+  await assertFails(updateDoc(ref, approval({ approvedAt: new Date() })));
+});
+
+await test('only drafts awaiting approval can be approved; users cannot approve', async () => {
+  await assertFails(updateDoc(doc(admin, 'notificationCampaigns/ev_testimony_t1'), approval()));
+  await assertFails(updateDoc(doc(alice, 'notificationCampaigns/ev_draft'), approval({ approvedBy: 'alice' })));
+});
+
+await test('a draft awaiting approval can be cancelled', async () => {
+  await assertSucceeds(updateDoc(doc(admin, 'notificationCampaigns/ev_draft'), { status: 'cancelled', cancelledAt: serverTimestamp(), cancelledBy: 'admin1' }));
+});
+
+await test('admins set copy mode, the Praxiom switch and targeting, with allowed values only', async () => {
+  await assertSucceeds(setDoc(doc(admin, 'settings/notificationEngine'), engineCfg({ copyMode: 'automatic', aiCopy: false, targeting: 'interested_only' })));
+  await assertFails(setDoc(doc(admin, 'settings/notificationEngine'), engineCfg({ copyMode: 'yolo' })));
+  await assertFails(setDoc(doc(admin, 'settings/notificationEngine'), engineCfg({ aiCopy: 'on' })));
+  await assertFails(setDoc(doc(admin, 'settings/notificationEngine'), engineCfg({ targeting: 'friends' })));
 });
 
 // ---------------- queue, stats, ledger ----------------

@@ -564,8 +564,11 @@ service cloud.firestore {
     match /settings/notificationEngine {
       allow read: if isAdmin();
       allow write: if isAdmin()
-        && request.resource.data.keys().hasOnly(['enabled', 'windows', 'defaultTimezone', 'updatedAt', 'updatedBy'])
+        && request.resource.data.keys().hasOnly(['enabled', 'windows', 'defaultTimezone', 'copyMode', 'aiCopy', 'targeting', 'updatedAt', 'updatedBy'])
         && (!('enabled' in request.resource.data) || request.resource.data.enabled is bool)
+        && (!('copyMode' in request.resource.data) || request.resource.data.copyMode in ['review', 'automatic', 'manual'])
+        && (!('aiCopy' in request.resource.data) || request.resource.data.aiCopy is bool)
+        && (!('targeting' in request.resource.data) || request.resource.data.targeting in ['everyone', 'interested_first', 'interested_only'])
         && (!('windows' in request.resource.data) || (request.resource.data.windows is list && request.resource.data.windows.size() <= 12))
         && (!('defaultTimezone' in request.resource.data) || (request.resource.data.defaultTimezone is string && request.resource.data.defaultTimezone.size() <= 64))
         && request.resource.data.updatedAt == request.time
@@ -573,15 +576,31 @@ service cloud.firestore {
     }
 
     // Campaigns: created by the Worker. An admin may only cancel one that has not finished.
+    // Campaigns: created by the Worker. An admin may cancel one that has not finished, or approve a Praxiom
+    // draft that awaits approval: send it with the AI text, an edited text, or the template (dueAt 0 = now).
     match /notificationCampaigns/{id} {
       allow read: if isAdmin();
       allow create, delete: if false;
-      allow update: if isAdmin()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt', 'cancelledBy'])
-        && resource.data.status in ['scheduled', 'fanning_out', 'queued']
+      allow update: if isAdmin() && (validCampaignCancel() || validCampaignApproval());
+    }
+    function validCampaignCancel() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt', 'cancelledBy'])
+        && resource.data.status in ['awaiting_approval', 'scheduled', 'fanning_out', 'queued']
         && request.resource.data.status == 'cancelled'
         && request.resource.data.cancelledBy == request.auth.uid
         && request.resource.data.cancelledAt == request.time;
+    }
+    function validCampaignApproval() {
+      let d = request.resource.data;
+      return d.diff(resource.data).affectedKeys().hasOnly(['status', 'dueAt', 'title', 'body', 'copySource', 'approvedBy', 'approvedAt'])
+        && resource.data.status == 'awaiting_approval'
+        && d.status == 'scheduled'
+        && d.dueAt == 0
+        && d.title is string && d.title.size() > 0 && d.title.size() <= 100
+        && d.body is string && d.body.size() > 0 && d.body.size() <= 300
+        && d.copySource in ['ai', 'edited', 'template']
+        && d.approvedBy == request.auth.uid
+        && d.approvedAt == request.time;
     }
 
     // Per-person queue items, the per-person send ledger and daily stats: engine writes, admins read

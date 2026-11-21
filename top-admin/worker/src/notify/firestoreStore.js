@@ -121,6 +121,20 @@ function createFirestoreStore({ projectId, getToken, fetchFn = fetch }) {
     return out;
   }
   return {
+    /** Documents at full paths (e.g. "users/u1/private/discovery"), 100 per request. Missing ones map to null. */
+    async getPaths(paths) {
+      const out = new Map(paths.map((p) => [p, null]));
+      for (let i = 0; i < paths.length; i += 100) {
+        const r = await call(`${base}:batchGet`, { documents: paths.slice(i, i + 100).map((p) => `${root}/${p}`) });
+        if (!r.ok) throw new Error(`Firestore batchGet failed (${r.status})`);
+        for (const x of r.json || []) {
+          if (!x.found) continue;
+          const p = x.found.name.slice(root.length + 1);
+          if (out.has(p)) out.set(p, { id: idOf(x.found.name), data: fromFields(x.found.fields), version: x.found.updateTime });
+        }
+      }
+      return out;
+    },
     async get(col, ids) {
       const out = new Map(ids.map((id) => [id, null]));
       for (let i = 0; i < ids.length; i += 100) {

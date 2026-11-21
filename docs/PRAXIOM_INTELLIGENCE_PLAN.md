@@ -210,3 +210,20 @@ automatic content pushes; admin sends). `killSwitch` stops all sends at once.
 - A device that fails with `InvalidCredentials` (a build from another Expo project) gets `credFailures`
   counted on its token and is removed after 3; rules allow that field so the app can still refresh it.
 - Worker 2.9.0; rules deployed; 22 engine tests, 23 notification rules tests.
+
+## 7e. Phase 3c status (2026-11-21): Praxiom copy, modes, targeting
+
+- On publish of content (testimony, written, article, lyrical, LoveWorld, choir) the Worker reads the item
+  and asks Praxiom for one message (`src/notify/draft.js`), sending only the item's public fields. The draft
+  must pass `validatePushCopy`: names the content, no number or sensitive word the content does not use,
+  no links/emails/urgency, length limits. Otherwise the template is used and `draftError` is recorded.
+- `settings/notificationEngine`: `copyMode` review (default) / automatic / manual; `aiCopy` (default on);
+  `targeting` interested_first (default) / interested_only / everyone.
+- Review: valid drafts wait as `awaiting_approval`; admins approve with the AI text, an edited text or the
+  template (rules: only those fields, `dueAt` 0, server time, acting admin), or cancel. Approval triggers an
+  immediate dispatch. Template-only notifications never wait.
+- Targeting uses the item's tags and each person's chosen interests (`private/discovery`, batch-read).
+  Non-matching people get it 3 hours later (or not at all with interested_only). No interests, opted out,
+  untagged content, announcements and live broadcasts are never targeted.
+- Worker 2.10.0, rules deployed; 12 new engine tests (34), 5 new rules tests (engine rules 26).
+- Not yet: open rates per copy source (needs the open tracking from Phase 3b).

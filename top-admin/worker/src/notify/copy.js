@@ -7,13 +7,14 @@
  */
 import { schemaErrors } from '../structured.js';
 
-export const PUSH_CATEGORIES = ['testimonies', 'live', 'announcements', 'promotions', 'choirs', 'loveworld', 'articles'];
+// Legacy push preference names plus the engine's categories (src/notify/engine.js CATEGORIES).
+export const PUSH_CATEGORIES = ['testimonies', 'live', 'announcements', 'promotions', 'choirs', 'loveworld', 'articles', 'dailyPraise', 'loveworldMusic', 'lyricalAnalysis', 'featuredChoirs', 'community'];
 export const MAX_TITLE_CHARS = 60;
 export const MAX_BODY_CHARS = 180;
 
 export const COPY_SCHEMA = {
   type: 'object',
-  required: ['title', 'body', 'category'],
+  required: ['title', 'body'],
   properties: {
     title: { type: 'string', minLength: 1, maxLength: MAX_TITLE_CHARS },
     body: { type: 'string', minLength: 1, maxLength: MAX_BODY_CHARS },
@@ -34,7 +35,8 @@ const normalizeNumber = (token) => token.replace(/,/g, '');
  * facts: {
  *   title?: string,            // the content's own title; copy must name it (case-insensitive)
  *   allowedNumbers?: string[], // every number, date or time that may appear in copy, e.g. "13", "12:00"
- *   allowTitleOmitted?: boolean
+ *   allowTitleOmitted?: boolean,
+ *   sourceText?: string        // the content's own words: a sensitive word it uses itself ("miracle") is allowed
  * }
  */
 export function validatePushCopy(candidate, facts = {}) {
@@ -48,7 +50,11 @@ export function validatePushCopy(candidate, facts = {}) {
   if (LINK_RE.test(text)) errors.push('contains a link or domain');
   if (EMAIL_RE.test(text)) errors.push('contains an email address');
   if (URGENCY_RE.test(text)) errors.push('uses urgency language');
-  if (OVERCLAIM_RE.test(text)) errors.push('makes an overclaim');
+  // Words like "miracle" or "breakthrough" are an overclaim only when the content itself does not say them.
+  const source = String(facts.sourceText || '').toLowerCase();
+  for (const m of text.matchAll(new RegExp(OVERCLAIM_RE.source, 'gi'))) {
+    if (!source.includes(m[0].toLowerCase())) { errors.push('makes an overclaim'); break; }
+  }
 
   const allowed = new Set((facts.allowedNumbers || []).map(normalizeNumber));
   for (const token of text.match(NUMBER_RE) || []) {

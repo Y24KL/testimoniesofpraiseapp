@@ -10,7 +10,9 @@ var CATEGORIES = [
   "featuredChoirs",
   "articles",
   "announcements",
-  "community"
+  "community",
+  // Private messages from the support team (supportThreads). Always on; never counted in the daily limit.
+  "messages"
 ];
 var DAILY_MAX_OPTIONS = [1, 3, 5];
 var FREQUENCY_TO_MAX = { light: 1, balanced: 3, frequent: 5 };
@@ -50,7 +52,8 @@ function legacyToCategories(prefs) {
     featuredChoirs: on(p.choirs),
     articles: on(p.articles),
     announcements: on(p.announcements),
-    community: on(p.promotions)
+    community: on(p.promotions),
+    messages: true
   };
 }
 var HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -131,6 +134,8 @@ function typeToCategory(type) {
       return "loveworldMusic";
     case "lyrical":
       return "lyricalAnalysis";
+    case "message":
+      return "messages";
     case "dailyPraise":
       return "dailyPraise";
     default:
@@ -166,9 +171,11 @@ var CATEGORY_DEFAULT_TYPE = {
   featuredChoirs: "choir",
   articles: "article",
   announcements: "announcement",
-  community: "community"
+  community: "community",
+  messages: "message"
 };
 var ROUTE_TYPES = /* @__PURE__ */ new Set([
+  "message",
   "testimony",
   "written",
   "featured",
@@ -294,7 +301,8 @@ var DEFAULT_EXPIRY_HOURS = {
   featuredChoirs: 72,
   articles: 72,
   announcements: 48,
-  community: 72
+  community: 72,
+  messages: 168
 };
 var DEFAULT_PRIORITY = {
   dailyPraise: 60,
@@ -305,7 +313,8 @@ var DEFAULT_PRIORITY = {
   featuredChoirs: 40,
   articles: 40,
   announcements: 70,
-  community: 35
+  community: 35,
+  messages: 92
 };
 var str = (v, max) => typeof v === "string" ? v.trim().slice(0, max) : "";
 var safeId = (v) => v.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 120);
@@ -342,7 +351,7 @@ function normalizeCampaign(id, raw, now) {
     delivery: r.delivery === "immediate" || r.delivery === "window" ? r.delivery : category === "live" ? "immediate" : "window",
     audienceUids: audience && audience.length ? audience : null,
     // Lane: "live" broadcasts and admin-flagged "urgent" announcements have their own limits (see evaluate).
-    lane: category === "live" ? "live" : r.urgent === true && category === "announcements" ? "urgent" : "normal",
+    lane: category === "live" ? "live" : category === "messages" || (r.urgent === true && category === "announcements") ? "urgent" : "normal",
     // The published item's interest tags, used for "interested people first / only".
     tags: sanitizeTags(r.tags),
     status,

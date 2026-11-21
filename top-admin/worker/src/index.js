@@ -15,7 +15,8 @@ import { handleKingsChatCallback, handleKingsChatRedeem, handleKingsChatState } 
 import { AIEndpointError, createEmbeddings, enforceAiRateLimit, semanticSearch, validateSearchQuery } from './ai.js';
 import { runAssistant } from './assistant.js';
 import { searchClips } from './clips.js';
-import { engineConfigured, NotifyInputError, parseEvent, publishEvent, runEngine } from './notify/index.js';
+import { engineConfigured, makeStore, NotifyInputError, parseEvent, publishEvent, runEngine } from './notify/index.js';
+import { lookupAuthUsers, parseSendRequest, sendSupportMessage, SupportInputError } from './support.js';
 import { MAX_ITEMS_PER_REQUEST, suggestTags } from './tags.js';
 import { homeSections } from './recommend.js';
 
@@ -415,6 +416,31 @@ async function handle(request, env) {
   if (!engineConfigured(env)) {
     return json({ error: 'The notification engine is not configured on the server (FIREBASE_SERVICE_ACCOUNT is missing).' }, 503, noStore);
   }
+  // User Communication & Support (admin only; see src/support.js).
+  if (pathname === '/api/support/send' || pathname === '/api/support/users') {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: 'Invalid request.' }, 400, noStore);
+    }
+    try {
+      if (pathname === '/api/support/users') {
+        return json({ users: await lookupAuthUsers(env, body || {}) }, 200, noStore);
+      }
+      const adminUid = (await verifyFirebaseToken(auth, env.FIREBASE_PROJECT_ID)).uid;
+      const input = parseSendRequest(body);
+      const out = await sendSupportMessage(makeStore(env), input, { adminUid });
+      const report = out.created ? await runEngine(env) : null;
+      console.log(`[support] message thread=${out.threadId} created=${out.created} sent=${report?.sent ?? 0}`);
+      return json({ ok: true, ...out, pushed: report ? report.sent : 0, inApp: report ? report.inApp : 0 }, 200, noStore);
+    } catch (e) {
+      if (e instanceof SupportInputError) return json({ error: e.message }, 400, noStore);
+      if (e instanceof AuthError) return json({ error: e.message }, e.status, noStore);
+      throw e;
+    }
+  }
+
   if (pathname === '/api/notifications/dispatch') {
     const report = await runEngine(env);
     return json({ ok: true, report }, 200, noStore);

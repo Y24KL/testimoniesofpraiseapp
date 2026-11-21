@@ -33,6 +33,7 @@ async function serviceAccessToken(serviceAccountRaw, fetchFn = fetch, now = Date
 }
 function toValue(v) {
   if (v === null || v === void 0) return { nullValue: null };
+  if (v instanceof Date) return { timestampValue: v.toISOString() };
   if (typeof v === "boolean") return { booleanValue: v };
   if (typeof v === "number") return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
   if (typeof v === "string") return { stringValue: v };

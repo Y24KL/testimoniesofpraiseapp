@@ -6,6 +6,7 @@ import { Icon } from '../components/Icon';
 import { useToast } from '../components/feedback';
 import { usePendingCounts } from '../hooks/usePendingCounts';
 import { EmptyState, FilterTabs, GlassCard, LoadingList, PageHeader, StatusBadge } from '../components/ui';
+import { MessageUserButton } from '../components/MessageUserButton';
 import type { Route } from '../types';
 
 type Status = 'pending' | 'reviewed' | 'approved' | 'rejected';
@@ -105,6 +106,7 @@ export function ChoirRequests({ go }: { go: (r: Route) => void }) {
           </dl>
           <div className="actions">
             <a className="btn small" href={r.ministrationUrl} target="_blank" rel="noopener noreferrer"><Icon name="play" size={14} />Watch ministration</a>
+            <MessageUserButton uid={r.submittedBy} label="Message submitter" context={{ category: 'choir_request', related: { type: 'choir_request', id: r.id, label: r.groupName }, values: { groupName: r.groupName, songTitle: r.songTitle } }} />
             <button type="button" className="btn small ghost" disabled={busyId === r.id || r.status === 'reviewed'} onClick={() => void setStatus(r, 'reviewed')}><Icon name="eye" size={14} />Mark reviewed</button>
             <button type="button" className="btn small success" disabled={busyId === r.id || r.status === 'approved'} onClick={() => void setStatus(r, 'approved')}><Icon name="check" size={14} />Approve</button>
             <button type="button" className="btn small ghost" disabled={busyId === r.id || r.status === 'rejected'} onClick={() => void setStatus(r, 'rejected')}><Icon name="x" size={14} />Reject</button>

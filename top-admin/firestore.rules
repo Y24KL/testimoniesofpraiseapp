@@ -617,6 +617,66 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // =====================================================================
+    // USER COMMUNICATION & SUPPORT (docs/USER_MESSAGING_PLAN.md). Conversations are created and admin
+    // messages written by the Worker (service account) after an admin check. From clients: the person
+    // reads their own conversations, replies as themselves and marks admin messages read; admins read
+    // everything, change status and mark user messages read. Nobody deletes.
+    // =====================================================================
+    function supportThread(threadId) {
+      return get(/databases/$(database)/documents/supportThreads/$(threadId)).data;
+    }
+    match /supportThreads/{threadId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create, delete: if false;
+      allow update: if (signedIn() && resource.data.uid == request.auth.uid && (validUserReplyThread() || validUserReadThread()))
+        || (isAdmin() && validAdminThreadUpdate());
+
+      match /messages/{messageId} {
+        allow read: if isAdmin() || (signedIn() && supportThread(threadId).uid == request.auth.uid);
+        // A reply: written as the signed-in owner, in the same batch as the thread's reply update.
+        allow create: if signedIn()
+          && supportThread(threadId).uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['senderType', 'senderUid', 'body', 'createdAt', 'readAt'])
+          && request.resource.data.senderType == 'user'
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.body is string && request.resource.data.body.size() > 0 && request.resource.data.body.size() <= 2000
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.readAt == null
+          && getAfter(/databases/$(database)/documents/supportThreads/$(threadId)).data.lastMessageAt == request.time;
+        // Read receipts: the owner marks admin messages read; admins mark user messages read.
+        allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt'])
+          && resource.data.readAt == null
+          && request.resource.data.readAt == request.time
+          && ((signedIn() && resource.data.senderType == 'admin' && supportThread(threadId).uid == request.auth.uid)
+            || (isAdmin() && resource.data.senderType == 'user'));
+        allow delete: if false;
+      }
+    }
+    function validUserReplyThread() {
+      let d = request.resource.data;
+      return d.diff(resource.data).affectedKeys().hasOnly(['lastMessageAt', 'lastMessagePreview', 'lastSender', 'updatedAt', 'status', 'unreadForAdmin', 'messageCount'])
+        && d.lastSender == 'user'
+        && d.status == 'awaiting_admin'
+        && d.lastMessageAt == request.time
+        && d.updatedAt == request.time
+        && d.lastMessagePreview is string && d.lastMessagePreview.size() <= 140
+        && d.unreadForAdmin == resource.data.unreadForAdmin + 1
+        && d.messageCount == resource.data.messageCount + 1;
+    }
+    function validUserReadThread() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['unreadForUser'])
+        && request.resource.data.unreadForUser == 0;
+    }
+    function validAdminThreadUpdate() {
+      let d = request.resource.data;
+      return d.diff(resource.data).affectedKeys().hasOnly(['status', 'unreadForAdmin', 'updatedAt', 'resolvedAt', 'resolvedBy'])
+        && d.status in ['awaiting_user', 'awaiting_admin', 'resolved']
+        && d.unreadForAdmin is int && d.unreadForAdmin >= 0 && d.unreadForAdmin <= resource.data.unreadForAdmin
+        && (!('updatedAt' in d.diff(resource.data).affectedKeys()) || d.updatedAt == request.time)
+        && (d.status != 'resolved' || resource.data.status == 'resolved' || (d.resolvedBy == request.auth.uid && d.resolvedAt == request.time));
+    }
+
     // AI request logs (no content): written by the Worker, read by admins.
     match /ai_requests/{id} {
       allow read: if isAdmin();

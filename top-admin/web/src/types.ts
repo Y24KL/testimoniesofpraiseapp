@@ -116,6 +116,7 @@ export interface AdotopocSettings {
 export type Route =
   | { name: 'dashboard' }
   | { name: 'notifications' }
+  | { name: 'messages'; threadId?: string; uid?: string }
   | { name: 'editorial' }
   | { name: 'reports' }
   | { name: 'testimonies' }

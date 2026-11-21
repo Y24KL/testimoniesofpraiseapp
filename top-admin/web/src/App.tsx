@@ -31,6 +31,7 @@ import { ChoirRequests } from './pages/ChoirRequests';
 import { LyricalAnalysis } from './pages/LyricalAnalysis';
 import { UserFeedback } from './pages/UserFeedback';
 import { NotificationCentre } from './pages/NotificationCentre';
+import { UserCommunication } from './pages/UserCommunication';
 import { Editorial } from './pages/Editorial';
 import { Reports } from './pages/Reports';
 
@@ -117,6 +118,7 @@ export default function App() {
       {route.name === 'userFeedback' && <UserFeedback />}
       {route.name === 'announcements' && <Announcements />}
       {route.name === 'notifications' && <NotificationCentre />}
+      {route.name === 'messages' && <UserCommunication key={route.threadId ?? route.uid ?? 'all'} threadId={route.threadId} uid={route.uid} go={setRoute} />}
       {route.name === 'editorial' && <Editorial />}
       {route.name === 'reports' && <Reports />}
       {route.name === 'sponsorships' && <Sponsorships />}

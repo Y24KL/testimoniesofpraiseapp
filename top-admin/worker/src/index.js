@@ -22,7 +22,7 @@ import { homeSections } from './recommend.js';
 // Durable Object that counts Praxiom chat requests in progress across the whole account (see praxiomGate.js).
 export { PraxiomConcurrencyGate } from './praxiomGate.js';
 
-export const WORKER_VERSION = '2.10.0';
+export const WORKER_VERSION = '2.10.1';
 
 const json = (body, status, headers) =>
   new Response(JSON.stringify(body), {

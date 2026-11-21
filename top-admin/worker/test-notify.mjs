@@ -153,9 +153,19 @@ await test('per-person settings override the legacy device preferences', async (
 });
 
 // ---------------- timing rules ----------------
-await test('during quiet hours the push is held, then sent when quiet hours end', async () => {
+await test('quiet hours are off by default: a push at night is sent at once', async () => {
   const night = Date.UTC(2026, 10, 21, 22, 0); // 23:00 Lagos
   const store = memoryStore({ 'pushTokens/a1': device('a', 'a1') });
+  const sender = fakeSender();
+  await publish(store, testimony(), night);
+  const rep = await run(store, sender, night);
+  assert.equal(rep.sent, 1);
+  assert.equal(rep.deferred, 0);
+});
+
+await test('for someone who turned quiet hours on, the push is held, then sent when they end', async () => {
+  const night = Date.UTC(2026, 10, 21, 22, 0); // 23:00 Lagos
+  const store = memoryStore({ 'pushTokens/a1': device('a', 'a1'), 'notificationSettings/a': { quietHours: { enabled: true, start: '22:00', end: '07:00' } } });
   const sender = fakeSender();
   await publish(store, testimony(), night);
   const rep = await run(store, sender, night);

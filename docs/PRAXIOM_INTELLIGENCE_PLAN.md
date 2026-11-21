@@ -108,7 +108,7 @@ Cold start / opt-out / Praxiom down: interests only, then freshness + popularity
 | Rule | Default | Configurable by |
 |---|---|---|
 | Daily ceiling per person | 3 (options 1/3/5); admin ceiling ≤ 5 | User (`dailyMax`), admin (`dailyCeiling`) |
-| Quiet hours | 22:00–07:00 phone time | User; admin sets default |
+| Quiet hours | **Off** by default (decision 2026-11-21); a person may turn them on (22:00–07:00 suggested) | User |
 | Cooldown between non-urgent pushes | 60 min (content sent on publish skips the old 2-hour gap) | Admin |
 | Dedupe | One per `(campaign, uid)`; one per `dedupeKey` per 35 days; never content already seen | Fixed |
 | Targeting for content | Category on **and** (personalization off **or** relevance ≥ threshold) | Admin threshold |

@@ -195,7 +195,7 @@ export function NotificationCentre() {
       <PageHeader
         eyebrow="Communication"
         title="Notification Centre"
-        sub="Published content is sent to phones straight away, within each person’s settings, quiet hours and daily limit. Live broadcasts always send at once."
+        sub="Published content is sent to phones straight away, within each person’s categories and daily limit, at any time of day. Live broadcasts always send at once."
       />
 
       {err ? <Message kind="err">{err}</Message> : null}
@@ -287,7 +287,7 @@ export function NotificationCentre() {
               </div>
             )}
             <p className="small muted" style={{ marginTop: 12 }}>
-              Each person controls their own categories, quiet hours (default 22:00–07:00) and daily limit (default 3) in the app.
+              Each person controls their own categories and daily limit (default 3) in the app. Quiet hours are off unless someone turns them on for themselves.
             </p>
           </GlassCard>
 

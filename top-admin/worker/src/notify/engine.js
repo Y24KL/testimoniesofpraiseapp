@@ -22,7 +22,8 @@ var DEFAULT_SETTINGS = {
   frequency: "balanced",
   categories: { ...DEFAULT_CATEGORIES },
   timezone: DEFAULT_TIMEZONE,
-  quietHours: { enabled: true, start: "22:00", end: "07:00" },
+  // Off unless the person turns quiet hours on for themselves (decision 2026-11-21).
+  quietHours: { enabled: false, start: "22:00", end: "07:00" },
   minIntervalMinutes: 120,
   signals: { counts: {}, opened: {}, seen: {} },
   lastActiveAt: null

@@ -16,11 +16,12 @@ import { AIEndpointError, createEmbeddings, enforceAiRateLimit, semanticSearch, 
 import { runAssistant } from './assistant.js';
 import { searchClips } from './clips.js';
 import { engineConfigured, NotifyInputError, parseEvent, publishEvent, runEngine } from './notify/index.js';
+import { MAX_ITEMS_PER_REQUEST, suggestTags } from './tags.js';
 
 // Durable Object that counts Praxiom chat requests in progress across the whole account (see praxiomGate.js).
 export { PraxiomConcurrencyGate } from './praxiomGate.js';
 
-export const WORKER_VERSION = '2.6.0';
+export const WORKER_VERSION = '2.7.0';
 
 const json = (body, status, headers) =>
   new Response(JSON.stringify(body), {
@@ -230,6 +231,14 @@ async function handle(request, env) {
         }
         const embedded = await createEmbeddings(env, [body.text]);
         result = { embedding: embedded.embeddings[0], dimensions: embedded.dimensions, model: embedded.model };
+      } else if (pathname === '/api/ai/suggest-tags') {
+        // Admin only: interest-tag suggestions for content (Praxiom, with a keyword fallback).
+        if (!(await verifyAdmin(authorization, env))) return json({ error: 'Admins only.' }, 403, { ...cors, 'Cache-Control': 'no-store' });
+        if (!Array.isArray(body.items) || body.items.length === 0 || body.items.length > MAX_ITEMS_PER_REQUEST) {
+          return json({ error: `Send between 1 and ${MAX_ITEMS_PER_REQUEST} items.` }, 400, { ...cors, 'Cache-Control': 'no-store' });
+        }
+        await enforceAiRateLimit(env, caller.uid, 'suggest-tags', 60);
+        result = await suggestTags(env, body.items);
       } else if (pathname === '/api/ai/index-content') {
         if (!(await verifyAdmin(authorization, env))) return json({ error: 'Admins only.' }, 403, { ...cors, 'Cache-Control': 'no-store' });
         await enforceAiRateLimit(env, caller.uid, 'index-content', 120);

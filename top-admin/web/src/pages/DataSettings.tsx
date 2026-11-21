@@ -5,6 +5,7 @@ import { Icon } from '../components/Icon';
 import { useConfirm } from '../components/feedback';
 import { usePendingCounts } from '../hooks/usePendingCounts';
 import { GlassCard, PageHeader, SectionHeader } from '../components/ui';
+import { TagBackfill } from '../components/TagBackfill';
 
 const CONFIRM_PHRASE = 'DELETE EVERYTHING';
 
@@ -68,7 +69,9 @@ export function DataSettings() {
 
   return (
     <>
-      <PageHeader eyebrow="System" title="Data Management" sub="Back up everything the portal collects, or wipe it to start fresh before launch." />
+      <PageHeader eyebrow="System" title="Data Management" sub="Tag content for recommendations, back up everything the portal collects, or wipe it to start fresh before launch." />
+
+      <TagBackfill />
 
       <div className="split">
         <GlassCard>

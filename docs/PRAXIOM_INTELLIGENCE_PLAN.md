@@ -161,6 +161,19 @@ automatic content pushes; admin sends). `killSwitch` stops all sends at once.
 - Known engine behaviour to revisit in Phase 3: a person gets at most one notification per run; others
   wait for the per-person gap (2 hours) or the next day if the daily limit is reached.
 
+## 7b. Phase 2b status (2026-11-21): content tags
+
+- One list of 12 tags (the original 10 plus `salvation`, `miracles`) in four places kept identical by
+  `tests/contentTags.test.mjs`: `worker/src/tags.js`, `web/src/tags.ts`, the app's `INTEREST_TAGS`, and the
+  rules' `validContentTags()`.
+- `tags: string[]` (≤ 5, allowlisted) on testimonies, written testimonies, articles, lyrical analyses and
+  LoveWorld Singers videos; enforced in rules for create and update (`tests/contentTags.rules.test.mjs`).
+- `POST /api/ai/suggest-tags` (admin only, 60/hour): one Praxiom call per batch of ≤ 8 items with public
+  content text only; the answer is schema-checked against the list; keyword matcher as fallback per item.
+- Admin: a tag picker with "Suggest tags" in all five editors; "Interest tags for existing content" on Data
+  Management lists untagged items, suggests in batches of 8 and saves only rows the admin confirms.
+- Worker 2.7.0 deployed; rules deployed.
+
 ## 8. Blockers and decisions
 
 | # | Decision | Recommendation |

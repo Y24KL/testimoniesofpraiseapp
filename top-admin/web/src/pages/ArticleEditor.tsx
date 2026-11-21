@@ -14,6 +14,8 @@ import { isHttpUrl } from '../lib';
 import type { Article, Route } from '../types';
 import { Check, Field, Message } from '../components/Field';
 import { Icon } from '../components/Icon';
+import { TagPicker } from '../components/TagPicker';
+import { sanitizeTags, type ContentTag } from '../tags';
 import { FilterTabs, GlassCard, LoadingList, PageHeader, SectionHeader, StatusBadge, UploadProgress } from '../components/ui';
 
 interface Props {
@@ -25,6 +27,7 @@ export function ArticleEditor({ id, go }: Props) {
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [category, setCategory] = useState('');
+  const [tags, setTags] = useState<ContentTag[]>([]);
   const [coverImageUrl, setCoverImageUrl] = useState('');
   const [body, setBody] = useState('');
   const [isPublished, setIsPublished] = useState(true);
@@ -51,6 +54,7 @@ export function ArticleEditor({ id, go }: Props) {
         setTitle(data.title || '');
         setAuthor(data.author || '');
         setCategory(data.category || '');
+        setTags(sanitizeTags((data as { tags?: unknown }).tags));
         setCoverImageUrl(data.coverImageUrl || '');
         setBody(data.body || '');
         setIsPublished(data.isPublished !== false);
@@ -90,6 +94,7 @@ export function ArticleEditor({ id, go }: Props) {
         title: title.trim(),
         author: author.trim() || 'TOP Editorial',
         category: category.trim() || 'General',
+        tags,
         coverImageUrl: coverImageUrl.trim(),
         body: body.trim(),
         isPublished,
@@ -228,6 +233,12 @@ export function ArticleEditor({ id, go }: Props) {
             <Field label="Category">
               <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Devotional, Announcement" />
             </Field>
+            <TagPicker
+              value={tags}
+              onChange={setTags}
+              disabled={busy}
+              source={() => ({ contentType: 'article', title, category, excerpt: body.slice(0, 2500) })}
+            />
           </GlassCard>
         </aside>
       </div>

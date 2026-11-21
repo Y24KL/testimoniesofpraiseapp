@@ -18,6 +18,8 @@ import { StreamPreview } from '../components/StreamPreview';
 import { useConfirm } from '../components/feedback';
 import { GlassCard, LoadingList, PageHeader, SectionHeader, UploadProgress } from '../components/ui';
 import { indexTestimony } from '../aiSearchIndex';
+import { TagPicker } from '../components/TagPicker';
+import { sanitizeTags, type ContentTag } from '../tags';
 
 interface Props {
   id?: string;
@@ -37,6 +39,7 @@ export function TestimonyEditor({ id, prefill, go }: Props) {
   const [authorName, setAuthorName] = useState(prefill?.authorName ?? '');
   const [category, setCategory] = useState(prefill?.category ?? '');
   const [keywords, setKeywords] = useState('');
+  const [tags, setTags] = useState<ContentTag[]>([]);
   const [durationText, setDurationText] = useState('');
   const [thumbnail, setThumbnail] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
@@ -63,6 +66,7 @@ export function TestimonyEditor({ id, prefill, go }: Props) {
         setExisting(t);
         setTitle(t.title); setDescription(t.description); setAuthorName(t.authorName); setCategory(t.category);
         setKeywords(t.keywords.join(', ')); setDurationText(fmtDuration(t.duration)); setThumbnail(t.thumbnail);
+        setTags(sanitizeTags(s.data()?.tags));
         setVideoUrl(t.videoUrl); setPublished(t.isPublished); setFeatured(t.isFeatured); setDownloadable(t.isDownloadable); setNotify(t.notifyOnPublish);
       }
       setLoading(false);
@@ -117,6 +121,7 @@ export function TestimonyEditor({ id, prefill, go }: Props) {
           authorName: authorName.trim(),
           category: category.trim(),
           keywords: keywords.split(',').map((k) => k.trim().toLowerCase()).filter(Boolean),
+          tags,
           duration: parseDuration(durationText),
           thumbnail: thumbnail.trim(),
           videoUrl: videoUrl.trim(),
@@ -202,6 +207,12 @@ export function TestimonyEditor({ id, prefill, go }: Props) {
             </div>
             <Field label="Description"><textarea value={description} onChange={(e) => mark(setDescription)(e.target.value)} style={{ minHeight: 120 }} /></Field>
             <Field label="Search keywords" hint="Comma-separated. Helps people find it in the app’s search."><input type="text" value={keywords} onChange={(e) => mark(setKeywords)(e.target.value)} placeholder="healing, faith, family" /></Field>
+            <TagPicker
+              value={tags}
+              onChange={mark(setTags)}
+              disabled={saving}
+              source={() => ({ contentType: 'testimony', title, description, category, keywords: keywords.split(',').map((k) => k.trim()).filter(Boolean) })}
+            />
           </GlassCard>
 
           <GlassCard>

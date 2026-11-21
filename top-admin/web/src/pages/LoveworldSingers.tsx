@@ -20,6 +20,8 @@ import { uploadToCloudinary, uploadVideo, uploadsEnabled } from '../uploads';
 import { fmtDuration, isHls, isHttpUrl, parseDuration } from '../lib';
 import { Check, Field, Message } from '../components/Field';
 import { Icon } from '../components/Icon';
+import { TagPicker } from '../components/TagPicker';
+import { sanitizeTags, type ContentTag } from '../tags';
 import { StreamPreview } from '../components/StreamPreview';
 import { useConfirm } from '../components/feedback';
 import { EmptyState, GlassCard, LoadingList, PageHeader, SearchInput, SectionHeader, StatusBadge, UploadProgress } from '../components/ui';
@@ -29,6 +31,7 @@ interface SingersVideo {
   id: string;
   title: string;
   description: string;
+  tags?: string[];
   videoUrl: string;
   thumbnailUrl: string;
   duration?: number;
@@ -55,6 +58,7 @@ export function LoveworldSingers() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [tags, setTags] = useState<ContentTag[]>([]);
   const [videoUrl, setVideoUrl] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [durationText, setDurationText] = useState('');
@@ -85,6 +89,7 @@ export function LoveworldSingers() {
     setEditingId(null);
     setTitle('');
     setDescription('');
+    setTags([]);
     setVideoUrl('');
     setThumbnailUrl('');
     setDurationText('');
@@ -98,6 +103,7 @@ export function LoveworldSingers() {
     setEditingId(v.id);
     setTitle(v.title);
     setDescription(v.description ?? '');
+    setTags(sanitizeTags(v.tags));
     setVideoUrl(v.videoUrl);
     setThumbnailUrl(v.thumbnailUrl ?? '');
     setDurationText(fmtDuration(v.duration ?? 0));
@@ -153,6 +159,7 @@ export function LoveworldSingers() {
       const data = {
         title: title.trim(),
         description: description.trim(),
+        tags,
         videoUrl: videoUrl.trim(),
         thumbnailUrl: thumbnailUrl.trim(),
         duration: parseDuration(durationText),
@@ -265,6 +272,7 @@ export function LoveworldSingers() {
           <div>
             <Field label="Title *"><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Song title" /></Field>
             <Field label="Description"><textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
+            <TagPicker value={tags} onChange={setTags} disabled={busy} source={() => ({ contentType: 'loveworld', title, description })} />
             <Field label="Video link *" hint="MP4 is needed for downloads. Paste a link or upload a file.">
               <div className="input-row">
                 <input type="url" placeholder="https://" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} />

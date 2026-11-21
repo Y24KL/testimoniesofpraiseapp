@@ -8,6 +8,8 @@ import type { Route } from '../types';
 import { Check, Field, Message } from '../components/Field';
 import { Icon } from '../components/Icon';
 import { useConfirm } from '../components/feedback';
+import { TagPicker } from '../components/TagPicker';
+import { sanitizeTags, type ContentTag } from '../tags';
 import { GlassCard, LoadingList, PageHeader, SectionHeader, UploadProgress } from '../components/ui';
 
 // Same limits as the Firestore rules (validWrittenTestimony).
@@ -32,6 +34,7 @@ export function WrittenTestimonyEditor({ id, prefill, go }: { id?: string; prefi
   const [authorName, setAuthorName] = useState(prefill?.authorName ?? '');
   const [churchZone, setChurchZone] = useState(prefill?.churchZone ?? '');
   const [category, setCategory] = useState('');
+  const [tags, setTags] = useState<ContentTag[]>([]);
   const [photo, setPhoto] = useState('');
   const [isPublished, setPublished] = useState(false);
   const [notify, setNotify] = useState(true);
@@ -52,7 +55,7 @@ export function WrittenTestimonyEditor({ id, prefill, go }: { id?: string; prefi
         if (!s.exists()) return setErr('This written testimony no longer exists.');
         const x = s.data();
         setTitle(x.title ?? ''); setBody(x.body ?? ''); setAuthorName(x.authorName ?? ''); setChurchZone(x.churchZone ?? '');
-        setCategory(x.category ?? ''); setPhoto(x.authorPhotoUrl ?? ''); setPublished(x.isPublished === true); setWasPublished(x.isPublished === true);
+        setCategory(x.category ?? ''); setTags(sanitizeTags(x.tags)); setPhoto(x.authorPhotoUrl ?? ''); setPublished(x.isPublished === true); setWasPublished(x.isPublished === true);
       })
       .catch((e: Error) => setErr(e.message))
       .finally(() => setLoading(false));
@@ -88,6 +91,7 @@ export function WrittenTestimonyEditor({ id, prefill, go }: { id?: string; prefi
         authorName: authorName.trim().slice(0, 120),
         churchZone: churchZone.trim().slice(0, 160),
         category: category.trim().slice(0, 60),
+        tags,
         authorPhotoUrl: photo.trim(),
         isPublished,
         updatedAt: serverTimestamp(),
@@ -169,6 +173,12 @@ export function WrittenTestimonyEditor({ id, prefill, go }: { id?: string; prefi
             <input type="text" list="written-cats" value={category} maxLength={60} onChange={(e) => mark(setCategory)(e.target.value)} />
             <datalist id="written-cats">{CATEGORIES.map((c) => <option key={c} value={c} />)}</datalist>
           </Field>
+          <TagPicker
+            value={tags}
+            onChange={mark(setTags)}
+            disabled={saving}
+            source={() => ({ contentType: 'written', title, category, excerpt: body.slice(0, 2500) })}
+          />
         </GlassCard>
 
         <aside className="editor-side">

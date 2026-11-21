@@ -20,7 +20,8 @@ export interface ActivityEvent {
 }
 
 /** Interests a person can choose. Tags are fixed, so no free text is ever stored. */
-export const INTEREST_TAGS = ['healing', 'worship', 'family', 'finances', 'faith', 'youth', 'marriage', 'deliverance', 'hope', 'missions'] as const;
+// Same list, same order, as top-admin/worker/src/tags.js CONTENT_TAGS (checked by tests/contentTags.test.mjs).
+export const INTEREST_TAGS = ['healing', 'salvation', 'deliverance', 'miracles', 'finances', 'family', 'marriage', 'youth', 'faith', 'hope', 'worship', 'missions'] as const;
 export type InterestTag = (typeof INTEREST_TAGS)[number];
 export const MAX_INTERESTS = 20;
 

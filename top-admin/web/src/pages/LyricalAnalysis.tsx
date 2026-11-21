@@ -17,6 +17,8 @@ import { uploadToCloudinary, uploadVideo, uploadsEnabled } from '../uploads';
 import { fmtDuration, isHls, isHttpUrl, parseDuration } from '../lib';
 import { Field, Message } from '../components/Field';
 import { Icon } from '../components/Icon';
+import { TagPicker } from '../components/TagPicker';
+import { sanitizeTags, type ContentTag } from '../tags';
 import { StreamPreview } from '../components/StreamPreview';
 import { useConfirm } from '../components/feedback';
 import { EmptyState, FilterTabs, GlassCard, LoadingList, PageHeader, SearchInput, SectionHeader, StatusBadge, UploadProgress } from '../components/ui';
@@ -30,6 +32,7 @@ interface Analysis {
   songTitle: string;
   artistName?: string;
   description: string;
+  tags?: string[];
   videoUrl: string;
   thumbnailUrl?: string;
   duration?: number;
@@ -55,6 +58,7 @@ export function LyricalAnalysis() {
   const [songTitle, setSongTitle] = useState('');
   const [artistName, setArtistName] = useState('');
   const [description, setDescription] = useState('');
+  const [tags, setTags] = useState<ContentTag[]>([]);
   const [videoUrl, setVideoUrl] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [durationText, setDurationText] = useState('');
@@ -85,6 +89,7 @@ export function LyricalAnalysis() {
     setSongTitle('');
     setArtistName('');
     setDescription('');
+    setTags([]);
     setVideoUrl('');
     setThumbnailUrl('');
     setDurationText('');
@@ -98,6 +103,7 @@ export function LyricalAnalysis() {
     setSongTitle(a.songTitle ?? '');
     setArtistName(a.artistName ?? '');
     setDescription(a.description ?? '');
+    setTags(sanitizeTags(a.tags));
     setVideoUrl(a.videoUrl);
     setThumbnailUrl(a.thumbnailUrl ?? '');
     setDurationText(fmtDuration(a.duration ?? 0));
@@ -152,6 +158,7 @@ export function LyricalAnalysis() {
         songTitle: songTitle.trim(),
         artistName: artistName.trim(),
         description: description.trim(),
+        tags,
         videoUrl: videoUrl.trim(),
         thumbnailUrl: thumbnailUrl.trim(),
         duration: parseDuration(durationText),
@@ -242,6 +249,7 @@ export function LyricalAnalysis() {
               <Field label="Artist / minister"><input value={artistName} onChange={(e) => setArtistName(e.target.value)} placeholder="LoveWorld Singers member or minister" /></Field>
             </div>
             <Field label="Description"><textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
+            <TagPicker value={tags} onChange={setTags} disabled={busy} source={() => ({ contentType: 'lyrical', title, description: `${songTitle} ${artistName} ${description}`.trim() })} />
             <Field label="Video link" hint={editingId ? 'To replace the video, upload a new file or paste a new link. The previous file stays in storage.' : 'Upload a video or paste a link.'}>
               <div className="input-row">
                 <input type="url" placeholder="https://" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} />

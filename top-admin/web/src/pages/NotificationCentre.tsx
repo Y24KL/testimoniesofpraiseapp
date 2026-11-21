@@ -287,7 +287,7 @@ export function NotificationCentre() {
               </div>
             )}
             <p className="small muted" style={{ marginTop: 12 }}>
-              Each person controls their own categories and daily limit (default 3) in the app. Quiet hours are off unless someone turns them on for themselves.
+              Each person controls their own categories and daily limit (default 5) in the app. Quiet hours are off unless someone turns them on for themselves.
             </p>
           </GlassCard>
 

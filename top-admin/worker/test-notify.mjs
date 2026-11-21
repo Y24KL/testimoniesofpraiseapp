@@ -188,6 +188,19 @@ await test('the daily limit holds further pushes until the next day', async () =
   assert.equal(rep.deferred, 1);
 });
 
+await test('by default a person gets up to 5 a day; the 6th waits for tomorrow', async () => {
+  const store = memoryStore({ 'pushTokens/a1': device('a', 'a1') });
+  const sender = fakeSender();
+  let last;
+  for (let i = 1; i <= 6; i += 1) {
+    const at = NOW + i * 15 * 60000;
+    await publish(store, testimony(`t${i}`), at);
+    last = await run(store, sender, at);
+  }
+  assert.equal(sender.sent.length, 5);
+  assert.equal(last.deferred, 1);
+});
+
 await test('content sent on publish is not held back by the 2-hour gap', async () => {
   const store = memoryStore({ 'pushTokens/a1': device('a', 'a1') });
   const sender = fakeSender();
@@ -243,7 +256,7 @@ await test('with the engine switched off nothing is queued or sent', async () =>
 // ---------------- pure rules ----------------
 await test('settings normalise safely: bad values fall back to defaults', () => {
   const s = normalizeSettings({ dailyMax: 99, timezone: 'Mars/Base', quietHours: { start: '25:00' } }, null);
-  assert.equal(s.dailyMax, 3);
+  assert.equal(s.dailyMax, 5);
   assert.equal(s.timezone, 'Africa/Lagos');
   assert.equal(s.quietHours.start, '22:00');
   assert.equal(s.minIntervalMinutes, 120);

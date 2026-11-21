@@ -18,8 +18,9 @@ var HARD_MIN_INTERVAL_MIN = 120;
 var DEFAULT_TIMEZONE = "Africa/Lagos";
 var DEFAULT_CATEGORIES = Object.fromEntries(CATEGORIES.map((c) => [c, true]));
 var DEFAULT_SETTINGS = {
-  dailyMax: 3,
-  frequency: "balanced",
+  // Up to 5 a day unless the person picks fewer (decision 2026-11-21).
+  dailyMax: 5,
+  frequency: "frequent",
   categories: { ...DEFAULT_CATEGORIES },
   timezone: DEFAULT_TIMEZONE,
   // Off unless the person turns quiet hours on for themselves (decision 2026-11-21).

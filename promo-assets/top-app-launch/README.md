@@ -47,5 +47,5 @@ Rendering can be split into parallel chunks (`... build/part_19.mp4 19 38` etc.)
 `assets/brand/qr-lwappstore.png` encodes `https://web.lwappstore.com/share/lW-APP-Y26-PJ8225` (the `STORE_URL` in
 `web/src/pages/DownloadLandingPage.tsx`). To point it elsewhere:
 ```bash
-python3 -c "import qrcode; q=qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=16, border=2); q.add_data('NEW_URL'); q.make(); q.make_image(fill_color=(18,0,28), back_color=(255,255,255)).save('assets/brand/qr-lwappstore.png')"
+python3 -c "import qrcode; q=qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=16, border=1); q.add_data('NEW_URL'); q.make(); q.make_image(fill_color=(18,0,28), back_color=(255,255,255)).save('assets/brand/qr-lwappstore.png')"
 ```

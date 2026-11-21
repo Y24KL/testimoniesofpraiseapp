@@ -109,7 +109,7 @@ Cold start / opt-out / Praxiom down: interests only, then freshness + popularity
 |---|---|---|
 | Daily ceiling per person | **5** by default (decision 2026-11-21; options 1/3/5) | User (`dailyMax`), admin (`dailyCeiling`) |
 | Quiet hours | **Off** by default (decision 2026-11-21); a person may turn them on (22:00–07:00 suggested) | User |
-| Cooldown between non-urgent pushes | 60 min (content sent on publish skips the old 2-hour gap) | Admin |
+| Cooldown between non-urgent pushes | **None** for content sent on publish (decision 2026-11-21): one per person per run, extras on the next run (~2 min); time-slot campaigns keep 2 h | Admin |
 | Dedupe | One per `(campaign, uid)`; one per `dedupeKey` per 35 days; never content already seen | Fixed |
 | Targeting for content | Category on **and** (personalization off **or** relevance ≥ threshold) | Admin threshold |
 | Live broadcasts | Immediate, outside the daily cap, max 2/day, still respect quiet hours | Admin |
@@ -158,8 +158,8 @@ automatic content pushes; admin sends). `killSwitch` stops all sends at once.
   `notificationQueue`, `notificationStats`, may switch `settings/notificationEngine` and cancel a campaign.
 - Admin Notification Centre now shows the live engine (switch, today's counts, campaigns with cancel,
   time slots). The approval queue returns with review mode in Phase 4.
-- Known engine behaviour to revisit in Phase 3: a person gets at most one notification per run; others
-  wait for the per-person gap (2 hours) or the next day if the daily limit is reached.
+- Engine behaviour (updated 2026-11-21): a person gets at most one notification per run; extra published
+  items follow on the next run (~2 minutes), or the next day if the daily limit (5) is reached.
 
 ## 7b. Phase 2b status (2026-11-21): content tags
 

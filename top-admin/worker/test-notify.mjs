@@ -201,6 +201,18 @@ await test('by default a person gets up to 5 a day; the 6th waits for tomorrow',
   assert.equal(last.deferred, 1);
 });
 
+await test('three items published together all arrive within minutes, one per run', async () => {
+  const store = memoryStore({ 'pushTokens/a1': device('a', 'a1') });
+  const sender = fakeSender();
+  for (const id of ['t1', 't2', 't3']) await publish(store, testimony(id));
+  await run(store, sender);
+  assert.equal(sender.sent.length, 1, 'one per person per run');
+  await run(store, sender, NOW + 2 * 60000);
+  await run(store, sender, NOW + 4 * 60000);
+  assert.equal(sender.sent.length, 3, 'the rest follow on the next runs, not 2 hours later');
+  assert.equal(new Set(sender.sent.map((m) => m.data.contentId)).size, 3);
+});
+
 await test('content sent on publish is not held back by the 2-hour gap', async () => {
   const store = memoryStore({ 'pushTokens/a1': device('a', 'a1') });
   const sender = fakeSender();

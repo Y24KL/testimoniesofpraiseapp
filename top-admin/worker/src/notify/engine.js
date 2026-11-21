@@ -657,9 +657,12 @@ async function dispatchDue(store, sender, cfg, now, o, rep, stats) {
     if (!sendable.length) continue;
     sendable.sort((a, b) => b.dec.score - a.dec.score || a.d.data.scheduledAt - b.d.data.scheduledAt);
     const [best, ...rest] = sendable;
+    // One notification per person per run. Content sent on publish waits only for the next run (about 2
+    // minutes), not the per-person gap (decision 2026-11-21); time-slot campaigns keep the gap.
     for (const r of rest) {
-      const after = now + minGapMs(s);
-      const at = r.d.data.delivery === "immediate" ? after : nextWindowSlot(after, s.timezone, r.d.data.category, cfg.windows)?.at ?? after;
+      const immediate = r.d.data.delivery === "immediate";
+      const after = now + (immediate ? MINUTE : minGapMs(s));
+      const at = immediate ? after : nextWindowSlot(after, s.timezone, r.d.data.category, cfg.windows)?.at ?? after;
       if (at >= r.d.data.expiresAt) skip(r.d, "expired", "expired_slot_taken");
       else defer(r.d, at, "slot_taken");
     }

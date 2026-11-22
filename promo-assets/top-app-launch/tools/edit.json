@@ -1,0 +1,16 @@
+{
+  "duration": 76.0,
+  "fps": 30,
+  "music": { "file": "../../../assets/audio/tutorial-bed.mp3", "start": 0, "gainDb": -9, "duckDb": -11, "fadeIn": 1.0, "fadeOut": 3.5 },
+  "lines": [
+    { "id": "hook",    "clip": "tutorial.intro.v2",      "align": "tutorial.intro",      "in": 11.20, "out": 22.90, "at": 1.00 },
+    { "id": "impact",  "clip": "tutorial.intro.v2",      "align": "tutorial.intro",      "in": 23.20, "out": 32.45, "at": 13.20 },
+    { "id": "welcome", "clip": "app.open.v1",            "align": null, "text": "Welcome to Testimonies of Praise.", "in": 0.0, "out": 1.91, "at": 23.30 },
+    { "id": "home",    "clip": "tutorial.home.v1",       "align": "tutorial.home",       "in": 5.30,  "out": 13.95, "at": 27.40 },
+    { "id": "testi",   "clip": "tutorial.testimonies.v2","align": "tutorial.testimonies","in": 0.0,   "out": 8.25,  "at": 36.60 },
+    { "id": "live",    "clip": "tutorial.live.v1",       "align": "tutorial.live",       "in": 6.10,  "out": 13.00, "at": 45.10 },
+    { "id": "praxiom", "clip": "assistant.response.v3",  "align": "assistant.response",  "in": 0.0,   "out": 5.10,  "at": 52.40 },
+    { "id": "moment",  "clip": "tutorial.ai.v3",         "align": "tutorial.ai",         "in": 4.80,  "out": 10.40, "at": 57.70 },
+    { "id": "payoff",  "clip": "tutorial.home.v1",       "align": "tutorial.home",       "in": 19.05, "out": 25.05, "at": 63.70 }
+  ]
+}

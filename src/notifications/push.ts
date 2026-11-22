@@ -60,6 +60,21 @@ export async function openNotificationSettings(): Promise<void> {
 }
 
 let currentToken: string | null = null;
+
+/**
+ * Android only: the phone's own Firebase (FCM) token. The server uses it to send notification messages that
+ * Android shows itself, even when battery savers stop the app from waking up for Expo data messages.
+ * Optional: if it cannot be read, the Expo token alone is used, as before.
+ */
+async function fcmDeviceToken(): Promise<{ fcmToken?: string }> {
+  if (Platform.OS !== 'android') return {};
+  try {
+    const t = await Notifications.getDevicePushTokenAsync();
+    return typeof t.data === 'string' && t.data.length >= 20 && t.data.length <= 4096 ? { fcmToken: t.data } : {};
+  } catch {
+    return {};
+  }
+}
 export const getCurrentPushToken = () => currentToken;
 
 /**
@@ -75,7 +90,7 @@ export async function registerPushToken(uid: string, prefsOverride?: Notificatio
   const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
   currentToken = token;
   const prefs = prefsOverride ?? (await loadPrefs());
-  await repo.registerPushToken({ token, uid, platform: Platform.OS, prefs: pushPrefsPayload(prefs) });
+  await repo.registerPushToken({ token, uid, platform: Platform.OS, prefs: pushPrefsPayload(prefs), ...(await fcmDeviceToken()) });
   return token;
 }
 
@@ -143,7 +158,7 @@ export async function diagnosePush(uid: string): Promise<PushCheckStep[]> {
 
   try {
     const prefs = await loadPrefs();
-    await repo.registerPushToken({ token, uid, platform: Platform.OS, prefs: pushPrefsPayload(prefs) });
+    await repo.registerPushToken({ token, uid, platform: Platform.OS, prefs: pushPrefsPayload(prefs), ...(await fcmDeviceToken()) });
     const off = Object.entries(prefs).filter(([, v]) => !v).map(([k]) => k);
     add('Saved to the server', true, off.length ? `Saved. Switched off here: ${off.join(', ')}` : 'Saved. All notification types on');
   } catch (e) {

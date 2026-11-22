@@ -239,7 +239,8 @@ service cloud.firestore {
     }
     function validPushToken(d) {
       // credFailures is written by the notification engine (wrong-project builds); clients may keep it.
-      return d.keys().hasOnly(['token', 'uid', 'platform', 'prefs', 'updatedAt', 'timeZone', 'utcOffsetMinutes', 'appVersion', 'credFailures'])
+      // fcmToken: Android's own Firebase token, used to send notification messages Android shows itself.
+      return d.keys().hasOnly(['token', 'uid', 'platform', 'prefs', 'updatedAt', 'timeZone', 'utcOffsetMinutes', 'appVersion', 'credFailures', 'fcmToken'])
         && d.token is string && d.token.size() >= 10 && d.token.size() <= 200
         && d.token.matches('^Expo(nent)?PushToken\\[.+\\]$')
         && d.uid is string && d.uid == request.auth.uid
@@ -249,7 +250,8 @@ service cloud.firestore {
         && (!('timeZone' in d) || (d.timeZone is string && d.timeZone.size() >= 1 && d.timeZone.size() <= 64))
         && (!('utcOffsetMinutes' in d) || (d.utcOffsetMinutes is int && d.utcOffsetMinutes >= -840 && d.utcOffsetMinutes <= 840))
         && (!('appVersion' in d) || (d.appVersion is string && d.appVersion.size() <= 30))
-        && (!('credFailures' in d) || (d.credFailures is int && d.credFailures >= 0 && d.credFailures <= 10));
+        && (!('credFailures' in d) || (d.credFailures is int && d.credFailures >= 0 && d.credFailures <= 10))
+        && (!('fcmToken' in d) || (d.fcmToken is string && d.fcmToken.size() >= 20 && d.fcmToken.size() <= 4096 && d.fcmToken.matches('^[A-Za-z0-9_:-]+$')));
     }
     match /pushTokens/{token} {
       allow create, update: if signedIn() && validPushToken(request.resource.data);

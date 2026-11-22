@@ -1,7 +1,7 @@
 import { obj, typeToCategory, prefToCategory, ROUTE_TYPES, str, COL, runDispatcher, eventCampaign, normalizeEngineConfig } from './engine.js';
 import { CONTENT_SOURCES, draftCopy, loadContent } from './draft.js';
 import { serviceAccessToken, createFirestoreStore } from './firestoreStore.js';
-import { createExpoSender, te, createWebPushSender } from './senders.js';
+import { createExpoSender, te, createWebPushSender, createFcmSender } from './senders.js';
 
 var engineConfigured = (env) => Boolean(env.FIREBASE_SERVICE_ACCOUNT && env.FIREBASE_PROJECT_ID);
 function makeStore(env, fetchFn = fetch) {
@@ -13,7 +13,7 @@ function makeStore(env, fetchFn = fetch) {
 }
 function makeSender(env, fetchFn = fetch) {
   const expo = createExpoSender(fetchFn, (m) => console.log(m));
-  return { expo: expo.expo, receipts: expo.receipts, webPush: createWebPushSender(env, fetchFn) };
+  return { expo: expo.expo, receipts: expo.receipts, webPush: createWebPushSender(env, fetchFn), fcm: createFcmSender(env, fetchFn) };
 }
 function runEngine(env, { fetchFn = fetch, now } = {}) {
   return runDispatcher(makeStore(env, fetchFn), makeSender(env, fetchFn), {

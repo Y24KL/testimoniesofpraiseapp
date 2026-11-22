@@ -163,10 +163,10 @@ export const firestoreRepository: ContentRepository = {
     });
   },
 
-  async registerPushToken({ token, uid, platform, prefs }) {
+  async registerPushToken({ token, uid, platform, prefs, fcmToken }) {
     await setDoc(
       doc(db, CONFIG.collections.pushTokens, tokenDocId(token)),
-      { token, uid, platform, prefs, updatedAt: serverTimestamp() },
+      { token, uid, platform, prefs, ...(fcmToken ? { fcmToken } : {}), updatedAt: serverTimestamp() },
       { merge: true },
     );
   },

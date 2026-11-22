@@ -65,6 +65,13 @@ await test('a token the engine marked with credential failures can still be refr
   await assertFails(setDoc(doc(alice, 'pushTokens/tok1'), pushToken('alice', { credFailures: 99 })));
 });
 
+await test('an Android phone may store its Firebase device token, validated', async () => {
+  await assertSucceeds(setDoc(doc(alice, 'pushTokens/tok1'), pushToken('alice', { fcmToken: 'dXk3_abc:APA91bH-' + 'x'.repeat(120) })));
+  await assertFails(setDoc(doc(alice, 'pushTokens/tok1'), pushToken('alice', { fcmToken: 'short' })));
+  await assertFails(setDoc(doc(alice, 'pushTokens/tok1'), pushToken('alice', { fcmToken: 'has spaces and <html> in it '.repeat(3) })));
+  await assertFails(setDoc(doc(alice, 'pushTokens/tok1'), pushToken('alice', { fcmToken: 12345 })));
+});
+
 await test('owner cannot register a token under another uid', async () => {
   await assertFails(setDoc(doc(alice, 'pushTokens/tok1'), pushToken('bob')));
 });

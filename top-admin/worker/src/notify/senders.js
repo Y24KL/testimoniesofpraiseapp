@@ -1,5 +1,6 @@
 import { obj, str, hash } from './engine.js';
 import { b64url } from './firestoreStore.js';
+import { getGoogleAccessToken } from '../googleAuth.js';
 
 var EXPO_SEND = "https://exp.host/--/api/v2/push/send";
 var EXPO_RECEIPTS = "https://exp.host/--/api/v2/push/getReceipts";
@@ -135,3 +136,53 @@ function createWebPushSender(env, fetchFn = fetch) {
 }
 
 export { te, createExpoSender, createWebPushSender };
+
+/**
+ * Sends one Android notification message through Firebase Cloud Messaging (HTTP v1), with the service
+ * account. Android draws it itself on the app's "default" channel (high importance, sound), so it appears
+ * even when the app is asleep. The data block lets the app open the right screen when it is tapped.
+ */
+function createFcmSender(env, fetchFn = fetch) {
+  return async function fcm(token, payload) {
+    if (!env.FIREBASE_SERVICE_ACCOUNT || !env.FIREBASE_PROJECT_ID) return { status: "error", code: "FcmNotConfigured", retryable: false, tokenGone: false };
+    let access;
+    try {
+      access = await getGoogleAccessToken(env.FIREBASE_SERVICE_ACCOUNT, "https://www.googleapis.com/auth/firebase.messaging", { fetchFn });
+    } catch {
+      return netErr("FcmAuth");
+    }
+    const data = Object.fromEntries(Object.entries(obj(payload.data)).filter(([, v]) => v !== void 0 && v !== null).map(([k, v]) => [k, String(v)]));
+    const message = {
+      token,
+      notification: { title: str(payload.title, 100), body: str(payload.body, 300) },
+      data,
+      android: {
+        priority: "HIGH",
+        ttl: "86400s",
+        notification: { channel_id: "default", sound: "default", default_vibrate_timings: true, notification_priority: "PRIORITY_HIGH", visibility: "PUBLIC" }
+      }
+    };
+    let res;
+    try {
+      res = await fetchFn(`https://fcm.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/messages:send`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${access}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+      });
+    } catch {
+      return netErr();
+    }
+    if (res.ok) return { status: "ok" };
+    const text = await res.text().catch(() => "");
+    let code = "";
+    try {
+      const err = JSON.parse(text)?.error;
+      code = (err?.details || []).find((d) => d?.errorCode)?.errorCode || err?.status || "";
+    } catch {
+    }
+    if (res.status === 404 || code === "UNREGISTERED") return { status: "error", code: "FcmUnregistered", retryable: false, tokenGone: true };
+    return { status: "error", code: `FCM_${code || res.status}`, retryable: res.status === 429 || res.status >= 500, tokenGone: false };
+  };
+}
+
+export { createFcmSender };

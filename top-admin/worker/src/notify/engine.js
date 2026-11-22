@@ -20,6 +20,9 @@ var MIN_INTERVAL_OPTIONS = [120, 180, 240];
 var HARD_MIN_INTERVAL_MIN = 120;
 var MAX_LIVE_PER_DAY = 2;
 var CRED_FAILURE_LIMIT = 3;
+/** Direct FCM sends per run (one outbound request each; Workers limit outbound requests per run). */
+var FCM_PER_RUN = 30;
+var FCM_TOKEN = /^[A-Za-z0-9_:-]{20,4096}$/;
 var COPY_MODES = ["review", "automatic", "manual"];
 var TARGETING = ["everyone", "interested_first", "interested_only"];
 /** How long people whose interests do not match wait when "interested first" is on. */
@@ -505,7 +508,8 @@ function toTokenRow(d) {
   const web = typeof w.endpoint === "string" && /^https:\/\//.test(w.endpoint) && typeof keys.p256dh === "string" && typeof keys.auth === "string" ? { endpoint: w.endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } } : null;
   const kind = web ? "web" : /^Expo(nent)?PushToken\[/.test(token) ? "expo" : null;
   if (!kind) return null;
-  return { id: d.id, uid, kind, token, web, prefs: r.prefs ? obj(r.prefs) : null, updatedAt: num(r.updatedAtMs) ?? num(r.updatedAt) ?? 0, credFailures: num(r.credFailures) ?? 0 };
+  const fcm = kind === "expo" && r.platform === "android" && typeof r.fcmToken === "string" && FCM_TOKEN.test(r.fcmToken) ? r.fcmToken : null;
+  return { id: d.id, uid, kind, token, web, fcm, prefs: r.prefs ? obj(r.prefs) : null, updatedAt: num(r.updatedAtMs) ?? num(r.updatedAt) ?? 0, credFailures: num(r.credFailures) ?? 0 };
 }
 /**
  * Does this person's chosen interests match the content's tags? true / false, or null when we cannot tell
@@ -755,6 +759,7 @@ async function dispatchDue(store, sender, cfg, now, o, rep, stats) {
   if (!won.length) return;
   const messages = [];
   const webJobs = [];
+  const fcmJobs = [];
   const results = won.map(() => []);
   const tickets = won.map(() => []);
   const deadTokens = /* @__PURE__ */ new Set();
@@ -775,10 +780,29 @@ async function dispatchDue(store, sender, cfg, now, o, rep, stats) {
       return;
     }
     for (const t of tokenMap.get(it.uid) ?? []) {
-      if (t.kind === "expo") messages.push({ msg: { to: t.token, title: it.title, body: it.body, data, sound: "default", channelId: "default", priority: "high" }, claim: i, tokenId: t.id });
+      const expoMsg = { msg: { to: t.token, title: it.title, body: it.body, data, sound: "default", channelId: "default", priority: "high" }, claim: i, tokenId: t.id };
+      // Android phones with their own FCM token get a notification message that Android shows itself, even
+      // when battery savers keep the app asleep (Expo data messages need the app to wake). Capped per run.
+      if (t.kind === "expo" && t.fcm && sender.fcm && fcmJobs.length < FCM_PER_RUN) fcmJobs.push({ claim: i, row: t, expo: expoMsg, payload: { title: it.title, body: it.body, data } });
+      else if (t.kind === "expo") messages.push(expoMsg);
       else if (t.web) webJobs.push({ claim: i, row: t, payload: { title: it.title, body: it.body, data } });
     }
   });
+  // Direct FCM first: any failure other than an uninstalled app falls back to Expo in this same run.
+  for (const j of fcmJobs) {
+    const r = await sender.fcm(j.row.fcm, j.payload).catch(() => ({ status: "error", code: "NetworkError", retryable: true, tokenGone: false }));
+    if (r.status === "ok") {
+      results[j.claim].push(r);
+      stats.add("fcm.ok");
+    } else if (r.tokenGone) {
+      results[j.claim].push(r);
+      deadTokens.add(j.row.id);
+      stats.add("fcm.unregistered");
+    } else {
+      stats.add(`fcm.${String(r.code).replace(/[^A-Za-z0-9_]/g, "_")}`);
+      messages.push(j.expo);
+    }
+  }
   if (inboxWrites.length) {
     const r = await store.commit(inboxWrites, false);
     let k = 0;

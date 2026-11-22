@@ -1,6 +1,7 @@
 import React from 'react';
-import { Bell, BookOpen, FileText, Globe, Heart, HandCoins, Megaphone, Music, Search, Settings, User, Users, Mic } from 'lucide-react';
+import { Bell, BookOpen, MessageCircle, FileText, Globe, Heart, HandCoins, Megaphone, Music, Search, Settings, User, Users, Mic } from 'lucide-react';
 import { navigate, type Route } from '../router';
+import { useUnreadMessages } from '../hooks/useUnreadMessages';
 import { TABS } from './BottomNavigation';
 
 const MORE: { route: Route; label: string; icon: React.FC<{ size?: number }> }[] = [
@@ -17,6 +18,7 @@ const MORE: { route: Route; label: string; icon: React.FC<{ size?: number }> }[]
 ];
 
 const ACCOUNT: { route: Route; label: string; icon: React.FC<{ size?: number }> }[] = [
+  { route: { name: 'messages' }, label: 'Messages', icon: MessageCircle },
   { route: { name: 'notifications' }, label: 'Notifications', icon: Bell },
   { route: { name: 'notificationSettings' }, label: 'Preferences', icon: Settings },
   { route: { name: 'profile' }, label: 'Profile', icon: User },
@@ -24,6 +26,7 @@ const ACCOUNT: { route: Route; label: string; icon: React.FC<{ size?: number }> 
 
 /** Desktop sidebar: every main section one click away. */
 export function SideNav({ current, isLive }: { current: Route['name']; isLive: boolean }) {
+  const unread = useUnreadMessages();
   const link = (route: Route, label: string, Icon: React.FC<{ size?: number }>, extra?: React.ReactNode) => (
     <button key={label} type="button" className="side-link" aria-current={current === route.name ? 'page' : undefined} onClick={() => navigate(route)}>
       <Icon size={20} />
@@ -48,7 +51,7 @@ export function SideNav({ current, isLive }: { current: Route['name']; isLive: b
       <div className="side-section">Discover</div>
       {MORE.map((m) => link(m.route, m.label, m.icon))}
       <div className="side-section">Account</div>
-      {ACCOUNT.map((m) => link(m.route, m.label, m.icon))}
+      {ACCOUNT.map((m) => link(m.route, m.label, m.icon, m.route.name === 'messages' && unread > 0 ? <span className="msg-count side" aria-label={`${unread} unread`}>{unread > 9 ? '9+' : unread}</span> : undefined))}
     </aside>
   );
 }

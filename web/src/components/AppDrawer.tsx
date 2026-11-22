@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { navigate } from '../router';
+import { useUnreadMessages } from '../hooks/useUnreadMessages';
 import { Logo } from './Logo';
 import { colors, radius } from '../theme';
 
@@ -66,6 +67,7 @@ export function AppDrawer({
   onFeedback,
 }: Props) {
   const { user, signOut } = useAuth();
+  const unreadMessages = useUnreadMessages();
 
   // Prevent background scrolling while open
   useEffect(() => {
@@ -224,6 +226,15 @@ export function AppDrawer({
       icon: <Download size={18} color={colors.accent} />,
       iconBg: 'rgba(245, 197, 66, 0.15)',
       action: onGoToDownloads,
+    },
+    {
+      id: 'messages',
+      title: 'Messages',
+      subtitle: 'From the T.O.P support team',
+      icon: <MessageSquare size={18} color={colors.accent} />,
+      iconBg: 'rgba(245, 197, 66, 0.15)',
+      ...(unreadMessages > 0 ? { badge: unreadMessages > 9 ? '9+ NEW' : `${unreadMessages} NEW`, badgeBg: 'rgba(245, 197, 66, 0.2)', badgeColor: colors.accent } : {}),
+      action: () => navigate({ name: 'messages' }),
     },
     {
       id: 'notifications',

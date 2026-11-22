@@ -27,6 +27,7 @@ export type Route =
   | { name: 'share' }
   | { name: 'sponsor' }
   | { name: 'notifications' }
+  | { name: 'messages'; threadId?: string }
   | { name: 'notificationSettings' }
   | { name: 'profile' }
   | { name: 'search' }
@@ -55,6 +56,7 @@ const STATIC: Record<string, Route> = {
   share: { name: 'share' },
   sponsor: { name: 'sponsor' },
   notifications: { name: 'notifications' },
+  messages: { name: 'messages' },
   'settings/notifications': { name: 'notificationSettings' },
   profile: { name: 'profile' },
   search: { name: 'search' },
@@ -89,6 +91,8 @@ export function parseHash(hash: string): Route {
   if (ly) return { name: 'lyricalVideo', id: ly[1] };
   const c = path.match(/^choir\/([^/?#]+)$/);
   if (c) return { name: 'featuredChoir', id: c[1] };
+  const msg = path.match(/^messages\/([A-Za-z0-9_-]{1,128})$/);
+  if (msg) return { name: 'messages', threadId: msg[1] };
   const m = path.match(/^(testimony|audio|article)\/([^/?#]+)$/);
   if (m) {
     if (m[1] !== 'testimony') return m[1] === 'audio' ? { name: 'audio', id: m[2] } : { name: 'article', id: m[2] };
@@ -124,6 +128,8 @@ export function pathFor(route: Route): string {
       return `/article/${encodeURIComponent(route.id)}`;
     case 'notificationSettings':
       return '/settings/notifications';
+    case 'messages':
+      return route.threadId ? `/messages/${encodeURIComponent(route.threadId)}` : '/messages';
     default:
       return `/${route.name}`;
   }

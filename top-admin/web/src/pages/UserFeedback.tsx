@@ -6,6 +6,7 @@ import { Icon } from '../components/Icon';
 import { useToast } from '../components/feedback';
 import { usePendingCounts } from '../hooks/usePendingCounts';
 import { EmptyState, FilterTabs, GlassCard, LoadingList, PageHeader, SearchInput, StatusBadge } from '../components/ui';
+import { MessageUserButton } from '../components/MessageUserButton';
 
 type Status = 'new' | 'reviewed' | 'resolved';
 type FeedbackType = 'general' | 'suggestion' | 'problem' | 'experience' | 'other';
@@ -163,6 +164,7 @@ export function UserFeedback() {
               <dd>{f.createdAt ? f.createdAt.toDate().toLocaleString() : 'just now'}{f.reviewedAt ? ` · status changed ${f.reviewedAt.toDate().toLocaleString()}` : ''}</dd>
             </dl>
             <div className="actions">
+              <MessageUserButton uid={f.userId} label="Reply to user" context={{ category: 'feedback', related: { type: 'feedback', id: f.id, label: f.subject ? `Feedback: ${f.subject}` : 'Feedback' }, templateId: 'general_feedback' }} />
               <button type="button" className="btn small ghost" disabled={busyId === f.id || status === 'reviewed'} onClick={() => void setStatus(f, 'reviewed')}><Icon name="eye" size={14} />Mark reviewed</button>
               <button type="button" className="btn small success" disabled={busyId === f.id || status === 'resolved'} onClick={() => void setStatus(f, 'resolved')}><Icon name="check" size={14} />Mark resolved</button>
               {status === 'new' ? null : (

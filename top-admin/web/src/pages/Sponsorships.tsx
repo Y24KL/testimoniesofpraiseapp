@@ -8,6 +8,7 @@ import { Icon } from '../components/Icon';
 import { useToast } from '../components/feedback';
 import { usePendingCounts } from '../hooks/usePendingCounts';
 import { EmptyState, FilterTabs, GlassCard, LoadingList, PageHeader, StatusBadge } from '../components/ui';
+import { MessageUserButton } from '../components/MessageUserButton';
 
 type Filter = SponsorshipStatus | 'all';
 
@@ -77,6 +78,7 @@ export function Sponsorships() {
               </a>
             ) : <span className="small muted">No receipt image attached.</span>}
             <div className="actions">
+              <MessageUserButton uid={s.uid} label="Message sponsor" context={{ category: 'sponsorship', related: { type: 'sponsorship', id: s.id, label: s.amount ? `Sponsorship ${s.amount}` : 'Sponsorship' }, values: { amount: s.amount } }} />
               {s.status !== 'approved' ? <button type="button" className="btn small success" onClick={() => void setStatus(s, 'approved')}><Icon name="check" size={14} />Approve</button> : null}
               {s.status !== 'rejected' ? <button type="button" className="btn small ghost" onClick={() => void setStatus(s, 'rejected')}><Icon name="x" size={14} />Reject</button> : null}
               {s.status !== 'pending' ? <button type="button" className="btn small ghost" onClick={() => void setStatus(s, 'pending')}><Icon name="undo" size={14} />Move back to pending</button> : null}

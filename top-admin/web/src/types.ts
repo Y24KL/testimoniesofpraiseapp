@@ -25,6 +25,7 @@ export interface Submission {
   churchZone: string;
   testimony: string;
   userEmail: string | null;
+  userId?: string;
   status: 'pending' | 'approved' | 'rejected';
   linkedTestimonyId?: string;
   linkedWrittenId?: string;

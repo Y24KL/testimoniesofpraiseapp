@@ -28,6 +28,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
       LyricalAnalysis: 'lyrical',
       LyricalAnalysisVideo: 'lyrical/:id',
       Feedback: 'feedback',
+      Messages: 'messages',
+      Conversation: 'messages/:threadId',
     },
   },
 };

@@ -1,3 +1,7 @@
 build/stills/
 build/sfx.wav
 build/mix.wav
+build/video.mp4
+build/video-nocaptions.mp4
+build/render.log
+build/cta.png

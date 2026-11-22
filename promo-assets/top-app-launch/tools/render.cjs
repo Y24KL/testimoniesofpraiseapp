@@ -25,10 +25,11 @@ const noCaps = args.includes('--no-captions');
     await browser.close(); return;
   }
   const out = path.join(ROOT, noCaps ? 'top-app-promo-landscape-nocaptions.mp4' : 'top-app-promo-landscape.mp4');
+  // 1) encode the frames (video only), 2) mux the soundtrack trimmed to the exact duration
+  const vid = path.join(ROOT, 'build', noCaps ? 'video-nocaptions.mp4' : 'video.mp4');
   const ff = spawn('ffmpeg', ['-v', 'error', '-y', '-f', 'image2pipe', '-framerate', String(edit.fps), '-c:v', 'mjpeg', '-i', '-',
-    '-i', path.join(ROOT, 'build/mix.wav'), '-map', '0:v', '-map', '1:a',
-    '-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-r', String(edit.fps),
-    '-c:a', 'aac', '-b:a', '256k', '-ar', '48000', '-movflags', '+faststart', '-shortest', out], { stdio: ['pipe', 'inherit', 'inherit'] });
+    '-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-r', String(edit.fps), vid], { stdio: ['pipe', 'inherit', 'inherit'] });
+  ff.stdin.on('error', (e) => { console.error('ffmpeg stdin error', e.message); process.exit(1); });
   const total = Math.round(edit.duration * edit.fps);
   for (let f = 0; f < total; f++) {
     await page.evaluate((t) => window.renderAt(t), f / edit.fps);
@@ -39,5 +40,8 @@ const noCaps = args.includes('--no-captions');
   ff.stdin.end();
   await new Promise((r) => ff.on('close', r));
   await browser.close();
+  require('child_process').execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', vid, '-i', path.join(ROOT, 'build/mix.wav'),
+    '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '256k', '-ar', '48000', '-t', String(edit.duration),
+    '-movflags', '+faststart', out], { stdio: 'inherit' });
   console.log('wrote', out);
 })();

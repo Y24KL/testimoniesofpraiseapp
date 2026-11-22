@@ -95,7 +95,7 @@ for i, line in enumerate(edit['lines']):
     chains.append(f"[{i}:a]atrim={line['in']}:{line['out']},asetpts=N/SR/TB,aresample=48000,"
                   f"afade=t=in:d=0.02,afade=t=out:st={d - 0.06:.3f}:d=0.06,adelay={ms}|{ms}[v{i}]")
     labels.append(f'[v{i}]')
-fc = ';'.join(chains) + f";{''.join(labels)}amix=inputs={len(labels)}:normalize=0,apad=whole_dur={DUR},atrim=0:{DUR},pan=stereo|c0=c0|c1=c0[vo]"
+fc = ';'.join(chains) + f";anullsrc=r=48000:cl=stereo,atrim=0:{DUR}[base];[base]{''.join(labels)}amix=inputs={len(labels) + 1}:normalize=0:duration=first,pan=stereo|c0=c0|c1=c0[vo]"
 vo = os.path.join(BUILD, 'voiceover.wav')
 subprocess.run(['ffmpeg', '-v', 'error', '-y', *inputs, '-filter_complex', fc, '-map', '[vo]', '-ar', '48000', vo], check=True)
 
@@ -112,7 +112,7 @@ parts.append("sine=f=82:d=3.2:r=48000,afade=t=in:d=0.25,afade=t=out:st=0.6:d=2.6
 parts.append("sine=f=1318:d=2.4:r=48000,tremolo=f=7:d=0.4,afade=t=in:d=0.05,afade=t=out:st=0.1:d=2.3,volume=0.05,adelay=23050|23050[b1]")
 parts.append("sine=f=82:d=3.2:r=48000,afade=t=in:d=0.25,afade=t=out:st=0.6:d=2.6,volume=0.3,adelay=69800|69800[b2]")
 labs = ''.join(f'[w{i}]' for i in range(len(WHOOSH))) + '[b0][b1][b2]'
-fc = ';'.join(parts) + f";{labs}amix=inputs={len(WHOOSH) + 3}:normalize=0,apad=whole_dur={DUR},atrim=0:{DUR},pan=stereo|c0=c0|c1=c0[s]"
+fc = ';'.join(parts) + f";anullsrc=r=48000:cl=mono,atrim=0:{DUR}[base];[base]{labs}amix=inputs={len(WHOOSH) + 4}:normalize=0:duration=first,pan=stereo|c0=c0|c1=c0[s]"
 subprocess.run(['ffmpeg', '-v', 'error', '-y', '-filter_complex', fc, '-map', '[s]', '-ar', '48000', sfx], check=True)
 
 # ---------- final mix ----------
@@ -124,7 +124,7 @@ fc = (f"[1:a]atrim={m['start']}:{m['start'] + DUR},asetpts=N/SR/TB,aresample=480
       f"[0:a]asplit=2[vo][sc];"
       f"[mu][sc]sidechaincompress=threshold=0.02:ratio=6:attack=80:release=600:makeup=1[duck];"
       f"[vo]equalizer=f=180:t=q:w=1:g=-1.5,equalizer=f=3500:t=q:w=1.2:g=1.5[vo2];"
-      f"[vo2][duck][2:a]amix=inputs=3:normalize=0,loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000[out]")
+      f"[vo2][duck][2:a]amix=inputs=3:normalize=0:duration=longest,atrim=0:{DUR},loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000[out]")
 subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', vo, '-i', music, '-i', sfx,
                 '-filter_complex', fc, '-map', '[out]', '-ar', '48000', mix], check=True)
 print('words', len(words), 'cues', len(cues))

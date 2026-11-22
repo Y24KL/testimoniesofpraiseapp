@@ -132,9 +132,11 @@ if (isWin) {
   run('./gradlew', gradleArgs, androidDir);
 }
 
+// With the arm64-only ABI split (plugins/withArm64Only.js) Gradle names the APK app-arm64-v8a-release.apk.
+const apkDir = join(androidDir, 'app', 'build', 'outputs', 'apk', 'release');
 const apk = aab
   ? join(androidDir, 'app', 'build', 'outputs', 'bundle', 'release', 'app-release.aab')
-  : join(androidDir, 'app', 'build', 'outputs', 'apk', 'release', 'app-release.apk');
+  : ['app-arm64-v8a-release.apk', 'app-release.apk'].map((n) => join(apkDir, n)).find((p) => existsSync(p)) ?? join(apkDir, 'app-release.apk');
 if (!existsSync(apk)) fail(`Gradle finished but ${apk} was not found.`);
 
 let sha = 'local';
@@ -149,13 +151,13 @@ const out = join(root, 'build-output', `testimonies-of-praise-${version}-${profi
 copyFileSync(apk, out);
 
 // ---- 4. verify signature ---------------------------------------------------------------
-const apksigner = join(androidHome, 'build-tools', '36.0.0', 'lib', 'apksigner.jar');
+// An APK signed with any other key than the release key cannot update the installed app (phones must uninstall).
 if (aab) {
   const r = spawnSync(join(javaHome, 'bin', 'jarsigner'), ['-verify', out], { env, encoding: 'utf8' });
   console.log(`\n  Signature: ${(r.stdout || r.stderr || '').trim().split('\n')[0] || 'could not read'}`);
-} else if (existsSync(apksigner)) {
-  const r = spawnSync(join(javaHome, 'bin', 'java'), ['-jar', apksigner, 'verify', '--print-certs', out], { env, encoding: 'utf8' });
-  const line = (r.stdout || '').split('\n').find((l) => /SHA-1/.test(l));
-  console.log(`\n  Signer: ${line ? line.trim() : 'could not read'}`);
+} else {
+  const r = spawnSync(process.execPath, [join(root, 'scripts', 'check-apk-signer.mjs'), out], { encoding: 'utf8' });
+  console.log(`\n${r.stdout}`);
+  if (r.status !== 0) fail('This APK is NOT signed with the T.O.P release key. Do not share it: phones would have to uninstall the app to install it.');
 }
 console.log(`\n✔ ${aab ? 'AAB' : 'APK'} ready: ${out}\n`);

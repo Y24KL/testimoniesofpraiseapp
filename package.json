@@ -17,6 +17,7 @@
     "web:build": "npm --prefix web run build",
     "web:preview": "npm --prefix web run preview",
     "build:android:local": "node scripts/build-android-local.mjs",
+    "apk:check": "node scripts/check-apk-signer.mjs",
     "test:rules": "npx --yes firebase-tools@latest emulators:exec --only firestore --project demo-top --config top-admin/firebase.json \"node tests/comments.rules.test.mjs && node tests/profile.rules.test.mjs && node tests/choirFeature.rules.test.mjs && node tests/lyricalAnalysis.rules.test.mjs && node tests/feedback.rules.test.mjs && node tests/notifications.rules.test.mjs && node tests/engine.rules.test.mjs && node tests/library.rules.test.mjs && node tests/community.rules.test.mjs && node tests/contentTags.rules.test.mjs && node tests/support.rules.test.mjs\"",
     "test:voiceover": "node --experimental-strip-types --no-warnings tests/voiceover.test.mjs",
     "test:profile-validation": "node --experimental-strip-types --no-warnings tests/profileValidation.test.mjs",

@@ -97,6 +97,17 @@ because Google sign-in is offered without Sign in with Apple, see the note alrea
 | Android | `.apk` (a store that wants a direct APK, e.g. Loveworld App Store may) | `npm run build:android:apk` |
 | iOS | `.ipa` | `npm run build:ios:testflight` (needs the paid Apple account) |
 
+### Android updates install over the old app only if both rules hold
+
+1. **Same signing key, every time.** Every APK must be signed with the T.O.P release key that EAS keeps
+   (SHA-1 `2C:79:DC:F4:8D:15:F5:5A:33:A5:DF:B9:A8:E1:C8:B9:22:1C:DC:F3`). Build with `npm run build:android:apk`
+   (EAS) or `npm run build:android:local` (uses the same key from `credentials.json`). Never share an APK from
+   `expo run:android` or a bare Gradle build: those use the public debug key
+   (`5E:8F:16:…:F6:25`), and phones then have to uninstall the app to install it.
+   Check any APK before sharing: `npm run apk:check -- path/to/file.apk`.
+2. **A higher `android.versionCode`** in `app.config.ts` than the build people have (and the same package,
+   `com.testimoniesofpraise.app`). Bump it for every APK you share.
+
 **For the Loveworld App Store specifically:** I could not find a public developer portal or
 submission API documentation for it to confirm their exact format requirements (APK vs AAB, any
 required metadata fields beyond the usual). **[FILL IN once you have their submission

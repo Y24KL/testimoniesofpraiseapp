@@ -11,7 +11,7 @@ import { TopBar } from '@/components/TopBar';
 import { useAuth } from '@/auth/AuthContext';
 import { isCloudinaryConfigured } from '@/constants/config';
 import { colors, radius, type as t } from '@/constants/theme';
-import { unregisterPushToken } from '@/notifications/push';
+import { unregisterThisDevice } from '@/notifications/registration';
 import { authMessage } from '@/utils/errors';
 import { initials } from '@/utils/format';
 
@@ -76,7 +76,7 @@ export function ProfileScreen() {
 
   const logout = async () => {
     setBusy(true);
-    await unregisterPushToken(); // stop this device receiving the signed-out user's notifications
+    await unregisterThisDevice(); // stop this device receiving the signed-out user's notifications
     await signOut();
   };
 
@@ -88,7 +88,7 @@ export function ProfileScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
-            await unregisterPushToken();
+            await unregisterThisDevice();
             await deleteAccount();
           } catch (e) {
             Alert.alert('Unable to delete account', authMessage(e));

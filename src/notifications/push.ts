@@ -61,48 +61,12 @@ export async function openNotificationSettings(): Promise<void> {
 
 let currentToken: string | null = null;
 
-/**
- * Android only: the phone's own Firebase (FCM) token. The server uses it to send notification messages that
- * Android shows itself, even when battery savers stop the app from waking up for Expo data messages.
- * Optional: if it cannot be read, the Expo token alone is used, as before.
- */
-async function fcmDeviceToken(): Promise<{ fcmToken?: string }> {
-  if (Platform.OS !== 'android') return {};
-  try {
-    const t = await Notifications.getDevicePushTokenAsync();
-    return typeof t.data === 'string' && t.data.length >= 20 && t.data.length <= 4096 ? { fcmToken: t.data } : {};
-  } catch {
-    return {};
-  }
-}
 export const getCurrentPushToken = () => currentToken;
+/** Set by the registration manager (registration.ts) whenever the token is read or cleared. */
+export const setCurrentPushToken = (t: string | null) => {
+  currentToken = t;
+};
 
-/**
- * Fetches the Expo push token (requires permission already granted) and associates it with the user
- * on the backend. Safe to call on every launch.
- */
-export async function registerPushToken(uid: string, prefsOverride?: NotificationPrefs): Promise<string | null> {
-  if (!Device.isDevice) return null; // push does not work on simulators
-  if ((await getPermissionStatus()) !== 'granted') return null;
-  await ensureAndroidChannel();
-  const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
-  if (!projectId) return null;
-  const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
-  currentToken = token;
-  const prefs = prefsOverride ?? (await loadPrefs());
-  await repo.registerPushToken({ token, uid, platform: Platform.OS, prefs: pushPrefsPayload(prefs), ...(await fcmDeviceToken()) });
-  return token;
-}
-
-export async function unregisterPushToken(): Promise<void> {
-  if (!currentToken) return;
-  try {
-    await repo.unregisterPushToken(currentToken);
-  } catch {
-    /* best effort */
-  }
-  currentToken = null;
-}
 
 export interface PushCheckStep {
   label: string;
@@ -121,7 +85,7 @@ const errText = (e: unknown) => {
  * own token (so the user sees the drop-down and we see Google's delivery receipt). Registration
  * normally swallows errors; this surfaces them so a "no notification" report can be diagnosed.
  */
-export async function diagnosePush(uid: string): Promise<PushCheckStep[]> {
+export async function diagnosePush(uid: string, register: () => Promise<{ state: string; errorCode: string | null }>): Promise<PushCheckStep[]> {
   const steps: PushCheckStep[] = [];
   const add = (label: string, ok: boolean, detail: string) => {
     steps.push({ label, ok, detail });
@@ -158,9 +122,10 @@ export async function diagnosePush(uid: string): Promise<PushCheckStep[]> {
 
   try {
     const prefs = await loadPrefs();
-    await repo.registerPushToken({ token, uid, platform: Platform.OS, prefs: pushPrefsPayload(prefs), ...(await fcmDeviceToken()) });
+    const reg = await register();
+    if (reg.state !== 'registered') throw Object.assign(new Error(`Registration ${reg.state}`), { code: reg.errorCode ?? reg.state });
     const off = Object.entries(prefs).filter(([, v]) => !v).map(([k]) => k);
-    add('Saved to the server', true, off.length ? `Saved. Switched off here: ${off.join(', ')}` : 'Saved. All notification types on');
+    add('Saved to the server', true, off.length ? `Saved for this account. Switched off here: ${off.join(', ')}` : 'Saved for this account. All notification types on');
   } catch (e) {
     add('Saved to the server', false, errText(e));
   }

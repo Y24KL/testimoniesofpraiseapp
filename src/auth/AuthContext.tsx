@@ -16,6 +16,7 @@ import { isKingsChatUid } from '@/auth/kingschat';
 import { isNewAccountPending, markNewAccount } from '@/onboarding/welcome';
 import { createPendingProfile, profileGateEnabled, readProfileStatus, saveCompleteProfile, type ProfileStatus } from '@/profile/profileService';
 import { validateProfile, type ProfileInput, type ValidProfile } from '@/profile/validation';
+import { unregisterThisDevice } from '@/notifications/registration';
 import {
   checkDeviceSessionTrust,
   deleteAccountOnServer,
@@ -242,6 +243,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // Stop this phone receiving the account's notifications before signing out (needs the session to delete).
+    await unregisterThisDevice().catch(() => undefined);
     setIsSessionVerified(false);
     setProfileStatus(null);
     setVerificationEmail(null);

@@ -29,7 +29,8 @@
     "test:library": "node --experimental-strip-types --no-warnings tests/library.test.mjs",
     "test:assistant-cards": "node --experimental-strip-types --no-warnings tests/assistantCards.test.mjs",
     "test:editorial": "node --experimental-strip-types --no-warnings tests/editorial.test.mjs",
-    "test:content-tags": "node --experimental-strip-types --no-warnings tests/contentTags.test.mjs"
+    "test:content-tags": "node --experimental-strip-types --no-warnings tests/contentTags.test.mjs",
+    "test:push-registration": "node --experimental-strip-types --no-warnings tests/pushRegistration.test.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

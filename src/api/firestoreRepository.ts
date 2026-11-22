@@ -163,10 +163,17 @@ export const firestoreRepository: ContentRepository = {
     });
   },
 
-  async registerPushToken({ token, uid, platform, prefs, fcmToken }) {
+  async registerPushToken({ token, uid, platform, prefs, fcmToken, appVersion, timeZone, utcOffsetMinutes }) {
     await setDoc(
       doc(db, CONFIG.collections.pushTokens, tokenDocId(token)),
-      { token, uid, platform, prefs, ...(fcmToken ? { fcmToken } : {}), updatedAt: serverTimestamp() },
+      {
+        token, uid, platform, prefs,
+        ...(fcmToken ? { fcmToken } : {}),
+        ...(appVersion ? { appVersion: appVersion.slice(0, 30) } : {}),
+        ...(timeZone ? { timeZone: timeZone.slice(0, 64) } : {}),
+        ...(Number.isInteger(utcOffsetMinutes) ? { utcOffsetMinutes } : {}),
+        updatedAt: serverTimestamp(),
+      },
       { merge: true },
     );
   },

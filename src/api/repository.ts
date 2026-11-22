@@ -53,7 +53,7 @@ export interface ContentRepository {
   /** Calls `cb` immediately and whenever the Admin Portal changes the live config. Returns unsubscribe. */
   subscribeLive(cb: (live: LiveConfig) => void, onError?: (e: unknown) => void): () => void;
   submitTestimony(input: SubmissionInput): Promise<void>;
-  registerPushToken(input: { token: string; uid: string; platform: string; prefs: Record<string, boolean>; fcmToken?: string }): Promise<void>;
+  registerPushToken(input: { token: string; uid: string; platform: string; prefs: Record<string, boolean>; fcmToken?: string; appVersion?: string; timeZone?: string; utcOffsetMinutes?: number }): Promise<void>;
   unregisterPushToken(token: string): Promise<void>;
   recordEvent(event: string, params: Record<string, string | number | boolean | undefined>, uid?: string): Promise<void>;
 

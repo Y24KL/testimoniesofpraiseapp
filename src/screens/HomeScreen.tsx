@@ -17,6 +17,7 @@ import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
 import { DailyDiscovery } from '@/components/DailyDiscovery';
 import { PersonalHome } from '@/components/PersonalHome';
+import { NotificationNudge } from '@/components/NotificationNudge';
 import { Skeleton } from '@/components/SkeletonCard';
 import { IconButton } from '@/components/TopBar';
 import { VideoCard } from '@/components/VideoCard';
@@ -169,6 +170,7 @@ export function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <EmailVerifyBanner />
+        <NotificationNudge />
 
         <Hero live={live} featured={hero} loading={latest.loading || feat.loading} onWatch={() => nav.navigate('Tabs', { screen: 'Live' })} onPlay={openTestimony} />
 

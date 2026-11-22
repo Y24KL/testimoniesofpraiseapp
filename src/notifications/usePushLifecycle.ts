@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { useAuth } from '@/auth/AuthContext';
@@ -6,7 +7,8 @@ import { track } from '@/analytics';
 import { useAppFlags } from '@/context/AppFlags';
 import { navigationRef } from '@/navigation/ref';
 import { openTarget } from './routing';
-import { ensureAndroidChannel, registerPushToken } from './push';
+import { ensureAndroidChannel } from './push';
+import { ensureRegistered } from './registration';
 
 const HANDLED_KEY = 'top.lastHandledNotificationResponse';
 
@@ -29,10 +31,23 @@ export function usePushLifecycle() {
   const handled = useRef<Set<string>>(new Set());
   const canNavigate = Boolean(user && isSessionVerified && primerSeen);
 
+  // Registration (see registration.ts): on sign-in and launch, every time the app returns to the foreground
+  // (catches permission switched on in phone settings, and a token refresh), and when the OS rotates the token.
+  // Failures are recorded and retried there; nothing is silently dropped.
   useEffect(() => {
     void ensureAndroidChannel();
-    if (user) void registerPushToken(user.uid).catch(() => undefined);
-  }, [user]);
+    if (!user) return;
+    const uid = user.uid;
+    void ensureRegistered(uid, { primerSeen });
+    const app = AppState.addEventListener('change', (s) => {
+      if (s === 'active') void ensureRegistered(uid, { primerSeen, allowPrompt: false });
+    });
+    const rotated = Notifications.addPushTokenListener(() => void ensureRegistered(uid, { primerSeen, allowPrompt: false, force: true }));
+    return () => {
+      app.remove();
+      rotated.remove();
+    };
+  }, [user, primerSeen]);
 
   const flush = useRef<() => void>(() => undefined);
   flush.current = () => {

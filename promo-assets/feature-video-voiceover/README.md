@@ -1,7 +1,12 @@
 # Feature video — voiceover added
 
-**Output:** `feature-video-with-voiceover.mp4`, the supplied 60 s feature video (848×478, 30 fps) with narration
-added. The picture is copied untouched; the video's own music is kept and ducked under the voice (about 12 dB below
+**Output:** `feature-video-with-voiceover.mp4`, 66 s, 848×478, 30 fps: the supplied feature video with narration,
+plus a LoveWorld AppStore end card. The original picture runs unchanged to 59.5 s (where it began its fade to black),
+then crossfades into the end card: "Download Free Today from the LoveWorld App Store", the official LoveWorld AppStore
+logo on a "Download on the LoveWorld AppStore" badge, the QR code (→ `https://web.lwappstore.com/share/lW-APP-Y26-PJ8225`,
+decoded from the final video), "Scan to download the T.O.P. app", the T.O.P. icon and testimoniesofpraiseapp.com,
+styled after the video's own scenes (lavender, deep purple, gold, Montserrat). Under the end card the original
+music's closing section is crossfaded on and faded out. the video's own music is kept and ducked under the voice (about 12 dB below
 it while he speaks, rising back between lines). Mix: −14 LUFS.
 
 | File | What it is |
@@ -12,7 +17,8 @@ it while he speaks, rising back between lines). Mix: −14 LUFS.
 | `audio/final-mix.wav` | Narration + ducked original music |
 | `captions.srt` | Captions, word for word with the narration (not burned in) |
 | `vo-lines.json` | Script and the scene window each line must fit |
-| `tools/generate.py`, `tools/mix.py` | Regenerate the voice / rebuild the mix and video |
+| `endcard/endcard.html` | Editable end card (HTML/CSS, `seek(t)`), with its fonts and images |
+| `tools/generate.py`, `tools/render_endcard.mjs`, `tools/mix.py` | Regenerate the voice / render the end card / build the mix and final video |
 
 Voice: Kokoro-82M (Apache-2.0), `am_michael`, speed 0.96 on every line, the same voice as the landscape promo.
 
@@ -29,7 +35,8 @@ Voice: Kokoro-82M (Apache-2.0), `am_michael`, speed 0.96 on every line, the same
 | 41.0s | Find outreach and crusade resources, all in one place. |
 | 46.9s | Ask Praxiom to help you discover testimonies, and find your way around. |
 | 52.9s | Your story is a living expression of God's goodness. |
-| 56.8s | Download free, and start your journey of praise. |
+| 57.1s | Download Testimonies of Praise free from the LoveWorld App Store today. |
+| 61.9s | Just scan the QR code to download the app. |
 
 Lines match the on-screen headings: Experience the Power of True Praise · LoveWorld songs · Read Stories That Inspire
 Faith · Listen everywhere you go · Stay Connected, Watch Live · Save Testimonies, Watch Offline · Outreach & Crusade
@@ -38,5 +45,6 @@ Resource Centre · Ask. Discover. Be Inspired (Praxiom) · A living expression o
 ## Rebuild
 ```bash
 python3 tools/generate.py <kokoro_model_dir>   # kokoro-v1.0.onnx + voices-v1.0.bin
+(cd endcard && python3 -m http.server 8766 &) ; NODE_PATH=$(npm root -g) node tools/render_endcard.mjs build/endcard.mp4 7.0
 python3 tools/mix.py
 ```

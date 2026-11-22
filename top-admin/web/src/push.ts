@@ -84,3 +84,26 @@ export async function dispatchNow(): Promise<void> {
   if (!token) return;
   await fetch(`${URL_}/api/notifications/dispatch`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: '{}' }).catch(() => undefined);
 }
+
+export interface TestDevice { id: string; platform: string; provider: 'fcm' | 'expo' | 'webpush'; appVersion: string | null; updatedAt: number | null; credFailures: number }
+export interface TestPerson { status: string; channel: string | null; accepted: boolean; provider: string | null; tickets: number; receipt: string | null; error: string | null; deferredBy: string | null }
+
+async function adminCall<T>(path: string, body: unknown): Promise<T> {
+  if (!URL_) throw new Error('Push relay is not configured.');
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error('You are signed out.');
+  const res = await fetch(`${URL_}${path}`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(j.error ?? `Request failed (${res.status}).`);
+  return j as T;
+}
+
+/** Sends a real test notification through the production engine to one person ('me' = the signed-in admin). */
+export function sendTestNotification(uid: string) {
+  return adminCall<{ campaignId: string | null; devices: TestDevice[]; created: boolean; report: { sent: number; failed: number } | null }>('/api/notifications/test', { uid });
+}
+
+/** Per-person delivery stages for a campaign (receipts are fetched from Expo on demand). */
+export function testDeliveryStatus(campaignId: string) {
+  return adminCall<{ campaign: { id: string; status: string }; people: TestPerson[] }>('/api/notifications/test-status', { campaignId });
+}

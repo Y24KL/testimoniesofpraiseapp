@@ -90,4 +90,4 @@ async function publishEvent(env, ev, { fetchFn = fetch, now = Date.now(), chat }
   return { ...out, report };
 }
 
-export { engineConfigured, makeStore, runEngine, NotifyInputError, parseEvent, publishEvent, createCampaign };
+export { engineConfigured, makeStore, makeSender, runEngine, NotifyInputError, parseEvent, publishEvent, createCampaign };

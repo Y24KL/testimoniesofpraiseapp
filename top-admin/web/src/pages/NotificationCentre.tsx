@@ -4,6 +4,7 @@ import { auth, db } from '../firebase';
 import { Check, Message } from '../components/Field';
 import { Icon } from '../components/Icon';
 import { dispatchNow } from '../push';
+import { DeliveryTools } from '../components/DeliveryTools';
 import { EmptyState, ErrorState, GlassCard, LoadingList, PageHeader, SectionHeader, StatCard, StatusBadge, type BadgeKind, type Metric } from '../components/ui';
 
 /**
@@ -315,6 +316,8 @@ export function NotificationCentre() {
               </div>
             )}
           </GlassCard>
+
+          <DeliveryTools />
 
           <GlassCard className="table-card">
             <SectionHeader icon="alert" title="Failed deliveries" hint="One row per person a notification could not reach, newest first" />

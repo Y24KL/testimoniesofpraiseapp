@@ -15,7 +15,8 @@ import { handleKingsChatCallback, handleKingsChatRedeem, handleKingsChatState } 
 import { AIEndpointError, createEmbeddings, enforceAiRateLimit, semanticSearch, validateSearchQuery } from './ai.js';
 import { runAssistant } from './assistant.js';
 import { searchClips } from './clips.js';
-import { engineConfigured, makeStore, NotifyInputError, parseEvent, publishEvent, runEngine } from './notify/index.js';
+import { engineConfigured, makeSender, makeStore, NotifyInputError, parseEvent, publishEvent, runEngine } from './notify/index.js';
+import { sendTestNotification, testDeliveryStatus, TestInputError } from './notify/testSend.js';
 import { lookupAuthUsers, parseSendRequest, sendSupportMessage, SupportInputError } from './support.js';
 import { MAX_ITEMS_PER_REQUEST, suggestTags } from './tags.js';
 import { homeSections } from './recommend.js';
@@ -23,7 +24,7 @@ import { homeSections } from './recommend.js';
 // Durable Object that counts Praxiom chat requests in progress across the whole account (see praxiomGate.js).
 export { PraxiomConcurrencyGate } from './praxiomGate.js';
 
-export const WORKER_VERSION = '2.11.0';
+export const WORKER_VERSION = '2.12.0';
 
 const json = (body, status, headers) =>
   new Response(JSON.stringify(body), {
@@ -436,6 +437,31 @@ async function handle(request, env) {
       return json({ ok: true, ...out, pushed: report ? report.sent : 0, inApp: report ? report.inApp : 0 }, 200, noStore);
     } catch (e) {
       if (e instanceof SupportInputError) return json({ error: e.message }, 400, noStore);
+      if (e instanceof AuthError) return json({ error: e.message }, e.status, noStore);
+      throw e;
+    }
+  }
+
+  // Delivery tests through the real pipeline (admin only; see src/notify/testSend.js).
+  if (pathname === '/api/notifications/test' || pathname === '/api/notifications/test-status') {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: 'Invalid request.' }, 400, noStore);
+    }
+    try {
+      const store = makeStore(env);
+      if (pathname === '/api/notifications/test-status') {
+        return json(await testDeliveryStatus(store, makeSender(env), body?.campaignId), 200, noStore);
+      }
+      const adminUid = (await verifyFirebaseToken(auth, env.FIREBASE_PROJECT_ID)).uid;
+      const out = await sendTestNotification(store, { uid: body?.uid === 'me' ? adminUid : body?.uid, adminUid });
+      const report = out.created ? await runEngine(env) : null;
+      console.log(`[notify] test campaign=${out.campaignId ?? '-'} devices=${out.devices.length} sent=${report?.sent ?? 0}`);
+      return json({ ok: true, ...out, report }, 200, noStore);
+    } catch (e) {
+      if (e instanceof TestInputError) return json({ error: e.message }, 400, noStore);
       if (e instanceof AuthError) return json({ error: e.message }, e.status, noStore);
       throw e;
     }

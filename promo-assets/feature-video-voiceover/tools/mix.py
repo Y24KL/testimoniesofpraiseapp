@@ -5,7 +5,7 @@ here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 A = lambda *p: os.path.join(here, *p)
 SRC = A('source', 'feature-video-original.mp4')
 # The original fades to black from 59.5 s. We cut there, crossfade (0.5 s) into the LoveWorld AppStore end card
-# (endcard/endcard.html, rendered to build/endcard.mp4 by tools/render_endcard.mjs) and fade out at the end.
+# (endcard/endcard.html, rendered to build/endcard.mp4 by tools/render_endcard.mjs), which holds to the last frame.
 CUT, XF, CARD = 59.5, 0.5, 7.0
 D = CUT - XF + CARD  # 66.0 s
 # Music under the end card: the original track's own closing section (52.1–59.4 s) crossfaded on after the cut.
@@ -28,7 +28,7 @@ fc = (f"[1:a]atrim=0:{CUT},asetpts=PTS-STARTPTS,aresample=48000[a1];[2:a]atrim={
       f"[duck][vos]amix=inputs=2:normalize=0,loudnorm=I=-14:TP=-1.5:LRA=9,atrim=0:{D}[out]")
 ff('-i', A('audio', 'voiceover.wav'), '-i', SRC, '-i', SRC, '-filter_complex', fc, '-map', '[out]', '-ar', '48000', A('audio', 'final-mix.wav'))
 vf = (f"[0:v]trim=0:{CUT},setpts=PTS-STARTPTS,fps=30,format=yuv420p[v0];[1:v]fps=30,format=yuv420p,setsar=1[v1];"
-      f"[v0][v1]xfade=transition=fade:duration={XF}:offset={CUT-XF},fade=t=out:st={D-0.7}:d=0.7[v]")
+      f"[v0][v1]xfade=transition=fade:duration={XF}:offset={CUT-XF}[v]")  # ends on the end card, no fade to black
 ff('-i', SRC, '-i', A('build', 'endcard.mp4'), '-i', A('audio', 'final-mix.wav'), '-filter_complex', vf, '-map', '[v]', '-map', '2:a',
    '-c:v', 'libx264', '-crf', '16', '-preset', 'slow', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '256k', '-ar', '48000',
    '-movflags', '+faststart', '-t', str(D), A('feature-video-with-voiceover.mp4'))

@@ -4,9 +4,9 @@
 plus a LoveWorld AppStore end card. The original picture runs unchanged to 59.5 s (where it began its fade to black),
 then crossfades into the end card: "Download Free Today from the LoveWorld App Store", the official LoveWorld AppStore
 logo on a "Download on the LoveWorld AppStore" badge, the QR code (→ `https://web.lwappstore.com/share/lW-APP-Y26-PJ8225`,
-decoded from the final video), "Scan to download the T.O.P. app", the T.O.P. icon and testimoniesofpraiseapp.com,
+decoded from the final video), "Scan to download the T.O.P. app" and testimoniesofpraiseapp.com,
 styled after the video's own scenes (lavender, deep purple, gold, Montserrat). Under the end card the original
-music's closing section is crossfaded on and faded out. the video's own music is kept and ducked under the voice (about 12 dB below
+music's closing section is crossfaded on and faded out. The picture holds on the end card to the last frame (no fade to black). the video's own music is kept and ducked under the voice (about 12 dB below
 it while he speaks, rising back between lines). Mix: −14 LUFS.
 
 | File | What it is |

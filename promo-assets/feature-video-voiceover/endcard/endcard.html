@@ -32,7 +32,6 @@ html,body{width:848px;height:478px;overflow:hidden;background:var(--bg);font-fam
 #qr img{display:block;width:100%;border-radius:10px}
 #qrlabel{left:500px;width:260px;top:300px;text-align:center;font-weight:800;font-size:12px;letter-spacing:.2em;color:var(--gold)}
 #qrlabel div{color:var(--ink);font-size:10.5px;letter-spacing:.18em;margin-top:5px}
-#top{left:503px;top:88px;width:46px;height:46px;border-radius:12px;box-shadow:0 8px 18px rgba(43,23,66,.3)}
 </style>
 </head>
 <body>
@@ -43,7 +42,6 @@ html,body{width:848px;height:478px;overflow:hidden;background:var(--bg);font-fam
   <div id="badge" class="abs"><img src="img/lw-appstore-logo.jpg" alt=""><div><div class="l1">Download on the</div><div class="l2">LoveWorld AppStore</div></div></div>
   <div id="web" class="abs">Also on the web: <b>testimoniesofpraiseapp.com</b></div>
   <div id="qr" class="abs"><img src="img/qr-lwappstore.png" alt=""></div>
-  <img id="top" class="abs" src="img/top-icon.png" alt="">
   <div id="qrlabel" class="abs">SCAN TO DOWNLOAD<div>THE T.O.P. APP</div></div>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -57,7 +55,7 @@ window.seek = function (t) {
   const c = easeOut(prog(t, 0, .9)); $('circle').style.transform = `scale(${.85 + .15 * c})`; $('circle').style.opacity = c;
   rise('kicker', t, .25); rise('head', t, .4, 22); rise('sub', t, .7);
   pop('badge', t, 1.7, .7); rise('web', t, 2.2);
-  pop('qr', t, 1.0); pop('top', t, 1.4, .3); rise('qrlabel', t, 2.9, 10);
+  pop('qr', t, 1.0); rise('qrlabel', t, 2.9, 10);
   const pulse = t > 2.9 ? (1 + .03 * Math.sin((t - 2.9) * 5)) : 1;
   $('qr').style.transform += ` scale(${pulse})`;
   $('qr').style.setProperty('--glow', `${t > 2.9 ? 14 + 10 * Math.sin((t - 2.9) * 5) : 0}px`);

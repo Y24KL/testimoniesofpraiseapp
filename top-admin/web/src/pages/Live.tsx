@@ -11,10 +11,13 @@ import { StreamPreview } from '../components/StreamPreview';
 import { ChatModeration } from '../components/ChatModeration';
 import { ViewerCount } from '../components/ViewerCount';
 
-type SourceType = 'hls' | 'youtube' | 'unknown';
-const sourceTypeOf = (url: string): SourceType => (isYouTubeUrl(url) ? 'youtube' : isHls(url) ? 'hls' : 'unknown');
+// 'file' is a plain video file (e.g. an MP4 on Bunny). The app and website play any non-YouTube link in their
+// normal video player, so a file works as the live source too; it just isn't a synchronised broadcast.
+type SourceType = 'hls' | 'youtube' | 'file' | 'unknown';
 // Pre-live media may also be a plain video file (e.g. an MP4 on Bunny/Cloudinary).
 const isVideoFile = (url: string) => /\.(mp4|m4v|mov|webm)(\?|#|$)/i.test(url);
+const sourceTypeOf = (url: string): SourceType => (isYouTubeUrl(url) ? 'youtube' : isHls(url) ? 'hls' : isVideoFile(url) ? 'file' : 'unknown');
+const SOURCE_LABEL: Record<Exclude<SourceType, 'unknown'>, string> = { hls: 'HLS', youtube: 'YouTube', file: 'Video file' };
 const preLiveKind = (url: string) => (isYouTubeUrl(url) ? 'YOUTUBE' : isHls(url) ? 'HLS' : isVideoFile(url) ? 'VIDEO FILE' : '');
 interface PickItem { id: string; title: string; url: string; thumbnail: string }
 
@@ -71,7 +74,7 @@ export function Live() {
     if (streamUrl && !isHttpUrl(streamUrl)) return setErr('The stream link must start with https://');
     if (thumbnail && !isHttpUrl(thumbnail)) return setErr('The thumbnail link must start with https://');
     if (live && !streamUrl) return setErr('Add a stream link (YouTube, or an HLS .m3u8 link) before going live.');
-    if (live && type === 'unknown') return setErr('That link isn’t a YouTube link or an HLS (.m3u8) link.');
+    if (live && type === 'unknown') return setErr('That link isn’t a YouTube link, an HLS (.m3u8) link or a video file (.mp4, .mov, .webm).');
     if (live && !isLive && notifyOnStart && !(await confirm({ title: 'Go live and notify app users?', message: 'Going live sends a push notification to everyone with live alerts on.', confirmLabel: 'Go live' }))) return;
     setBusy(true);
     try {
@@ -200,10 +203,15 @@ export function Live() {
       <div className="split">
         <GlassCard>
           <SectionHeader icon="radioTower" title="Stream details" hint={isLive ? 'Changes apply to viewers as soon as you save.' : 'Set these up before going live.'} />
-          <Field label="Stream link *" hint="A YouTube video or live link, or an HLS (.m3u8) playback URL from your streaming provider or server (the one OBS publishes to).">
+          <Field label="Stream link *" hint="A YouTube video or live link, an HLS (.m3u8) playback URL from your streaming provider or server (the one OBS publishes to), or a video file link (.mp4, .mov, .webm) such as one on Bunny Storage.">
             <input type="url" placeholder="https://youtube.com/watch?v=… or https://…/stream.m3u8" value={streamUrl} onChange={(e) => setStreamUrl(e.target.value)} />
           </Field>
-          {streamUrl && kind === 'unknown' ? <Message kind="err">That doesn’t look like a YouTube link or an HLS (.m3u8) link.</Message> : null}
+          {streamUrl && kind === 'unknown' ? <Message kind="err">That doesn’t look like a YouTube link, an HLS (.m3u8) link or a video file (.mp4, .mov, .webm).</Message> : null}
+          {kind === 'file' ? (
+            <Message kind="warn">
+              This is a video file, not a live broadcast. Each viewer starts it from the beginning when they open the Live tab, so people won’t be at the same moment, and every viewer downloads the file separately. Chat still works.
+            </Message>
+          ) : null}
           <div className="two">
             <Field label="Title"><input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Sunday Testimony Service" /></Field>
             <Field label="Thumbnail link (optional)"><input type="url" value={thumbnail} onChange={(e) => setThumbnail(e.target.value)} placeholder="https://" /></Field>
@@ -221,7 +229,7 @@ export function Live() {
             icon="eye"
             title="Stream preview"
             hint="Check the link plays before you go live."
-            actions={streamUrl && kind !== 'unknown' ? <StatusBadge kind="info" plain>{kind === 'hls' ? 'HLS' : 'YouTube'}</StatusBadge> : undefined}
+            actions={streamUrl && kind !== 'unknown' ? <StatusBadge kind="info" plain>{SOURCE_LABEL[kind as Exclude<SourceType, 'unknown'>]}</StatusBadge> : undefined}
           />
           {preview ? (parseYouTubeId(preview) ? yt(preview, 'Stream preview') : <StreamPreview url={preview} />) : thumbnail && isHttpUrl(thumbnail) ? <img className="cover-preview" src={thumbnail} alt="Stream thumbnail" /> : <div className="cover-empty">Press “Test this stream” to load it here.</div>}
           <div className="row" style={{ marginTop: 12 }}>

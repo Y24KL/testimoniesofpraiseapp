@@ -352,7 +352,7 @@ function LiveMonitor({ live, open }: { live: Load<LiveDoc | null>; open: () => v
             {live.state === 'error'
               ? `Couldn't read the live status: ${live.message}`
               : on
-                ? `Streaming now${d?.sourceType && d.sourceType !== 'unknown' ? ` via ${d.sourceType === 'hls' ? 'HLS' : 'YouTube'}` : ''}. Chat and viewers are live in the app.`
+                ? `Streaming now${d?.sourceType && d.sourceType !== 'unknown' ? ` via ${d.sourceType === 'hls' ? 'HLS' : d.sourceType === 'file' ? 'a video file' : 'YouTube'}` : ''}. Chat and viewers are live in the app.`
                 : `Nothing is broadcasting.${d?.updatedAt ? ` Last change ${ago(toDate(d.updatedAt))}.` : ''}`}
           </p>
         </div>

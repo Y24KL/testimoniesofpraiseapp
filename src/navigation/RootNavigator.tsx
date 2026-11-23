@@ -11,6 +11,8 @@ import { FirstTimeWelcomeScreen } from '@/screens/FirstTimeWelcomeScreen';
 import { ProfileCompletionScreen } from '@/screens/ProfileCompletionScreen';
 import { NotificationSettingsScreen } from '@/screens/NotificationSettingsScreen';
 import { NotificationsScreen } from '@/screens/NotificationsScreen';
+import { MessagesScreen } from '@/screens/MessagesScreen';
+import { ConversationScreen } from '@/screens/ConversationScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { MyTopScreen } from '@/screens/MyTopScreen';
 import { SearchScreen } from '@/screens/SearchScreen';
@@ -100,6 +102,8 @@ export function RootNavigator() {
             options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
+          <Stack.Screen name="Messages" component={MessagesScreen} />
+          <Stack.Screen name="Conversation" component={ConversationScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="MyTop" component={MyTopScreen} />
           <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />

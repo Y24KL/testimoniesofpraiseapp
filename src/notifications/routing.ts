@@ -42,6 +42,10 @@ export function openTarget({ type, contentId }: NotificationTarget): void {
       if (contentId) navigationRef.navigate('LoveworldSingerVideo', { id: contentId });
       else navigationRef.navigate('LoveworldSingers');
       break;
+    case 'message':
+      if (contentId) navigationRef.navigate('Conversation', { threadId: contentId });
+      else navigationRef.navigate('Messages');
+      break;
     case 'announcement':
       // Announcements are read in the in-app list.
       navigationRef.navigate('Notifications');

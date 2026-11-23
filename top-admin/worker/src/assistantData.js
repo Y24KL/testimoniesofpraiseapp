@@ -6,7 +6,7 @@
  * Cards are built only from these reads. The model never supplies a card, id or link.
  */
 import { AIEndpointError } from './ai.js';
-import { decodeFields, encodeValue } from './engine/firestoreRest.js';
+import { decodeFields, encodeValue } from './firestoreRest.js';
 
 export const DEEP_LINK_BASE = 'testimoniesofpraise://';
 export const MAX_CARDS = 8;

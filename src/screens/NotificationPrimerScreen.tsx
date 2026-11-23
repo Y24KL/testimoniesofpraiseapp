@@ -10,9 +10,9 @@ import { colors, gradients, type as t } from '@/constants/theme';
 import {
   getPermissionStatus,
   openNotificationSettings,
-  registerPushToken,
   requestPermission,
 } from '@/notifications/push';
+import { ensureRegistered } from '@/notifications/registration';
 
 /** Explains WHY, then triggers the real OS permission dialog. */
 export function NotificationPrimerScreen() {
@@ -42,7 +42,8 @@ export function NotificationPrimerScreen() {
 
       const granted = await requestPermission();
       if (granted && user) {
-        await registerPushToken(user.uid).catch(() => undefined);
+        // Recorded by the registration manager (with automatic retry), not silently dropped.
+        await ensureRegistered(user.uid, { primerSeen: true, allowPrompt: false, force: true });
       }
     } finally {
       await markPrimerSeen();

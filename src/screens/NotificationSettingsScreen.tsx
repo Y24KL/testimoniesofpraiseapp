@@ -7,7 +7,8 @@ import { Screen } from '@/components/Screen';
 import { TopBar } from '@/components/TopBar';
 import { useAuth } from '@/auth/AuthContext';
 import { colors, radius, type as t } from '@/constants/theme';
-import { diagnosePush, getPermissionStatus, registerPushToken, requestPermission, type PushCheckStep } from '@/notifications/push';
+import { diagnosePush, getPermissionStatus, requestPermission, type PushCheckStep } from '@/notifications/push';
+import { ensureRegistered } from '@/notifications/registration';
 import { DEFAULT_PREFS, loadPrefs, savePrefs } from '@/storage/prefs';
 import type { NotificationPrefs } from '@/types';
 
@@ -34,7 +35,7 @@ export function NotificationSettingsScreen() {
     setChecking(true);
     setSteps(null);
     try {
-      setSteps(await diagnosePush(user.uid));
+      setSteps(await diagnosePush(user.uid, () => ensureRegistered(user.uid, { primerSeen: true, allowPrompt: false, force: true })));
     } finally {
       setChecking(false);
       void getPermissionStatus().then(setPerm);
@@ -53,14 +54,14 @@ export function NotificationSettingsScreen() {
     const next = { ...prefs, [key]: value };
     setPrefs(next);
     await savePrefs(next);
-    if (user) await registerPushToken(user.uid, next).catch(() => undefined); // syncs prefs to the backend
+    if (user) await ensureRegistered(user.uid, { primerSeen: true, allowPrompt: false, force: true, prefsOverride: next }); // syncs prefs to the backend
   };
 
   const enable = async () => {
     if (perm === 'denied') return void Linking.openSettings(); // OS won't show the dialog again
     const ok = await requestPermission();
     setPerm(ok ? 'granted' : 'denied');
-    if (ok && user) await registerPushToken(user.uid).catch(() => undefined);
+    if (ok && user) await ensureRegistered(user.uid, { primerSeen: true, allowPrompt: false, force: true });
   };
 
   return (

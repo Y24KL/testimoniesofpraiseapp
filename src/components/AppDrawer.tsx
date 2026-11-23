@@ -19,6 +19,7 @@ import { useVoiceover } from '@/voiceover/VoiceoverProvider';
 import { colors, radius, type as t } from '@/constants/theme';
 import { useDrawer } from '@/context/DrawerContext';
 import { Logo } from './Logo';
+import { useUnreadMessages } from '@/support/useUnreadMessages';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.84, 340);
@@ -41,6 +42,7 @@ export function AppDrawer() {
   const { isOpen, closeDrawer } = useDrawer();
   const { user, signOut } = useAuth();
   const nav = useNavigation<any>();
+  const unreadMessages = useUnreadMessages();
   const { restartTutorial } = useVoiceover();
   const insets = useSafeAreaInsets();
 
@@ -221,6 +223,16 @@ export function AppDrawer() {
       iconColor: colors.accent,
       iconBg: 'rgba(245, 197, 66, 0.15)',
       onPress: () => nav.navigate('Tabs', { screen: 'Downloads' }),
+    },
+    {
+      id: 'messages',
+      title: 'Messages',
+      subtitle: 'From the T.O.P support team',
+      icon: 'chatbubbles-outline',
+      iconColor: colors.accent,
+      iconBg: 'rgba(245, 197, 66, 0.15)',
+      ...(unreadMessages > 0 ? { badge: unreadMessages > 9 ? '9+ NEW' : `${unreadMessages} NEW`, badgeBg: 'rgba(245, 197, 66, 0.2)', badgeColor: colors.accent } : {}),
+      onPress: () => nav.navigate('Messages'),
     },
     {
       id: 'notifications',

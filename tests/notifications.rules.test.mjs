@@ -58,6 +58,20 @@ await test('owner can save timezone, UTC offset and app version', async () => {
   await assertSucceeds(setDoc(doc(alice, 'pushTokens/tok1'), pushToken('alice', { timeZone: 'Africa/Lagos', utcOffsetMinutes: 60, appVersion: '1.0.9' })));
 });
 
+await test('a token the engine marked with credential failures can still be refreshed by its owner', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'pushTokens/tok1'), { ...pushToken(), updatedAt: new Date(), credFailures: 2 }));
+  await assertSucceeds(setDoc(doc(alice, 'pushTokens/tok1'), pushToken(), { merge: true }));
+  await assertFails(setDoc(doc(alice, 'pushTokens/tok1'), pushToken('alice', { credFailures: 'many' })));
+  await assertFails(setDoc(doc(alice, 'pushTokens/tok1'), pushToken('alice', { credFailures: 99 })));
+});
+
+await test('an Android phone may store its Firebase device token, validated', async () => {
+  await assertSucceeds(setDoc(doc(alice, 'pushTokens/tok1'), pushToken('alice', { fcmToken: 'dXk3_abc:APA91bH-' + 'x'.repeat(120) })));
+  await assertFails(setDoc(doc(alice, 'pushTokens/tok1'), pushToken('alice', { fcmToken: 'short' })));
+  await assertFails(setDoc(doc(alice, 'pushTokens/tok1'), pushToken('alice', { fcmToken: 'has spaces and <html> in it '.repeat(3) })));
+  await assertFails(setDoc(doc(alice, 'pushTokens/tok1'), pushToken('alice', { fcmToken: 12345 })));
+});
+
 await test('owner cannot register a token under another uid', async () => {
   await assertFails(setDoc(doc(alice, 'pushTokens/tok1'), pushToken('bob')));
 });

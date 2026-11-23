@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { addDoc, collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { pushEnabled, sendPush } from '../push';
+import { describePush, pushEnabled, sendPush } from '../push';
 import { fmtDate } from '../lib';
 import type { Announcement } from '../types';
 import { Check, Field, Message } from '../components/Field';
@@ -15,6 +15,7 @@ export function Announcements() {
   const [type, setType] = useState<'announcement' | 'featured'>('announcement');
   const [contentId, setContentId] = useState('');
   const [sendPush_, setSendPush] = useState(true);
+  const [urgent, setUrgent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
@@ -44,18 +45,18 @@ export function Announcements() {
     setErr(''); setOk('');
     if (!title.trim() || !message.trim()) return setErr('Please enter a title and a message.');
     if (type === 'featured' && !contentId) return setErr('Choose which testimony to feature.');
-    if (sendPush_ && !(await confirm({ title: 'Send this push notification now?', message: `“${title.trim()}” goes to every app user who has announcements turned on.`, confirmLabel: 'Send now' }))) return;
+    if (sendPush_ && !(await confirm({ title: urgent ? 'Send this URGENT notification now?' : 'Send this push notification now?', message: `“${title.trim()}” goes to every app user who has announcements turned on${urgent ? ', even if they have reached their daily limit' : ''}.`, confirmLabel: 'Send now' }))) return;
     setBusy(true);
     try {
       let pushNote = '';
       if (sendPush_ && pushEnabled) {
-        const r = await sendPush({ pref: 'announcements', title: title.trim(), body: message.trim(), data: { type, ...(type === 'featured' ? { contentId } : {}) } });
+        const r = await sendPush({ pref: 'announcements', title: title.trim(), body: message.trim(), data: { type, ...(type === 'featured' ? { contentId } : {}) }, ...(urgent ? { urgent: true } : {}) });
         if (!r.ok) {
           setErr(`The push notification failed: ${r.error}. Nothing was saved. Try again.`);
           setBusy(false);
           return;
         }
-        pushNote = ` Push sent to ${r.sent} device${r.sent === 1 ? '' : 's'}.`;
+        pushNote = ` ${describePush(r)}`;
       } else if (sendPush_) {
         pushNote = ' (Push isn’t set up, so it was added to the in-app list only.)';
       }
@@ -68,7 +69,7 @@ export function Announcements() {
         skipPush: true, // the push is sent by the portal, not by a server function
         createdAt: serverTimestamp(),
       });
-      setTitle(''); setMessage(''); setContentId('');
+      setTitle(''); setMessage(''); setContentId(''); setUrgent(false);
       setOk(`Added to the app’s notification list.${pushNote}`);
     } catch (e) {
       setErr((e as Error).message);
@@ -136,6 +137,7 @@ export function Announcements() {
               <textarea value={message} onChange={(e) => setMessage(e.target.value)} maxLength={240} style={{ minHeight: 100 }} placeholder="What should people know?" />
             </label>
             <Check checked={sendPush_} onChange={setSendPush} label="Send as a push notification" hint="Untick to only show it inside the app’s notification list." />
+            {sendPush_ ? <Check checked={urgent} onChange={setUrgent} label="Urgent" hint="Reaches people even if they have had their 5 notifications today. Use only for time-sensitive notices." /> : null}
             <button type="button" className="btn primary" disabled={busy} onClick={() => void send()}>
               {busy ? <span className="spin sm" aria-hidden="true" /> : <Icon name="send" size={16} />}
               {busy ? 'Sending…' : sendPush_ ? 'Send announcement' : 'Add to notification list'}

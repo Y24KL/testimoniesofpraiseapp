@@ -25,6 +25,9 @@ export type RootStackParamList = {
   ShareTestimony: undefined;
   Sponsor: undefined;
   Notifications: undefined;
+  // Private messages from the support team (supportThreads)
+  Messages: undefined;
+  Conversation: { threadId: string };
   Profile: undefined;
   MyTop: undefined;
   NotificationSettings: undefined;

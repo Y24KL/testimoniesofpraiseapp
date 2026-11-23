@@ -12,13 +12,53 @@ export interface PushRequest {
   title: string;
   body: string;
   data: { type: string; contentId?: string };
+  /** Announcements only: skips each person's daily limit (categories and their quiet hours still apply). */
+  urgent?: boolean;
 }
 
 /**
  * Sends a push through the free relay (worker/). The relay checks that the caller is an admin by
  * reading the device list with THEIR sign-in token, so nobody else can trigger notifications.
  */
-export async function sendPush(req: PushRequest): Promise<{ ok: true; sent: number } | { ok: false; error: string }> {
+export interface PushResult {
+  ok: true;
+  sent: number;
+  failed: number;
+  devices: number;
+  reasons?: Record<string, number>;
+  firstError?: string;
+  /** Set when the live notification engine (worker 2.5+) handled the request. */
+  engine?: { queued: number; inApp: number; duplicate: boolean; held: 'review' | 'manual' | null; copySource: string | null };
+}
+
+const phones = (n: number) => `${n} phone${n === 1 ? '' : 's'}`;
+
+/** One-line summary of a relay result for the admin, including why sends failed. */
+export function describePush(r: PushResult): string {
+  if (r.engine) {
+    const { queued, inApp, duplicate, held, copySource } = r.engine;
+    if (held === 'review') return 'Praxiom wrote a message for this. It is waiting for your approval in the Notification Centre.';
+    if (held === 'manual') return 'Manual mode is on, so no notification was sent. Send an announcement if you want to tell people.';
+    if (duplicate) return 'A notification was already sent for this one, so it was not sent again.';
+    if (queued === 0 && r.sent === 0 && inApp === 0) return 'No phones have this notification type turned on, so no push was sent.';
+    const parts = [`Push sent to ${phones(r.sent)}.`];
+    if (inApp) parts.push(`${phones(inApp)} had the app open and got it in the app instead.`);
+    if (r.failed) parts.push(`${r.failed} failed.`);
+    const later = queued - r.sent - inApp - r.failed;
+    if (later > 0) parts.push(`${phones(later)} will get it later (not their topic, quiet hours or their daily limit).`);
+    if (copySource === 'ai') parts.push('Praxiom wrote the message.');
+    return parts.join(' ');
+  }
+  if (r.devices === 0) return 'No phones are signed up for this notification type yet, so no push was sent.';
+  let s = `Push sent to ${r.sent} of ${r.devices} device${r.devices === 1 ? '' : 's'}.`;
+  if (r.failed) {
+    const why = Object.entries(r.reasons ?? {}).map(([k, n]) => `${k} ×${n}`).join(', ');
+    s += ` ${r.failed} failed${why ? ` (${why})` : ''}${r.firstError ? `: ${r.firstError}` : ''}.`;
+  }
+  return s;
+}
+
+export async function sendPush(req: PushRequest): Promise<PushResult | { ok: false; error: string }> {
   if (!URL_) return { ok: false, error: 'Push relay is not configured.' };
   try {
     const token = await auth.currentUser?.getIdToken();
@@ -30,8 +70,40 @@ export async function sendPush(req: PushRequest): Promise<{ ok: true; sent: numb
     });
     const j = await res.json().catch(() => ({}));
     if (!res.ok) return { ok: false, error: j.error ?? `Relay error (${res.status}).` };
-    return { ok: true, sent: j.sent ?? 0 };
+    const engine = j.engine === true ? { queued: j.queued ?? 0, inApp: j.inApp ?? 0, duplicate: j.duplicate === true, held: j.held === 'review' || j.held === 'manual' ? j.held : null, copySource: typeof j.copySource === 'string' ? j.copySource : null } : undefined;
+    return { ok: true, sent: j.sent ?? 0, failed: j.failed ?? 0, devices: j.devices ?? 0, reasons: j.reasons, firstError: j.firstError, engine };
   } catch {
     return { ok: false, error: 'Could not reach the push relay.' };
   }
+}
+
+/** Asks the engine to run now (admin only), so an approved notification goes out without waiting for the next scheduled run. */
+export async function dispatchNow(): Promise<void> {
+  if (!URL_) return;
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) return;
+  await fetch(`${URL_}/api/notifications/dispatch`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: '{}' }).catch(() => undefined);
+}
+
+export interface TestDevice { id: string; platform: string; provider: 'fcm' | 'expo' | 'webpush'; appVersion: string | null; updatedAt: number | null; credFailures: number }
+export interface TestPerson { status: string; channel: string | null; accepted: boolean; provider: string | null; tickets: number; receipt: string | null; error: string | null; deferredBy: string | null }
+
+async function adminCall<T>(path: string, body: unknown): Promise<T> {
+  if (!URL_) throw new Error('Push relay is not configured.');
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error('You are signed out.');
+  const res = await fetch(`${URL_}${path}`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(j.error ?? `Request failed (${res.status}).`);
+  return j as T;
+}
+
+/** Sends a real test notification through the production engine to one person ('me' = the signed-in admin). */
+export function sendTestNotification(uid: string) {
+  return adminCall<{ campaignId: string | null; devices: TestDevice[]; created: boolean; report: { sent: number; failed: number } | null }>('/api/notifications/test', { uid });
+}
+
+/** Per-person delivery stages for a campaign (receipts are fetched from Expo on demand). */
+export function testDeliveryStatus(campaignId: string) {
+  return adminCall<{ campaign: { id: string; status: string }; people: TestPerson[] }>('/api/notifications/test-status', { campaignId });
 }

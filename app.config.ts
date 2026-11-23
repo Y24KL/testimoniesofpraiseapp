@@ -3,7 +3,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Testimonies of Praise',
   slug: 'testimonies-of-praise',
-  version: '2.0.1',
+  version: '2.2.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'dark',
@@ -37,7 +37,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#0a0a0a',
     },
     package: 'com.testimoniesofpraise.app',
-    versionCode: 201,
+    versionCode: 202,
     googleServicesFile: process.env.GOOGLE_SERVICES_JSON || './google-services.json',
     // Required for expo-notifications foreground banners on Android 13+
     permissions: ['android.permission.POST_NOTIFICATIONS', 'android.permission.VIBRATE'],

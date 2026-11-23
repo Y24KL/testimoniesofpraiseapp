@@ -2,7 +2,7 @@
  * Unified Server-Side Relay for Testimonies of Praise (Cloudflare Workers).
  *
  * Capabilities:
- * 1. Push Notification Relay: Sends Expo push notifications using caller's Firebase admin token.
+ * 1. Notification engine (src/notify): content events, scheduled dispatch, Expo + web push, in-app inbox.
  * 2. Secure Server-Side Bunny Storage Uploads: Keeps Bunny Storage AccessKeys safe on the server.
  * 3. Media Provider Status & Verification: Inspects configured providers and verifies URL reachability.
  *
@@ -15,16 +15,16 @@ import { handleKingsChatCallback, handleKingsChatRedeem, handleKingsChatState } 
 import { AIEndpointError, createEmbeddings, enforceAiRateLimit, semanticSearch, validateSearchQuery } from './ai.js';
 import { runAssistant } from './assistant.js';
 import { searchClips } from './clips.js';
-import { runNotificationEngineFromEnv } from './engine/run.js';
+import { engineConfigured, makeSender, makeStore, NotifyInputError, parseEvent, publishEvent, runEngine } from './notify/index.js';
+import { sendTestNotification, testDeliveryStatus, TestInputError } from './notify/testSend.js';
+import { lookupAuthUsers, parseSendRequest, sendSupportMessage, SupportInputError } from './support.js';
+import { MAX_ITEMS_PER_REQUEST, suggestTags } from './tags.js';
+import { homeSections } from './recommend.js';
 
 // Durable Object that counts Praxiom chat requests in progress across the whole account (see praxiomGate.js).
 export { PraxiomConcurrencyGate } from './praxiomGate.js';
 
-const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
-const PREFS = new Set(['testimonies', 'live', 'announcements', 'promotions', 'choirs', 'loveworld', 'articles']);
-const TYPES = new Set(['testimony', 'written', 'live', 'announcement', 'featured', 'article', 'promotion', 'radio', 'resource', 'choir', 'loveworld']);
-const MAX_DEVICES = 5000;
-export const WORKER_VERSION = '2.4.0';
+export const WORKER_VERSION = '2.12.0';
 
 const json = (body, status, headers) =>
   new Response(JSON.stringify(body), {
@@ -85,15 +85,15 @@ export function corsHeaders(origin, allowed) {
 
 export default {
   /**
-   * Cron trigger (wrangler.toml [triggers]). Runs the notification engine. Each run is independent and
-   * idempotent: a run that finds nothing to do, or is switched off, returns at once. Logs contain counts only.
+   * Cron trigger (wrangler.toml [triggers]): one notification dispatcher run. Runs are idempotent; a run with
+   * nothing due, or with the engine switched off in settings/notificationEngine, returns at once.
    */
-  async scheduled(event, env, ctx) {
-    ctx.waitUntil(
-      runNotificationEngineFromEnv(env)
-        .then((summary) => console.log('[engine]', JSON.stringify(summary)))
-        .catch((error) => console.error('[engine] run failed', error?.message || error)),
-    );
+  async scheduled(_event, env, ctx) {
+    if (!engineConfigured(env)) {
+      console.error('[notify] FIREBASE_SERVICE_ACCOUNT is not set: the notification engine cannot run.');
+      return;
+    }
+    ctx.waitUntil(runEngine(env).catch((e) => console.error('[notify] dispatcher run failed', e?.stack || e)));
   },
 
   async fetch(request, env) {
@@ -234,6 +234,27 @@ async function handle(request, env) {
         }
         const embedded = await createEmbeddings(env, [body.text]);
         result = { embedding: embedded.embeddings[0], dimensions: embedded.dimensions, model: embedded.model };
+      } else if (pathname === '/api/ai/home') {
+        // Personal home sections for the signed-in caller. Reads use the caller's own token (rules apply).
+        // A per-person edge cache (5 minutes) absorbs repeat calls without Firestore reads or KV writes.
+        const cache = globalThis.caches?.default;
+        const key = new Request(`https://cache.top.internal/home/v1/${encodeURIComponent(caller.uid)}`);
+        const hit = cache ? await cache.match(key).then((r) => r?.json()).catch(() => null) : null;
+        // Pull-to-refresh may bypass the cache, but at most once a minute.
+        if (hit && (!body.refresh || Date.now() - (Number(hit.generatedAt) || 0) < 60000)) {
+          result = hit;
+        } else {
+          result = await homeSections(env, authorization, caller.uid, body);
+          if (cache) await cache.put(key, new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=300' } })).catch(() => undefined);
+        }
+      } else if (pathname === '/api/ai/suggest-tags') {
+        // Admin only: interest-tag suggestions for content (Praxiom, with a keyword fallback).
+        if (!(await verifyAdmin(authorization, env))) return json({ error: 'Admins only.' }, 403, { ...cors, 'Cache-Control': 'no-store' });
+        if (!Array.isArray(body.items) || body.items.length === 0 || body.items.length > MAX_ITEMS_PER_REQUEST) {
+          return json({ error: `Send between 1 and ${MAX_ITEMS_PER_REQUEST} items.` }, 400, { ...cors, 'Cache-Control': 'no-store' });
+        }
+        await enforceAiRateLimit(env, caller.uid, 'suggest-tags', 60);
+        result = await suggestTags(env, body.items);
       } else if (pathname === '/api/ai/index-content') {
         if (!(await verifyAdmin(authorization, env))) return json({ error: 'Admins only.' }, 403, { ...cors, 'Cache-Control': 'no-store' });
         await enforceAiRateLimit(env, caller.uid, 'index-content', 120);
@@ -249,6 +270,11 @@ async function handle(request, env) {
       console.error('[ai] request failed', e?.stack || e);
       return json({ error: 'AI service temporarily unavailable.' }, 502, { ...cors, 'Cache-Control': 'no-store' });
     }
+  }
+
+  // Web push: the public VAPID key (safe to publish; the private key is a server secret).
+  if (request.method === 'GET' && pathname === '/api/notifications/vapid-key') {
+    return json({ publicKey: env.VAPID_PUBLIC_KEY || null }, 200, { ...cors, 'Cache-Control': 'public, max-age=3600' });
   }
 
   if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405, cors);
@@ -382,120 +408,88 @@ async function handle(request, env) {
   }
 
   // -------------------------------------------------------------
-  // 4) Push Notification Relay (POST /, /api/push)
+  // 4) Notification engine (admin only): content events and manual dispatch
+  //    POST / or /api/push   { pref?, title, body, data: { type, contentId? } }  -> campaign + immediate run
+  //    POST /api/notifications/dispatch                                          -> one dispatcher run
   // -------------------------------------------------------------
+  const noStore = { ...cors, 'Cache-Control': 'no-store' };
+  if (!(await verifyAdmin(auth, env))) return json({ error: 'Admins only.' }, 403, noStore);
+  if (!engineConfigured(env)) {
+    return json({ error: 'The notification engine is not configured on the server (FIREBASE_SERVICE_ACCOUNT is missing).' }, 503, noStore);
+  }
+  // User Communication & Support (admin only; see src/support.js).
+  if (pathname === '/api/support/send' || pathname === '/api/support/users') {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: 'Invalid request.' }, 400, noStore);
+    }
+    try {
+      if (pathname === '/api/support/users') {
+        return json({ users: await lookupAuthUsers(env, body || {}) }, 200, noStore);
+      }
+      const adminUid = (await verifyFirebaseToken(auth, env.FIREBASE_PROJECT_ID)).uid;
+      const input = parseSendRequest(body);
+      const out = await sendSupportMessage(makeStore(env), input, { adminUid });
+      const report = out.created ? await runEngine(env) : null;
+      console.log(`[support] message thread=${out.threadId} created=${out.created} sent=${report?.sent ?? 0}`);
+      return json({ ok: true, ...out, pushed: report ? report.sent : 0, inApp: report ? report.inApp : 0 }, 200, noStore);
+    } catch (e) {
+      if (e instanceof SupportInputError) return json({ error: e.message }, 400, noStore);
+      if (e instanceof AuthError) return json({ error: e.message }, e.status, noStore);
+      throw e;
+    }
+  }
+
+  // Delivery tests through the real pipeline (admin only; see src/notify/testSend.js).
+  if (pathname === '/api/notifications/test' || pathname === '/api/notifications/test-status') {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: 'Invalid request.' }, 400, noStore);
+    }
+    try {
+      const store = makeStore(env);
+      if (pathname === '/api/notifications/test-status') {
+        return json(await testDeliveryStatus(store, makeSender(env), body?.campaignId), 200, noStore);
+      }
+      const adminUid = (await verifyFirebaseToken(auth, env.FIREBASE_PROJECT_ID)).uid;
+      const out = await sendTestNotification(store, { uid: body?.uid === 'me' ? adminUid : body?.uid, adminUid });
+      const report = out.created ? await runEngine(env) : null;
+      console.log(`[notify] test campaign=${out.campaignId ?? '-'} devices=${out.devices.length} sent=${report?.sent ?? 0}`);
+      return json({ ok: true, ...out, report }, 200, noStore);
+    } catch (e) {
+      if (e instanceof TestInputError) return json({ error: e.message }, 400, noStore);
+      if (e instanceof AuthError) return json({ error: e.message }, e.status, noStore);
+      throw e;
+    }
+  }
+
+  if (pathname === '/api/notifications/dispatch') {
+    const report = await runEngine(env);
+    return json({ ok: true, report }, 200, noStore);
+  }
   let req;
   try {
     req = await request.json();
   } catch {
-    return json({ error: 'Invalid request.' }, 400, cors);
+    return json({ error: 'Invalid request.' }, 400, noStore);
   }
-  const { pref, title, body, data } = req || {};
-  if (!PREFS.has(pref)) return json({ error: 'Unknown notification type.' }, 400, cors);
-  if (typeof title !== 'string' || !title.trim() || title.length > 100) return json({ error: 'Invalid title.' }, 400, cors);
-  if (typeof body !== 'string' || !body.trim() || body.length > 300) return json({ error: 'Invalid message.' }, 400, cors);
-  if (
-    !data ||
-    !TYPES.has(data.type) ||
-    (data.contentId !== undefined && (typeof data.contentId !== 'string' || data.contentId.length > 100))
-  ) {
-    return json({ error: 'Invalid data.' }, 400, cors);
+  let ev;
+  try {
+    ev = parseEvent(req);
+  } catch (e) {
+    if (e instanceof NotifyInputError) return json({ error: e.message }, 400, noStore);
+    throw e;
   }
-
-  // Read device tokens as caller to enforce admin permissions
-  const base = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents`;
-  const q = await fetch(`${base}:runQuery`, {
-    method: 'POST',
-    headers: { Authorization: auth, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      structuredQuery: {
-        from: [{ collectionId: 'pushTokens' }],
-        where: { fieldFilter: { field: { fieldPath: `prefs.${pref}` }, op: 'EQUAL', value: { booleanValue: true } } },
-        limit: MAX_DEVICES,
-      },
-    }),
-  });
-  if (q.status === 401 || q.status === 403) return json({ error: 'Admins only.' }, 403, cors);
-  if (!q.ok) return json({ error: 'Could not read devices.' }, 502, cors);
-
-  const rows = (await q.json()).filter((r) => r.document);
-  const devices = rows
-    .map((r) => ({ name: r.document.name, token: r.document.fields?.token?.stringValue }))
-    .filter((d) => typeof d.token === 'string' && d.token.startsWith('Expo'));
-  if (devices.length === 0) {
-    console.log(`[push] no devices opted in to "${pref}" (rows read: ${rows.length})`);
-    return json({ sent: 0, failed: 0, removed: 0, devices: 0 }, 200, cors);
-  }
-
-  // Send through Expo in batches of 100 with high priority and notification channels
-  let sent = 0;
-  let failed = 0;
-  const reasons = {}; // Expo error code -> count (e.g. InvalidCredentials = FCM key missing on EAS)
-  const ticketIds = []; // Expo ticket ids: look up delivery receipts at /--/api/v2/push/getReceipts
-  let firstMessage = '';
-  const dead = [];
-  const message = (d) => ({ to: d.token, title, body, data, sound: 'default', channelId: 'default', priority: 'high', _displayInForeground: true });
-  const countTickets = (tickets, chunk) =>
-    tickets.forEach((t, idx) => {
-      if (t.status === 'ok') {
-        sent += 1;
-        if (t.id && ticketIds.length < 20) ticketIds.push(t.id);
-      }
-      else {
-        failed += 1;
-        const reason = t.details?.error || 'Unknown';
-        reasons[reason] = (reasons[reason] || 0) + 1;
-        if (!firstMessage) firstMessage = String(t.message || '').slice(0, 300);
-        if (reason === 'DeviceNotRegistered') dead.push(chunk[idx].name);
-      }
-    });
-  // Sends one batch. Expo rejects a whole request whose tokens belong to different Expo projects
-  // (PUSH_TOO_MANY_EXPERIENCE_IDS), e.g. phones that installed a build from another project. In that
-  // case it lists the tokens per project, and each project's tokens are sent as their own request.
-  const sendBatch = async (chunk, allowSplit = true) => {
-    let res;
-    try {
-      res = await fetch(EXPO_PUSH_URL, {
-        method: 'POST',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify(chunk.map(message)),
-      });
-    } catch {
-      failed += chunk.length;
-      return;
-    }
-    if (res.ok) {
-      countTickets((await res.json()).data || [], chunk);
-      return;
-    }
-    const text = await res.text().catch(() => '');
-    let err = null;
-    try {
-      err = JSON.parse(text)?.errors?.[0] ?? null;
-    } catch {
-      /* not JSON */
-    }
-    if (allowSplit && err?.code === 'PUSH_TOO_MANY_EXPERIENCE_IDS' && err.details && typeof err.details === 'object') {
-      const byToken = new Map(chunk.map((d) => [d.token, d]));
-      const groups = Object.entries(err.details).map(([project, tokens]) => [project, (tokens || []).map((t) => byToken.get(t)).filter(Boolean)]);
-      console.log(`[push] tokens span ${groups.length} Expo projects: ${groups.map(([p, g]) => `${p}=${g.length}`).join(', ')}; sending each separately`);
-      for (const [, group] of groups) if (group.length) await sendBatch(group, false);
-      return;
-    }
-    console.error(`[push] Expo push API HTTP ${res.status}: ${text.slice(0, 300)}`);
-    failed += chunk.length;
-  };
-  for (let i = 0; i < devices.length; i += 100) await sendBatch(devices.slice(i, i + 100));
-
-
-  // Tidy up invalid tokens
-  let removed = 0;
-  for (const name of dead.slice(0, 40)) {
-    const d = await fetch(`https://firestore.googleapis.com/v1/${name}`, { method: 'DELETE', headers: { Authorization: auth } });
-    if (d.ok) removed += 1;
-  }
-
-  // Visible with `npx wrangler tail`; contains no tokens or secrets.
-  console.log(`[push] pref=${pref} devices=${devices.length} sent=${sent} failed=${failed}` + (failed ? ` reasons=${JSON.stringify(reasons)} first="${firstMessage}"` : '') + (ticketIds.length ? ` tickets=${ticketIds.join(',')}` : ''));
-  return json({ sent, failed, removed, devices: devices.length, ...(failed ? { reasons, firstError: firstMessage } : {}) }, 200, cors);
+  const { campaignId, created, held, copySource, report } = await publishEvent(env, ev);
+  console.log(`[notify] event type=${ev.type} campaign=${campaignId} created=${created} held=${held ?? '-'} copy=${copySource ?? '-'} queued=${report.queued} sent=${report.sent}`);
+  return json(
+    // held: "review" (an AI draft awaits approval) or "manual" (manual mode: nothing sent for published content)
+    { ok: true, engine: true, campaignId, created, duplicate: !created && !held, held: held ?? null, copySource: copySource ?? null, queued: report.queued, sent: report.sent, inApp: report.inApp, failed: report.failed },
+    200,
+    noStore,
+  );
 }

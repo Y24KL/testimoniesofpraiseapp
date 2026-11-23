@@ -25,6 +25,7 @@ export interface Submission {
   churchZone: string;
   testimony: string;
   userEmail: string | null;
+  userId?: string;
   status: 'pending' | 'approved' | 'rejected';
   linkedTestimonyId?: string;
   linkedWrittenId?: string;
@@ -116,6 +117,7 @@ export interface AdotopocSettings {
 export type Route =
   | { name: 'dashboard' }
   | { name: 'notifications' }
+  | { name: 'messages'; threadId?: string; uid?: string }
   | { name: 'editorial' }
   | { name: 'reports' }
   | { name: 'testimonies' }

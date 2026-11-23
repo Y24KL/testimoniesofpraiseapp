@@ -43,6 +43,7 @@ const DownloadsPage = named(() => import('./pages/DownloadsPage'), 'DownloadsPag
 const ShareTestimonyPage = named(() => import('./pages/ShareTestimonyPage'), 'ShareTestimonyPage');
 const SponsorPage = named(() => import('./pages/SponsorPage'), 'SponsorPage');
 const NotificationsPage = named(() => import('./pages/NotificationsPage'), 'NotificationsPage');
+const MessagesPage = named(() => import('./pages/MessagesPage'), 'MessagesPage');
 const NotificationSettingsPage = named(() => import('./pages/NotificationSettingsPage'), 'NotificationSettingsPage');
 const ProfilePage = named(() => import('./pages/ProfilePage'), 'ProfilePage');
 const SearchPage = named(() => import('./pages/SearchPage'), 'SearchPage');
@@ -185,6 +186,9 @@ function Shell({ route }: { route: Route }) {
       break;
     case 'sponsor':
       page = <SponsorPage onBack={back} />;
+      break;
+    case 'messages':
+      page = <MessagesPage key={route.threadId ?? 'inbox'} threadId={route.threadId} onBack={back} />;
       break;
     case 'notifications':
       page = <NotificationsPage onBack={back} onSelectTestimony={(id: string) => navigate({ name: 'testimony', id })} onGoToLive={go({ name: 'live' })} />;

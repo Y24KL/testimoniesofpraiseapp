@@ -1,51 +1,56 @@
-// Offline test of the relay logic with mocked Firestore + Expo. Run: node test.mjs
+// Offline tests of the Worker's notification endpoint guards, CORS policy and the Expo sender. Run: node test.mjs
 import worker from './src/index.js';
 import assert from 'node:assert';
+import { createExpoSender } from './src/notify/senders.js';
 
 const env = { FIREBASE_PROJECT_ID: 'demo', ALLOWED_ORIGINS: 'http://localhost:5173' };
 const calls = [];
 let admin = true;
 
+// Only the admin check (a Firestore runQuery with the caller's token) is reachable before the engine runs.
 globalThis.fetch = async (url, init = {}) => {
   calls.push({ url: String(url), init });
-  if (String(url).includes(':runQuery')) {
-    if (!admin) return new Response('{}', { status: 403 });
-    const many = Array.from({ length: 150 }, (_, i) => ({ document: { name: `projects/demo/databases/(default)/documents/pushTokens/t${i}`, fields: { token: { stringValue: `ExponentPushToken[t${i}]` } } } }));
-    return new Response(JSON.stringify([...many, { readTime: 'x' }]), { status: 200 });
-  }
-  if (String(url).startsWith('https://exp.host')) {
-    const msgs = JSON.parse(init.body);
-    return new Response(JSON.stringify({ data: msgs.map((m, i) => (m.to.endsWith('t3]') ? { status: 'error', details: { error: 'DeviceNotRegistered' } } : { status: 'ok' })) }), { status: 200 });
-  }
-  if (init.method === 'DELETE') return new Response('{}', { status: 200 });
+  if (String(url).includes(':runQuery')) return admin ? new Response('[{"readTime":"x"}]', { status: 200 }) : new Response('{}', { status: 403 });
   throw new Error('unexpected ' + url);
 };
 
-const call = (over = {}, headers = {}) =>
-  worker.fetch(new Request('https://relay/', { method: 'POST', headers: { Origin: 'http://localhost:5173', Authorization: 'Bearer x', 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ pref: 'testimonies', title: 'T', body: 'B', data: { type: 'testimony', contentId: 'abc' }, ...over }) }), env);
+const call = (over = {}, headers = {}, e = env) =>
+  worker.fetch(new Request('https://relay/', { method: 'POST', headers: { Origin: 'http://localhost:5173', Authorization: 'Bearer x', 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ pref: 'testimonies', title: 'T', body: 'B', data: { type: 'testimony', contentId: 'abc' }, ...over }) }), e);
 
-// happy path: 150 devices -> 2 Expo batches, 1 dead token removed
+// without the service account the engine refuses clearly, after the admin check
 let r = await call();
-let j = await r.json();
-assert.equal(r.status, 200); assert.equal(j.sent, 149); assert.equal(j.failed, 1); assert.equal(j.removed, 1);
-assert.equal(calls.filter((c) => c.url.startsWith('https://exp.host')).length, 2);
+assert.equal(r.status, 503);
+assert.match((await r.json()).error, /FIREBASE_SERVICE_ACCOUNT/);
 assert.equal(r.headers.get('Access-Control-Allow-Origin'), 'http://localhost:5173');
+assert.equal(r.headers.get('Cache-Control'), 'no-store');
 
-// non-admin (Firestore denies the read) -> nothing is sent
-calls.length = 0; admin = false;
+// non-admin (Firestore denies the read) -> refused before anything else
+admin = false;
 r = await call(); assert.equal(r.status, 403);
-assert.equal(calls.filter((c) => c.url.startsWith('https://exp.host')).length, 0);
 admin = true;
 
-// wrong origin, missing auth, bad payloads
+// wrong origin, missing auth
 assert.equal((await call({}, { Origin: 'https://evil.example' })).status, 403);
 assert.equal((await call({}, { Authorization: '' })).status, 401);
-assert.equal((await call({ pref: 'everyone' })).status, 400);
-assert.equal((await call({ title: '' })).status, 400);
-assert.equal((await call({ data: { type: 'hack' } })).status, 400);
+
+// bad payloads are rejected before any engine work (a service account is set, but nothing is fetched)
+const engineEnv = { ...env, FIREBASE_SERVICE_ACCOUNT: '{}' };
+calls.length = 0;
+assert.equal((await call({ pref: 'everyone' }, {}, engineEnv)).status, 400);
+assert.equal((await call({ title: '' }, {}, engineEnv)).status, 400);
+assert.equal((await call({ body: 'x'.repeat(301) }, {}, engineEnv)).status, 400);
+assert.equal((await call({ data: { type: 'hack' } }, {}, engineEnv)).status, 400);
+assert.equal((await call({ data: { type: 'testimony', contentId: 'x'.repeat(101) } }, {}, engineEnv)).status, 400);
+assert.ok(calls.every((c) => c.url.includes(':runQuery')), 'only the admin check ran for rejected payloads');
+
 const pre = await worker.fetch(new Request('https://relay/', { method: 'OPTIONS', headers: { Origin: 'http://localhost:5173' } }), env);
 assert.equal(pre.status, 204);
-console.log('relay tests passed');
+
+// the public VAPID key is served without sign-in
+const vk = await worker.fetch(new Request('https://relay/api/notifications/vapid-key', { headers: { Origin: 'http://localhost:5173' } }), { ...env, VAPID_PUBLIC_KEY: 'BPub' });
+assert.equal(vk.status, 200);
+assert.deepEqual(await vk.json(), { publicKey: 'BPub' });
+console.log('notification endpoint tests passed');
 
 // ---- CORS policy (regression tests for the "Worker Status Error" in TOP Admin) ----
 const prodEnv = { ...env, ALLOWED_ORIGINS: 'http://localhost:5173,https://testimoniesofpraiseweb.onrender.com, https://top-admin.onrender.com/' };
@@ -77,34 +82,31 @@ assert.equal(s.status, 401);
 assert.equal(s.headers.get('Access-Control-Allow-Origin'), ADMIN);
 console.log('cors tests passed');
 
-// ---- Mixed Expo projects (PUSH_TOO_MANY_EXPERIENCE_IDS) are split and each sent ----
+// ---- Expo sender: mixed Expo projects (PUSH_TOO_MANY_EXPERIENCE_IDS) are split and each sent ----
 {
-  const tokens = ['ExponentPushToken[a1]', 'ExponentPushToken[a2]', 'ExponentPushToken[b1]'];
   const project = (t) => (t.includes('[b') ? '@y24kl/top10' : '@y24kl/testimonies-of-praise');
   const requests = [];
-  globalThis.fetch = async (url, init = {}) => {
-    url = String(url);
-    if (url.includes(':runQuery')) {
-      return new Response(JSON.stringify(tokens.map((t, i) => ({ document: { name: `projects/demo/databases/(default)/documents/pushTokens/m${i}`, fields: { token: { stringValue: t } } } }))), { status: 200 });
+  const fakeFetch = async (url, init = {}) => {
+    const msgs = JSON.parse(init.body);
+    requests.push(msgs.length);
+    const projects = [...new Set(msgs.map((m) => project(m.to)))];
+    if (projects.length > 1) {
+      const details = {};
+      for (const m of msgs) (details[project(m.to)] ||= []).push(m.to);
+      return new Response(JSON.stringify({ errors: [{ code: 'PUSH_TOO_MANY_EXPERIENCE_IDS', message: 'same project', details }] }), { status: 400 });
     }
-    if (url.startsWith('https://exp.host')) {
-      const msgs = JSON.parse(init.body);
-      requests.push(msgs.length);
-      const projects = [...new Set(msgs.map((m) => project(m.to)))];
-      if (projects.length > 1) {
-        const details = {};
-        for (const m of msgs) (details[project(m.to)] ||= []).push(m.to);
-        return new Response(JSON.stringify({ errors: [{ code: 'PUSH_TOO_MANY_EXPERIENCE_IDS', message: 'same project', details }] }), { status: 400 });
-      }
-      return new Response(JSON.stringify({ data: msgs.map(() => ({ status: 'ok' })) }), { status: 200 });
-    }
-    throw new Error('unexpected ' + url);
+    return new Response(JSON.stringify({ data: msgs.map((m) => (m.to.endsWith('a2]') ? { status: 'error', details: { error: 'DeviceNotRegistered' } } : { status: 'ok', id: `id-${m.to}` })) }), { status: 200 });
   };
-  const res = await call({ pref: 'announcements', data: { type: 'announcement' } });
-  const out = await res.json();
-  assert.equal(res.status, 200);
-  assert.equal(out.sent, 3, 'every device gets the push despite mixed projects');
-  assert.equal(out.failed, 0);
+  const sender = createExpoSender(fakeFetch);
+  const out = await sender.expo(['ExponentPushToken[a1]', 'ExponentPushToken[a2]', 'ExponentPushToken[b1]'].map((to) => ({ to, title: 'T', body: 'B' })));
   assert.deepEqual(requests, [3, 2, 1], 'one rejected mixed batch, then one request per project');
-  console.log('mixed-project push tests passed');
+  assert.equal(out[0].status, 'ok');
+  assert.equal(out[1].tokenGone, true, 'a dead token is reported so the engine removes it');
+  assert.equal(out[2].status, 'ok');
+  // a server error is retryable; a network failure is retryable; nothing throws
+  const s500 = createExpoSender(async () => new Response('down', { status: 503 }));
+  assert.equal((await s500.expo([{ to: 'ExponentPushToken[x]' }]))[0].retryable, true);
+  const sNet = createExpoSender(async () => { throw new Error('offline'); });
+  assert.equal((await sNet.expo([{ to: 'ExponentPushToken[x]' }]))[0].code, 'NetworkError');
+  console.log('expo sender tests passed');
 }

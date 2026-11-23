@@ -8,6 +8,7 @@ import { Icon } from '../components/Icon';
 import { useConfirm, useToast } from '../components/feedback';
 import { usePendingCounts } from '../hooks/usePendingCounts';
 import { EmptyState, FilterTabs, GlassCard, LoadingList, PageHeader, SearchInput, StatusBadge } from '../components/ui';
+import { MessageUserButton } from '../components/MessageUserButton';
 
 type Filter = 'pending' | 'approved' | 'rejected' | 'all';
 
@@ -121,6 +122,7 @@ export function Submissions({ go }: { go: (r: Route) => void }) {
             </div>
             <div className="quote" style={{ whiteSpace: 'pre-wrap' }}>{s.testimony}</div>
             <div className="actions">
+              <MessageUserButton uid={s.userId} label="Message submitter" context={{ category: 'testimony', related: { type: 'testimony_submission', id: s.id, label: `Testimony from ${s.fullName}` } }} />
               {s.linkedTestimonyId ? (
                 <button type="button" className="btn small" onClick={() => go({ name: 'editor', id: s.linkedTestimonyId })}><Icon name="video" size={14} />Open video draft</button>
               ) : (

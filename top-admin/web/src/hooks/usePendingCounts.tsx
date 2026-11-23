@@ -11,7 +11,7 @@ const SOURCES: Record<CountKey, { collection: string; field: string; value: stri
   feedback: { collection: 'appFeedback', field: 'status', value: 'new' },
   sponsorships: { collection: 'sponsorships', field: 'status', value: 'pending' },
   reports: { collection: 'contentReports', field: 'status', value: 'open' },
-  notificationQueue: { collection: 'notification_queue', field: 'status', value: 'pending' },
+  support: { collection: 'supportThreads', field: 'status', value: 'awaiting_admin' },
 };
 
 const KEYS = Object.keys(SOURCES) as CountKey[];

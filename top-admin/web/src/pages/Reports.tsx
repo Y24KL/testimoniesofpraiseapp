@@ -7,6 +7,7 @@ import { Icon } from '../components/Icon';
 import { useToast } from '../components/feedback';
 import { usePendingCounts } from '../hooks/usePendingCounts';
 import { EmptyState, FilterTabs, GlassCard, LoadingList, PageHeader, StatusBadge } from '../components/ui';
+import { MessageUserButton } from '../components/MessageUserButton';
 
 type Status = 'open' | 'reviewed' | 'actioned' | 'dismissed';
 interface Report {
@@ -18,6 +19,7 @@ interface Report {
   status: Status;
   createdAt?: Timestamp;
   reviewedBy?: string;
+  reporterUid?: string;
 }
 
 const STATUSES: Status[] = ['open', 'reviewed', 'actioned', 'dismissed'];
@@ -95,6 +97,7 @@ export function Reports() {
             {r.note ? <><dt>Note</dt><dd>{r.note}</dd></> : null}
           </dl>
           <div className="actions">
+            <MessageUserButton uid={r.reporterUid} label="Message reporter" context={{ category: 'report', related: { type: 'report', id: r.id, label: `Report: ${label(r.contentType)}` } }} />
             <button type="button" className="btn small ghost" disabled={busyId === r.id || r.status === 'reviewed'} onClick={() => void setStatus(r, 'reviewed')}><Icon name="eye" size={14} />Mark reviewed</button>
             <button type="button" className="btn small success" disabled={busyId === r.id || r.status === 'actioned'} onClick={() => void setStatus(r, 'actioned')}><Icon name="check" size={14} />Action taken</button>
             <button type="button" className="btn small ghost" disabled={busyId === r.id || r.status === 'dismissed'} onClick={() => void setStatus(r, 'dismissed')}><Icon name="x" size={14} />Dismiss</button>

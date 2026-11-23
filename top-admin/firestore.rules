@@ -9,6 +9,15 @@ service cloud.firestore {
       return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    // Content interest tags (testimonies, written, articles, lyrical analyses, LoveWorld videos): optional,
+    // at most 5, only from the fixed list. Same list as worker/src/tags.js (tests/contentTags.test.mjs).
+    function validContentTags() {
+      let d = request.resource.data;
+      return !('tags' in d)
+        || (d.tags is list && d.tags.size() <= 5
+          && d.tags.hasOnly(['healing', 'salvation', 'deliverance', 'miracles', 'finances', 'family', 'marriage', 'youth', 'faith', 'hope', 'worship', 'missions']));
+    }
+
     // A user may check whether THEY are an admin. Nobody can write here from a client.
     match /admins/{uid} {
       allow get: if signedIn() && request.auth.uid == uid;
@@ -33,7 +42,8 @@ service cloud.firestore {
     // Testimonies: the app only sees published ones; admins see and manage everything.
     match /testimonies/{id} {
       allow read: if isAdmin() || (signedIn() && (resource.data.isPublished == true || resource.data.published == true));
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && validContentTags();
+      allow delete: if isAdmin();
     }
 
     // Onboarding media shown on the Welcome screen BEFORE sign-in (public, non-sensitive):
@@ -77,7 +87,8 @@ service cloud.firestore {
     match /articles/{id} {
       // Allow anyone to read published articles; admins manage everything
       allow read: if isAdmin() || resource.data.isPublished == true || resource.data.published == true || resource.data.status == 'published';
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && validContentTags();
+      allow delete: if isAdmin();
     }
 
     // In-app notification feed + announcement triggers.
@@ -227,7 +238,9 @@ service cloud.firestore {
         && (!('articles' in p) || p.articles is bool);
     }
     function validPushToken(d) {
-      return d.keys().hasOnly(['token', 'uid', 'platform', 'prefs', 'updatedAt', 'timeZone', 'utcOffsetMinutes', 'appVersion'])
+      // credFailures is written by the notification engine (wrong-project builds); clients may keep it.
+      // fcmToken: Android's own Firebase token, used to send notification messages Android shows itself.
+      return d.keys().hasOnly(['token', 'uid', 'platform', 'prefs', 'updatedAt', 'timeZone', 'utcOffsetMinutes', 'appVersion', 'credFailures', 'fcmToken'])
         && d.token is string && d.token.size() >= 10 && d.token.size() <= 200
         && d.token.matches('^Expo(nent)?PushToken\\[.+\\]$')
         && d.uid is string && d.uid == request.auth.uid
@@ -236,7 +249,9 @@ service cloud.firestore {
         && d.updatedAt == request.time
         && (!('timeZone' in d) || (d.timeZone is string && d.timeZone.size() >= 1 && d.timeZone.size() <= 64))
         && (!('utcOffsetMinutes' in d) || (d.utcOffsetMinutes is int && d.utcOffsetMinutes >= -840 && d.utcOffsetMinutes <= 840))
-        && (!('appVersion' in d) || (d.appVersion is string && d.appVersion.size() <= 30));
+        && (!('appVersion' in d) || (d.appVersion is string && d.appVersion.size() <= 30))
+        && (!('credFailures' in d) || (d.credFailures is int && d.credFailures >= 0 && d.credFailures <= 10))
+        && (!('fcmToken' in d) || (d.fcmToken is string && d.fcmToken.size() >= 20 && d.fcmToken.size() <= 4096 && d.fcmToken.matches('^[A-Za-z0-9_:-]+$')));
     }
     match /pushTokens/{token} {
       allow create, update: if signedIn() && validPushToken(request.resource.data);
@@ -392,7 +407,7 @@ service cloud.firestore {
 
     match /writtenTestimonies/{id} {
       allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
-      allow create, update: if isAdmin() && validWrittenTestimony();
+      allow create, update: if isAdmin() && validWrittenTestimony() && validContentTags();
       allow delete: if isAdmin();
     }
 
@@ -420,7 +435,7 @@ service cloud.firestore {
     }
     match /loveworldSingersVideos/{id} {
       allow read: if isAdmin() || (signedIn() && resource.data.isPublished == true);
-      allow create, update: if isAdmin() && validSingersVideo();
+      allow create, update: if isAdmin() && validSingersVideo() && validContentTags();
       allow delete: if isAdmin();
     }
 
@@ -520,8 +535,8 @@ service cloud.firestore {
     }
     match /lyricalAnalyses/{id} {
       allow read: if isAdmin() || (signedIn() && resource.data.status == 'published');
-      allow create: if isAdmin() && validLyricalAnalysis() && request.resource.data.createdBy == request.auth.uid;
-      allow update: if isAdmin() && validLyricalAnalysis();
+      allow create: if isAdmin() && validLyricalAnalysis() && validContentTags() && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isAdmin() && validLyricalAnalysis() && validContentTags();
       allow delete: if isAdmin();
     }
 
@@ -542,66 +557,132 @@ service cloud.firestore {
     }
 
     // =====================================================================
-    // NOTIFICATION ENGINE (T.O.P. 2.0, Phase 1). The engine runs on the Worker with a service identity,
-    // which bypasses these rules, so the engine collections below accept NO client writes except the
-    // admin's approval and kill-switch controls. Admins can read everything the engine writes.
+    // NOTIFICATION ENGINE (worker src/notify). The engine runs on the Worker with a service identity,
+    // which bypasses these rules. Clients never write engine state; admins may read it, switch the
+    // engine on or off, change delivery windows, and cancel a campaign. Everything else is server only.
     // =====================================================================
 
-    // Kill switch and per-category switches. Fails closed: the engine sends nothing unless enabled == true.
-    match /settings/notifications {
-      allow read: if isAdmin();
-      allow write: if isAdmin() && request.resource.data.keys().hasOnly(['enabled', 'categories', 'quietHours', 'maxPerDay', 'perCategoryPerDay', 'updatedAt'])
-        && request.resource.data.enabled is bool
-        && request.resource.data.updatedAt == request.time;
-    }
-
-    // Engine cursors and state: server only.
+    // Engine config: { enabled, windows[], defaultTimezone }. "enabled" missing means on.
     match /settings/notificationEngine {
       allow read: if isAdmin();
-      allow write: if false;
+      allow write: if isAdmin()
+        && request.resource.data.keys().hasOnly(['enabled', 'windows', 'defaultTimezone', 'copyMode', 'aiCopy', 'targeting', 'updatedAt', 'updatedBy'])
+        && (!('enabled' in request.resource.data) || request.resource.data.enabled is bool)
+        && (!('copyMode' in request.resource.data) || request.resource.data.copyMode in ['review', 'automatic', 'manual'])
+        && (!('aiCopy' in request.resource.data) || request.resource.data.aiCopy is bool)
+        && (!('targeting' in request.resource.data) || request.resource.data.targeting in ['everyone', 'interested_first', 'interested_only'])
+        && (!('windows' in request.resource.data) || (request.resource.data.windows is list && request.resource.data.windows.size() <= 12))
+        && (!('defaultTimezone' in request.resource.data) || (request.resource.data.defaultTimezone is string && request.resource.data.defaultTimezone.size() <= 64))
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.uid;
     }
 
-    // The queue. The engine creates entries. An admin may only approve (pending -> approved) or cancel
-    // (pending or approved -> cancelled) an entry, and may not change its content or audience.
-    match /notification_queue/{key} {
+    // Campaigns: created by the Worker. An admin may only cancel one that has not finished.
+    // Campaigns: created by the Worker. An admin may cancel one that has not finished, or approve a Praxiom
+    // draft that awaits approval: send it with the AI text, an edited text, or the template (dueAt 0 = now).
+    match /notificationCampaigns/{id} {
       allow read: if isAdmin();
       allow create, delete: if false;
-      allow update: if isAdmin()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'decidedBy', 'decidedAt'])
-        && ((resource.data.status == 'pending' && request.resource.data.status in ['approved', 'cancelled'])
-          || (resource.data.status == 'approved' && request.resource.data.status == 'cancelled'))
-        && request.resource.data.decidedBy == request.auth.uid
-        && request.resource.data.decidedAt == request.time;
+      allow update: if isAdmin() && (validCampaignCancel() || validCampaignApproval());
+    }
+    function validCampaignCancel() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt', 'cancelledBy'])
+        && resource.data.status in ['awaiting_approval', 'scheduled', 'fanning_out', 'queued']
+        && request.resource.data.status == 'cancelled'
+        && request.resource.data.cancelledBy == request.auth.uid
+        && request.resource.data.cancelledAt == request.time;
+    }
+    function validCampaignApproval() {
+      let d = request.resource.data;
+      return d.diff(resource.data).affectedKeys().hasOnly(['status', 'dueAt', 'title', 'body', 'copySource', 'approvedBy', 'approvedAt'])
+        && resource.data.status == 'awaiting_approval'
+        && d.status == 'scheduled'
+        && d.dueAt == 0
+        && d.title is string && d.title.size() > 0 && d.title.size() <= 100
+        && d.body is string && d.body.size() > 0 && d.body.size() <= 300
+        && d.copySource in ['ai', 'edited', 'template']
+        && d.approvedBy == request.auth.uid
+        && d.approvedAt == request.time;
     }
 
-    // History, delivery events and AI request logs: written by the engine, read by admins only.
-    match /notification_history/{id} {
+    // Per-person queue items, the per-person send ledger and daily stats: engine writes, admins read
+    // the queue and stats for monitoring. The ledger is server only.
+    match /notificationQueue/{id} {
       allow read: if isAdmin();
       allow write: if false;
     }
-    match /notification_events/{id} {
+    match /notificationStats/{day} {
       allow read: if isAdmin();
       allow write: if false;
     }
+    match /notificationLedger/{uid} {
+      allow read, write: if false;
+    }
+
+    // =====================================================================
+    // USER COMMUNICATION & SUPPORT (docs/USER_MESSAGING_PLAN.md). Conversations are created and admin
+    // messages written by the Worker (service account) after an admin check. From clients: the person
+    // reads their own conversations, replies as themselves and marks admin messages read; admins read
+    // everything, change status and mark user messages read. Nobody deletes.
+    // =====================================================================
+    function supportThread(threadId) {
+      return get(/databases/$(database)/documents/supportThreads/$(threadId)).data;
+    }
+    match /supportThreads/{threadId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create, delete: if false;
+      allow update: if (signedIn() && resource.data.uid == request.auth.uid && (validUserReplyThread() || validUserReadThread()))
+        || (isAdmin() && validAdminThreadUpdate());
+
+      match /messages/{messageId} {
+        allow read: if isAdmin() || (signedIn() && supportThread(threadId).uid == request.auth.uid);
+        // A reply: written as the signed-in owner, in the same batch as the thread's reply update.
+        allow create: if signedIn()
+          && supportThread(threadId).uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['senderType', 'senderUid', 'body', 'createdAt', 'readAt'])
+          && request.resource.data.senderType == 'user'
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.body is string && request.resource.data.body.size() > 0 && request.resource.data.body.size() <= 2000
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.readAt == null
+          && getAfter(/databases/$(database)/documents/supportThreads/$(threadId)).data.lastMessageAt == request.time;
+        // Read receipts: the owner marks admin messages read; admins mark user messages read.
+        allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt'])
+          && resource.data.readAt == null
+          && request.resource.data.readAt == request.time
+          && ((signedIn() && resource.data.senderType == 'admin' && supportThread(threadId).uid == request.auth.uid)
+            || (isAdmin() && resource.data.senderType == 'user'));
+        allow delete: if false;
+      }
+    }
+    function validUserReplyThread() {
+      let d = request.resource.data;
+      return d.diff(resource.data).affectedKeys().hasOnly(['lastMessageAt', 'lastMessagePreview', 'lastSender', 'updatedAt', 'status', 'unreadForAdmin', 'messageCount'])
+        && d.lastSender == 'user'
+        && d.status == 'awaiting_admin'
+        && d.lastMessageAt == request.time
+        && d.updatedAt == request.time
+        && d.lastMessagePreview is string && d.lastMessagePreview.size() <= 140
+        && d.unreadForAdmin == resource.data.unreadForAdmin + 1
+        && d.messageCount == resource.data.messageCount + 1;
+    }
+    function validUserReadThread() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['unreadForUser'])
+        && request.resource.data.unreadForUser == 0;
+    }
+    function validAdminThreadUpdate() {
+      let d = request.resource.data;
+      return d.diff(resource.data).affectedKeys().hasOnly(['status', 'unreadForAdmin', 'updatedAt', 'resolvedAt', 'resolvedBy'])
+        && d.status in ['awaiting_user', 'awaiting_admin', 'resolved']
+        && d.unreadForAdmin is int && d.unreadForAdmin >= 0 && d.unreadForAdmin <= resource.data.unreadForAdmin
+        && (!('updatedAt' in d.diff(resource.data).affectedKeys()) || d.updatedAt == request.time)
+        && (d.status != 'resolved' || resource.data.status == 'resolved' || (d.resolvedBy == request.auth.uid && d.resolvedAt == request.time));
+    }
+
+    // AI request logs (no content): written by the Worker, read by admins.
     match /ai_requests/{id} {
       allow read: if isAdmin();
       allow write: if false;
-    }
-
-    // Per-person send counters used for frequency caps. Server only, never readable by clients.
-    match /notificationCounters/{uid} {
-      allow read, write: if false;
-    }
-
-    // Per-person delivery records (one per entry and person): written by the engine, read by admins.
-    match /notification_deliveries/{id} {
-      allow read: if isAdmin();
-      allow write: if false;
-    }
-
-    // The engine's run lock: server only.
-    match /notificationLocks/{name} {
-      allow read, write: if false;
     }
 
     // =====================================================================
